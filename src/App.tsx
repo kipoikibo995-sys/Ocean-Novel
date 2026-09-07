@@ -10,7 +10,6 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { AnimatePresence } from "motion/react";
 import { AppLayout, ProjectLayout } from "./components/layout/layouts";
 import { ProjectProvider } from "./context/ProjectContext";
 import Dashboard from "./pages/Dashboard";
@@ -26,14 +25,14 @@ import Settings from "./pages/Settings";
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    
+      <Routes location={location} >
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateProject />} />
 
-          <Route path="/project/:id" element={<ProjectOverview />} />
           <Route element={<ProjectLayout />}>
+            <Route path="/project/:id" element={<ProjectOverview />} />
             <Route path="/project/:id/characters" element={<Characters />} />
             <Route path="/project/:id/workspace" element={<Navigate to="studio" replace />} />
             <Route path="/project/:id/workspace/bible" element={<StoryBible />} />
@@ -46,7 +45,7 @@ function AnimatedRoutes() {
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </AnimatePresence>
+    
   );
 }
 

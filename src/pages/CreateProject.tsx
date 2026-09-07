@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Sparkles, BookOpen } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { storage } from "@/lib/storage";
 
 const GENRES = [
   "Fantasy",
@@ -20,7 +21,7 @@ const COLORS = [
     name: "Obsidian",
     bg: "bg-[#2B3A42]",
     text: "text-[#E5E0D5]",
-    accent: "bg-[#965A5A]",
+    accent: "bg-[#8C503C]",
     ribbon: "bg-rose-700",
   },
   {
@@ -48,7 +49,7 @@ const COLORS = [
     name: "Parchment",
     bg: "bg-[#D3BFA9]",
     text: "text-[#3A3532]",
-    accent: "bg-[#965A5A]",
+    accent: "bg-[#8C503C]",
     ribbon: "bg-rose-800",
   },
 ];
@@ -66,14 +67,58 @@ export default function CreateProject() {
 
   const handleCreate = () => {
     setIsSubmitting(true);
-    // Simulate creation delay
+    
     setTimeout(() => {
-      navigate("/project/1");
+      const newId = Date.now().toString();
+      
+      // Save project meta
+      storage.saveProject({
+        id: newId,
+        title: title || 'Untitled Project',
+        author: author || 'Unknown Author',
+        genre,
+        audience,
+        logline,
+        wordGoal: wordCount ? Number(wordCount) : 50000,
+        currentWords: 0,
+        lastModified: Date.now(),
+        themeColor: colorStyle.bg
+      });
+
+      // Save initial project data
+      storage.saveProjectData(newId, {
+        manuscript: [
+          {
+            id: 'part-1',
+            type: 'part',
+            title: 'Part I',
+            children: [
+              {
+                id: 'chap-1',
+                type: 'chapter',
+                title: 'Chapter 1',
+                children: [
+                  {
+                    id: 'scene-1',
+                    type: 'scene',
+                    title: 'Scene 1',
+                    content: '<h1>Chapter 1</h1><p>Start writing here...</p>'
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        characters: [],
+        locations: []
+      });
+
+      navigate(`/project/${newId}/workspace/studio`);
     }, 300);
   };
 
   const handleBack = () => {
-    navigate(-1);
+    navigate("/dashboard");
   };
 
   return (
@@ -82,25 +127,21 @@ export default function CreateProject() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans selection:bg-[#965A5A] selection:text-white"
+      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans selection:bg-[#8C503C] selection:text-white"
     >
-      {/* Abstract Artistic Background - Matches Dashboard */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-[400px] lg:w-[600px] h-[400px] lg:h-[600px] bg-[#E8E3D7] rounded-full mix-blend-multiply blur-[60px] lg:blur-[100px] opacity-70" />
-        <div className="absolute top-[30%] -left-20 w-[300px] lg:w-[500px] h-[300px] lg:h-[500px] bg-[#E2D9C8] rounded-full mix-blend-multiply blur-[60px] lg:blur-[120px] opacity-50" />
-      </div>
+      
 
       {/* Header */}
       <div className="relative z-20 px-6 py-4 lg:px-12 lg:py-6 flex items-center justify-between shrink-0">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 text-stone-500 hover:text-stone-800 transition-colors group"
+          className="flex items-center gap-2 text-stone-500 hover:text-[#4A3225] transition-colors group"
         >
-          <div className="w-8 h-8 rounded-full bg-white/50 border border-stone-200 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
+          <div className="w-8 h-8 rounded-full bg-white/50 border border-[#E5E0D5] flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
             <ChevronLeft className="w-4 h-4" />
           </div>
           <span className="text-[10px] font-bold tracking-widest uppercase">
-            Back to Studio
+            Back to Dashboard
           </span>
         </button>
       </div>
@@ -122,8 +163,8 @@ export default function CreateProject() {
               )}
             >
               {/* Paper Edges (3D depth simulation) */}
-              <div className="absolute inset-y-[3px] -right-[4px] lg:-right-[5px] w-[4px] lg:w-[5px] bg-[#E8E3D7] rounded-r-sm shadow-[inset_1px_0_2px_rgba(0,0,0,0.2)]" />
-              <div className="absolute -bottom-[3px] lg:-bottom-[4px] inset-x-[3px] h-[3px] lg:h-[4px] bg-[#E8E3D7] rounded-b-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]" />
+              <div className="absolute inset-y-[3px] -right-[4px] lg:-right-[5px] w-[4px] lg:w-[5px] bg-[#E5E0D5] rounded-r-sm shadow-[inset_1px_0_2px_rgba(0,0,0,0.2)]" />
+              <div className="absolute -bottom-[3px] lg:-bottom-[4px] inset-x-[3px] h-[3px] lg:h-[4px] bg-[#E5E0D5] rounded-b-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]" />
 
               {/* Cover Texture */}
               <div
@@ -200,7 +241,7 @@ export default function CreateProject() {
           className="flex-1 w-full max-w-[520px] flex flex-col justify-center"
         >
           <div className="mb-5 lg:mb-6 shrink-0">
-            <h1 className="text-2xl lg:text-3xl font-serif font-bold text-stone-800 tracking-tight mb-1">
+            <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#4A3225] tracking-tight mb-1">
               Create Project
             </h1>
             <p className="text-stone-500 text-xs">
@@ -211,7 +252,7 @@ export default function CreateProject() {
           <div className="space-y-4 lg:space-y-5">
             {/* Title Input */}
             <div>
-              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-1.5 block">
+              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-1.5 block">
                 Manuscript Title
               </label>
               <input
@@ -219,7 +260,7 @@ export default function CreateProject() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter title..."
-                className="w-full bg-transparent border-b-2 border-stone-200 focus:border-[#965A5A] outline-none py-1.5 text-xl lg:text-2xl font-serif text-stone-800 placeholder:text-stone-300 transition-colors"
+                className="w-full bg-transparent border-b-2 border-[#E5E0D5] focus:border-[#8C503C] outline-none py-1.5 text-xl lg:text-2xl font-serif text-[#4A3225] placeholder:text-stone-300 transition-colors"
                 autoFocus
               />
             </div>
@@ -227,7 +268,7 @@ export default function CreateProject() {
             {/* Row 2: Author & Word Count */}
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
               <div className="flex-[3]">
-                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-1.5 block">
+                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-1.5 block">
                   Author / Pen Name
                 </label>
                 <input
@@ -235,14 +276,14 @@ export default function CreateProject() {
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
                   placeholder="How shall you be known?"
-                  className="w-full bg-transparent border-b border-stone-200 focus:border-[#965A5A] outline-none py-1.5 text-base font-serif text-stone-700 placeholder:text-stone-300 transition-colors"
+                  className="w-full bg-transparent border-b border-[#E5E0D5] focus:border-[#8C503C] outline-none py-1.5 text-base font-serif text-[#4A3225] placeholder:text-stone-300 transition-colors"
                 />
               </div>
               <div className="flex-[2]">
-                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-1.5 block">
+                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-1.5 block">
                   Word Goal
                 </label>
-                <div className="flex items-center gap-2 border-b border-stone-200 focus-within:border-[#965A5A] transition-colors py-1.5">
+                <div className="flex items-center gap-2 border-b border-[#E5E0D5] focus-within:border-[#8C503C] transition-colors py-1.5">
                   <input
                     type="number"
                     value={wordCount}
@@ -250,7 +291,7 @@ export default function CreateProject() {
                       setWordCount(e.target.value ? Number(e.target.value) : "")
                     }
                     step={5000}
-                    className="w-full bg-transparent outline-none text-base font-mono text-stone-800 text-right"
+                    className="w-full bg-transparent outline-none text-base font-mono text-[#4A3225] text-right"
                   />
                   <span className="text-[10px] text-stone-500 font-medium">
                     words
@@ -261,7 +302,7 @@ export default function CreateProject() {
 
             {/* Logline Textarea */}
             <div>
-              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-1.5 block">
+              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-1.5 block">
                 Logline / Premise
               </label>
               <textarea
@@ -269,13 +310,13 @@ export default function CreateProject() {
                 onChange={(e) => setLogline(e.target.value)}
                 placeholder="In one or two sentences, what is this story about?..."
                 rows={2}
-                className="w-full bg-white/40 border border-stone-200 focus:border-[#965A5A] focus:bg-white rounded-lg outline-none p-2.5 text-xs font-serif text-stone-700 placeholder:text-stone-400 transition-colors resize-none shadow-sm"
+                className="w-full bg-[#FCFAF5] border border-[#E5E0D5] focus:border-[#8C503C] focus:bg-white rounded-sm outline-none p-2.5 text-xs font-serif text-[#4A3225] placeholder:text-stone-500/80 transition-colors resize-none shadow-sm"
               />
             </div>
 
             {/* Genre Selection */}
             <div>
-              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-2 block">
+              <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-2 block">
                 Primary Genre
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -284,10 +325,10 @@ export default function CreateProject() {
                     key={g}
                     onClick={() => setGenre(g)}
                     className={cn(
-                      "px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all duration-300 border",
+                      "px-3 py-1.5 rounded-sm text-[9px] font-bold tracking-widest uppercase transition-all duration-300 border",
                       genre === g
-                        ? "bg-[#965A5A] text-white border-[#965A5A] shadow-md"
-                        : "bg-white/50 text-stone-500 border-stone-200 hover:bg-white hover:border-stone-300 hover:shadow-sm",
+                        ? "bg-[#8C503C] text-white border-[#8C503C] shadow-md"
+                        : "bg-white/50 text-stone-500 border-[#E5E0D5] hover:bg-white hover:border-[#D49A89] hover:shadow-sm",
                     )}
                   >
                     {g}
@@ -299,7 +340,7 @@ export default function CreateProject() {
             {/* Row 4: Audience & Cover Binding */}
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-end">
               <div className="flex-[3]">
-                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-2 block">
+                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-2 block">
                   Target Audience
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -308,10 +349,10 @@ export default function CreateProject() {
                       key={a}
                       onClick={() => setAudience(a)}
                       className={cn(
-                        "px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all duration-300 border",
+                        "px-3 py-1.5 rounded-sm text-[9px] font-bold tracking-widest uppercase transition-all duration-300 border",
                         audience === a
-                          ? "bg-stone-700 text-white border-stone-700 shadow-md"
-                          : "bg-white/50 text-stone-500 border-stone-200 hover:bg-white hover:border-stone-300 hover:shadow-sm",
+                          ? "bg-[#4A3225] text-white border-[#4A3225] shadow-md"
+                          : "bg-white/50 text-stone-500 border-[#E5E0D5] hover:bg-white hover:border-[#D49A89] hover:shadow-sm",
                       )}
                     >
                       {a}
@@ -320,7 +361,7 @@ export default function CreateProject() {
                 </div>
               </div>
               <div className="flex-[2]">
-                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-400 mb-2 block">
+                <label className="text-[9px] font-bold tracking-widest uppercase text-stone-500/80 mb-2 block">
                   Binding
                 </label>
                 <div className="flex gap-1.5">
@@ -331,7 +372,7 @@ export default function CreateProject() {
                       className={cn(
                         "w-6 h-6 rounded-full shadow-inner border-2 transition-all duration-300 flex items-center justify-center",
                         colorStyle.name === c.name
-                          ? "border-[#965A5A] scale-110"
+                          ? "border-[#8C503C] scale-110"
                           : "border-transparent hover:scale-105",
                       )}
                     >
@@ -349,15 +390,10 @@ export default function CreateProject() {
               <button
                 onClick={handleCreate}
                 disabled={isSubmitting || !title.trim()}
-                className="w-full relative overflow-hidden group bg-stone-900 text-white py-3.5 rounded-xl text-sm font-medium tracking-wide shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
+                className="w-full bg-[#4A3225] text-[#F4F1EA] py-3 rounded-sm text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-[#332218] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isSubmitting ? (
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>Create Manuscript</>
-                  )}
+                <span className="flex items-center justify-center gap-2">
+                  {isSubmitting ? 'Creating...' : 'Create Manuscript'}
                 </span>
               </button>
             </div>

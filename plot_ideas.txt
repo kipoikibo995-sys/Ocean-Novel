@@ -1,0 +1,4 @@
+1. Add Plot Arcs / Threads (Main, Subplot, etc.) with color coding.
+2. Add "Acts" grouping for the list view (Act 1, Act 2, Act 3).
+3. Add a Slide-out panel to edit an Event (Title, Date, Description, Characters, Location, Arc).
+4. Upgrade horizontal timeline to be pan-able (similar to Locations map) or just nicely styled scrolling.

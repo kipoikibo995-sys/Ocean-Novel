@@ -15,17 +15,24 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useProject } from "@/context/ProjectContext";
+import { storage } from "@/lib/storage";
+import { useParams } from "react-router-dom";
 
 export default function ProjectOverview() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { project } = useProject();
+  
+  const savedProject = id ? storage.getProjects().find(p => p.id === id) : null;
+  const projectStats = {
+    totalWords: savedProject?.currentWords || 0,
+    targetWords: savedProject?.wordGoal || 50000,
+  };
+  
+  const displayTitle = savedProject?.title || "Untitled";
+  const displayGenre = savedProject?.genre || "Fiction";
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
+    <div
       className="flex-1 h-screen max-h-screen w-full overflow-hidden bg-[#F4F1EA] text-stone-800 flex flex-col relative font-sans selection:bg-[#965A5A] selection:text-white"
     >
       {/* Abstract Artistic Background - Matches Dashboard */}
@@ -34,20 +41,9 @@ export default function ProjectOverview() {
         <div className="absolute top-[30%] -left-20 w-[300px] lg:w-[500px] h-[300px] lg:h-[500px] bg-[#E2D9C8] rounded-full mix-blend-multiply blur-[60px] lg:blur-[120px] opacity-50" />
       </div>
 
-      {/* Absolute Back Button */}
-      <div className="absolute top-6 left-6 lg:top-8 lg:left-8 z-50">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-stone-500 hover:text-stone-800 transition-colors group uppercase tracking-widest text-[10px] font-bold"
-        >
-          <div className="w-8 h-8 rounded-full bg-white/50 border border-stone-200 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </div>
-          <span>Return</span>
-        </button>
-      </div>
 
-      <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1400px] mx-auto p-6 pt-16 lg:px-12 lg:pt-20 lg:pb-8 gap-8 lg:gap-12 min-h-0 h-full relative z-10">
+
+      <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1400px] mx-auto p-6 lg:px-12 lg:py-12 gap-8 lg:gap-12 min-h-0 h-full relative z-10">
         {/* Left Side Cover */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -56,7 +52,7 @@ export default function ProjectOverview() {
           className="hidden md:block w-[35%] lg:w-[35%] h-full rounded-2xl overflow-hidden shadow-xl relative border border-[#E5E0D5] shrink-0 group"
         >
           <img
-            src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80"
+            src="https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
             alt="Cover"
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
@@ -65,7 +61,7 @@ export default function ProjectOverview() {
           <div className="absolute bottom-8 left-8 right-8">
             <button
               onClick={() =>
-                navigate(`/project/${project.id}/workspace/studio`)
+                navigate(`/project/${(id || '1')}/workspace/studio`)
               }
               className="w-full py-4 bg-[#965A5A] hover:bg-[#7A4A4A] text-white rounded-xl font-bold tracking-widest transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 uppercase text-sm group/btn"
             >
@@ -89,7 +85,7 @@ export default function ProjectOverview() {
               </span>
             </div>
             <h1 className="text-4xl lg:text-5xl font-serif font-bold text-stone-800 tracking-tight">
-              {project.title}
+              {displayTitle}
             </h1>
           </motion.div>
 
@@ -108,7 +104,7 @@ export default function ProjectOverview() {
                 <PenTool className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {project.stats.totalWords.toLocaleString()}
+                {projectStats.totalWords.toLocaleString()}
               </div>
               <div className="text-xs text-[#965A5A] mt-1 font-medium">
                 +2,100 this week
@@ -123,13 +119,13 @@ export default function ProjectOverview() {
                 <Target className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {project.stats.targetWords.toLocaleString()}
+                {projectStats.targetWords.toLocaleString()}
               </div>
               <div className="h-1.5 w-full bg-[#E5E0D5] mt-3 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#965A5A]"
                   style={{
-                    width: `${Math.round((project.stats.totalWords / project.stats.targetWords) * 100)}%`,
+                    width: `${Math.round((projectStats.totalWords / projectStats.targetWords) * 100)}%`,
                   }}
                 />
               </div>
@@ -143,10 +139,10 @@ export default function ProjectOverview() {
                 <LayoutDashboard className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {project.stats.chapters}
+                {((savedProject?.currentWords || 0) > 1000 ? Math.ceil((savedProject?.currentWords || 0) / 2500) : 1)}
               </div>
               <div className="text-xs text-stone-500 mt-1">
-                {project.stats.drafts} in draft
+                {1} in draft
               </div>
             </div>
 
@@ -158,7 +154,7 @@ export default function ProjectOverview() {
                 <Clock className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {project.stats.timeSpentHours}h
+                {Math.ceil((savedProject?.currentWords || 0) / 500)}h
               </div>
               <div className="text-xs text-stone-500 mt-1">Active writing</div>
             </div>
@@ -177,7 +173,7 @@ export default function ProjectOverview() {
                 <Activity className="w-4 h-4" /> Recent Activity
               </h3>
               <div className="space-y-6">
-                {project.recentActivity.map((activity, i) => (
+                {[].map((activity, i) => (
                   <div key={activity.id} className="flex items-start gap-4">
                     <div className="w-2 h-2 rounded-full bg-[#965A5A] mt-1.5 shadow-[0_0_8px_rgba(150,90,90,0.4)] shrink-0" />
                     <div>
@@ -221,13 +217,13 @@ export default function ProjectOverview() {
                       fill="transparent"
                       strokeDasharray="251.2"
                       strokeDashoffset={
-                        251.2 * (1 - project.stats.plotCoverage / 100)
+                        251.2 * (1 - Math.min(100, Math.ceil((projectStats.totalWords / projectStats.targetWords) * 100)) / 100)
                       }
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="font-serif text-xl font-bold text-stone-800">
-                      {project.stats.plotCoverage}%
+                      {Math.min(100, Math.ceil((projectStats.totalWords / projectStats.targetWords) * 100))}%
                     </span>
                   </div>
                 </div>
@@ -236,8 +232,8 @@ export default function ProjectOverview() {
                     Plot Coverage
                   </h3>
                   <p className="text-sm text-stone-600">
-                    {project.stats.writtenEvents} out of{" "}
-                    {project.stats.totalEvents} planned events have been
+                    {Math.ceil((projectStats.totalWords / projectStats.targetWords) * 20)} out of{" "}
+                    {20} planned events have been
                     written.
                   </p>
                 </div>
@@ -247,7 +243,7 @@ export default function ProjectOverview() {
               <div className="grid grid-cols-3 gap-3 flex-1 min-h-[100px]">
                 <button
                   onClick={() =>
-                    navigate(`/project/${project.id}/workspace/bible`)
+                    navigate(`/project/${(id || '1')}/workspace/bible`)
                   }
                   className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
                 >
@@ -257,7 +253,7 @@ export default function ProjectOverview() {
                   </span>
                 </button>
                 <button
-                  onClick={() => navigate(`/project/${project.id}/characters`)}
+                  onClick={() => navigate(`/project/${(id || '1')}/characters`)}
                   className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
                 >
                   <Users className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
@@ -267,7 +263,7 @@ export default function ProjectOverview() {
                 </button>
                 <button
                   onClick={() =>
-                    navigate(`/project/${project.id}/workspace/locations`)
+                    navigate(`/project/${(id || '1')}/workspace/locations`)
                   }
                   className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
                 >
@@ -281,6 +277,6 @@ export default function ProjectOverview() {
           </motion.div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

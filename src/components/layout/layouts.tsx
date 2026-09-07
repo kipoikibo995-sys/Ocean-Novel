@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Book,
@@ -20,8 +21,8 @@ import { cn } from "@/lib/utils";
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-[#F4F1EA] text-stone-800 font-sans flex flex-col">
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+    <div className="h-screen w-screen bg-[#F4F1EA] text-stone-800 font-sans flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <Outlet />
       </main>
     </div>
@@ -32,6 +33,12 @@ export function ProjectLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    if (location.pathname.includes("/workspace/studio")) {
+      setIsExpanded(false);
+    }
+  }, [location.pathname]);
 
   const navItems = [
     {
@@ -109,7 +116,7 @@ export function ProjectLayout() {
           {isExpanded && <span className="font-medium text-sm">All Books</span>}
         </button>
 
-        <nav className="flex-1 w-full flex flex-col gap-2">
+        <nav className="flex-1 w-full flex flex-col gap-2 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {isExpanded && (
             <div className="text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
               Database
@@ -182,7 +189,7 @@ export function ProjectLayout() {
           })}
         </nav>
 
-        <div className="flex flex-col gap-2 mt-auto">
+        <div className="flex flex-col gap-2 mt-auto shrink-0 pt-2">
           <button
             className={cn(
               "flex items-center rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors",
@@ -196,7 +203,7 @@ export function ProjectLayout() {
             {isExpanded && <span className="font-medium text-sm">Profile</span>}
           </button>
           <button
-            onClick={() => navigate("/project/1/settings")}
+            onClick={() => navigate(`/project/${location.pathname.split("/")[2] || "1"}/settings`)}
             className={cn(
               "flex items-center rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors",
               isExpanded

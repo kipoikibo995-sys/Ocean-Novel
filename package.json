@@ -13,6 +13,13 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@tiptap/extension-highlight": "^3.31.3",
+    "@tiptap/extension-mention": "^3.31.3",
+    "@tiptap/extension-text-align": "^3.31.3",
+    "@tiptap/extension-underline": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "@tiptap/suggestion": "^3.31.3",
     "@uiw/react-md-editor": "^4.1.2",
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",
@@ -24,6 +31,7 @@
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.18.3",
     "tailwind-merge": "^3.6.0",
+    "tippy.js": "^6.3.7",
     "vite": "^6.2.3"
   },
   "devDependencies": {
