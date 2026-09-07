@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "ProjectMeta": {
+      "title": "ProjectMeta",
+      "description": "Metadata for a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "wordGoal": { "type": "number" },
+        "currentWords": { "type": "number" },
+        "lastModified": { "type": "number" },
+        "themeColor": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "title", "userId"]
+    },
+    "ProjectData": {
+      "title": "ProjectData",
+      "description": "Data inside a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "manuscript": { "type": "array" },
+        "characters": { "type": "array" },
+        "locations": { "type": "array" },
+        "storyBible": { "type": "object" },
+        "plot": { "type": "object" }
+      },
+      "required": ["id", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/ProjectMeta" },
+      "description": "Stores metadata about each project for a user"
+    },
+    "users/{userId}/projectData/{projectId}": {
+      "schema": { "$ref": "#/entities/ProjectData" },
+      "description": "Stores the heavy content of the projects"
+    }
+  }
+}

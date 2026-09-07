@@ -103,7 +103,7 @@ export function ProjectLayout() {
         >
           {isExpanded && (
             <span className="text-white font-serif tracking-widest font-bold uppercase text-sm">
-              Lumina Writer
+              Ocean Novel
             </span>
           )}
           <button
