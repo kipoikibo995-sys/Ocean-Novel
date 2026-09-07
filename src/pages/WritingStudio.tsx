@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect, useRef } from "react";
+import React, { ReactNode, useState, useEffect, useRef, useMemo } from "react";
 import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import MentionEditor from "@/components/MentionEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { storage, ProjectData } from "@/lib/storage";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import GlobalSearchModal from "@/components/GlobalSearchModal";
 
 // Helper functions for manuscript tree
 const findFirstSceneId = (items: ManuscriptItem[]): string => {
@@ -48,11 +49,32 @@ export default function WritingStudio() {
   const [selectedEntity, setSelectedEntity] = useState<{id: string, type: string} | null>(null);
   const [isContextOpen, setIsContextOpen] = useState(true);
   const [isManuscriptOpen, setIsManuscriptOpen] = useState(true);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sceneParam = searchParams.get('scene');
+  const tabParam = searchParams.get('tab');
+
+  useEffect(() => {
+    if (tabParam === 'notes') {
+      setActiveTab('notes');
+      setIsContextOpen(true);
+    }
+  }, [tabParam]);
+
+  // Keyboard shortcut for Global Search: Ctrl+Shift+F or Cmd+Shift+F
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+        e.preventDefault();
+        setIsSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Entities & Notes state with synchronous lazy initialization
   const [characters, setCharacters] = useState<any[]>(() => {
@@ -724,6 +746,15 @@ export default function WritingStudio() {
               )}
             </div>
 
+            {/* Global Search & Replace Trigger */}
+            <button 
+              onClick={() => setIsSearchModalOpen(true)}
+              className="p-1.5 rounded-sm transition-colors text-stone-500 hover:text-stone-800 hover:bg-[#E5E0D5]"
+              title="Global Search & Replace (Ctrl+Shift+F)"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {/* Toggle Context Panel */}
             {!isFocusMode && (
               <button 
@@ -1248,6 +1279,16 @@ export default function WritingStudio() {
           )}
         </div>
       )}
+
+      {/* Global Search & Replace Modal */}
+      <GlobalSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        projectId={projectId || "1"}
+        onNavigateToScene={(sceneId) => {
+          setActiveDocId(sceneId);
+        }}
+      />
     </div>
   );
 }

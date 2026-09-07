@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   Menu,
   ChevronLeft,
+  Search,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +70,19 @@ export function ProjectLayout() {
       label: "Writing Studio",
       icon: PenTool,
       href: `/project/${location.pathname.split("/")[2] || "1"}/workspace/studio`,
+    },
+  ];
+
+  const toolItems = [
+    {
+      label: "Search & Replace",
+      icon: Search,
+      href: `/project/${location.pathname.split("/")[2] || "1"}/workspace/search`,
+    },
+    {
+      label: "Consistency Checker",
+      icon: ShieldCheck,
+      href: `/project/${location.pathname.split("/")[2] || "1"}/workspace/consistency`,
     },
   ];
 
@@ -181,6 +196,45 @@ export function ProjectLayout() {
                 <item.icon className="w-5 h-5 shrink-0" />
                 {isExpanded && (
                   <span className="font-bold text-sm truncate">
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+
+          <div
+            className={cn(
+              "bg-white/20 my-2",
+              isExpanded ? "w-full h-px" : "w-8 h-px mx-auto",
+            )}
+          />
+
+          {isExpanded && (
+            <div className="text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-2">
+              Tools & Quality
+            </div>
+          )}
+          {toolItems.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                title={!isExpanded ? item.label : undefined}
+                className={cn(
+                  "flex items-center rounded-xl transition-all shadow-xs border",
+                  isExpanded
+                    ? "w-full px-4 h-11 gap-3"
+                    : "w-11 h-11 justify-center mx-auto",
+                  isActive
+                    ? "bg-[#D3BFA9] border-white/50 text-[#5A4535] font-bold"
+                    : "bg-transparent border-transparent text-white/80 hover:bg-[#A36262]/60 hover:text-white",
+                )}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {isExpanded && (
+                  <span className="font-semibold text-xs truncate">
                     {item.label}
                   </span>
                 )}

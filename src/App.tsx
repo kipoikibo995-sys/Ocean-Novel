@@ -21,6 +21,8 @@ import Locations from "./pages/Locations";
 import Plot from "./pages/Plot";
 import WritingStudio from "./pages/WritingStudio";
 import Settings from "./pages/Settings";
+import GlobalSearchPage from "./pages/GlobalSearchPage";
+import ConsistencyCheckerPage from "./pages/ConsistencyCheckerPage";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -41,6 +43,10 @@ function AnimatedRoutes() {
             <Route path="/project/:id/workspace/plot" element={<Plot />} />
             <Route path="/project/:id/workspace/studio" element={<WritingStudio />} />
             <Route path="/project/:id/studio" element={<WritingStudio />} />
+            <Route path="/project/:id/workspace/search" element={<GlobalSearchPage />} />
+            <Route path="/project/:id/search" element={<GlobalSearchPage />} />
+            <Route path="/project/:id/workspace/consistency" element={<ConsistencyCheckerPage />} />
+            <Route path="/project/:id/consistency" element={<ConsistencyCheckerPage />} />
             <Route path="/project/:id/workspace/settings" element={<Settings />} />
             <Route path="/project/:id/settings" element={<Settings />} />
             <Route path="/project/:id/profile" element={<Settings />} />
