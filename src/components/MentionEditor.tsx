@@ -12,7 +12,7 @@ import { MOCK_CHARACTERS } from '@/mockData';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, 
   Heading1, Heading2, Heading3, List, ListOrdered, Quote, 
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, MessageSquare, Scissors 
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, MessageSquare, Scissors 
 } from 'lucide-react';
 
 // Suggestion list component
@@ -220,12 +220,8 @@ export default function MentionEditor({ initialValue, onEntityClick, onChange, c
 
   // Sync when active scene changes (initialValue changes)
   useEffect(() => {
-    if (editor && initialValue !== editor.getHTML()) {
-      setTimeout(() => {
-        if (initialValue !== editor.getHTML()) {
-          editor.commands.setContent(initialValue);
-        }
-      }, 0);
+    if (editor && !editor.isDestroyed && initialValue !== editor.getHTML()) {
+      editor.commands.setContent(initialValue);
     }
   }, [initialValue, editor]);
 

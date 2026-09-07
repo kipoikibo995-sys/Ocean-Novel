@@ -29,8 +29,11 @@ import {
   Scissors,
   Link2
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
+import { storage } from "@/lib/storage";
+import ImageDropzoneCard from "@/components/ImageDropzoneCard";
+import ImagePickerModal from "@/components/ImagePickerModal";
 
 // Define exact mock characters based on the provided image
 const CATALOG_CHARACTERS = [
@@ -122,26 +125,182 @@ export const RELATION_OPTIONS = [
   { label: "RIVAL", color: "#9c27b0", icon: Swords },
 ];
 
+export function buildDefaultProjectGraph(projectId: string | undefined, chars: any[]) {
+  // If stored in project data, validate and return
+  if (projectId) {
+    const data = storage.getProjectData(projectId);
+    if (data?.characterGraphs && data.characterGraphs.length > 0) {
+      const firstGraph = data.characterGraphs[0];
+      const hasMatchingNode = firstGraph.nodes.some((n: any) => chars.some((c: any) => c.id === n.id));
+      if (hasMatchingNode) {
+        return data.characterGraphs;
+      }
+    }
+  }
+
+  // Pre-configured relationships for the 5 fantasy books
+  if (projectId === "book-golden-oasis") {
+    return [
+      {
+        id: "1",
+        name: "Main Plot",
+        nodes: [
+          { id: "char-amira", x: 420, y: 260 },
+          { id: "char-tariq", x: 680, y: 200 },
+          { id: "char-zahir", x: 230, y: 240 },
+          { id: "char-maheera", x: 480, y: 470 },
+        ],
+        edges: [
+          { id: "e1", source: "char-amira", target: "char-tariq", label: "ALLY", color: "#78c3b4" },
+          { id: "e2", source: "char-amira", target: "char-zahir", label: "FAMILY", color: "#6184d8" },
+          { id: "e3", source: "char-amira", target: "char-maheera", label: "ENEMY", color: "#e15b64" },
+          { id: "e4", source: "char-tariq", target: "char-maheera", label: "RIVAL", color: "#9c27b0" },
+        ],
+      },
+    ];
+  }
+
+  if (projectId === "book-sunken-crown") {
+    return [
+      {
+        id: "1",
+        name: "Main Plot",
+        nodes: [
+          { id: "char-valen", x: 420, y: 260 },
+          { id: "char-lyra", x: 680, y: 200 },
+          { id: "char-garrick", x: 230, y: 240 },
+          { id: "char-morath", x: 480, y: 470 },
+        ],
+        edges: [
+          { id: "e1", source: "char-valen", target: "char-lyra", label: "ALLY", color: "#78c3b4" },
+          { id: "e2", source: "char-valen", target: "char-garrick", label: "FRIEND", color: "#fca311" },
+          { id: "e3", source: "char-valen", target: "char-morath", label: "ENEMY", color: "#e15b64" },
+          { id: "e4", source: "char-lyra", target: "char-morath", label: "RIVAL", color: "#9c27b0" },
+        ],
+      },
+    ];
+  }
+
+  if (projectId === "book-astral-spire") {
+    return [
+      {
+        id: "1",
+        name: "Main Plot",
+        nodes: [
+          { id: "char-alistair", x: 420, y: 260 },
+          { id: "char-sylvia", x: 680, y: 200 },
+          { id: "char-kaelen", x: 230, y: 240 },
+          { id: "char-inquisitor", x: 480, y: 470 },
+        ],
+        edges: [
+          { id: "e1", source: "char-alistair", target: "char-sylvia", label: "FRIEND", color: "#fca311" },
+          { id: "e2", source: "char-alistair", target: "char-kaelen", label: "ALLY", color: "#78c3b4" },
+          { id: "e3", source: "char-alistair", target: "char-inquisitor", label: "ENEMY", color: "#e15b64" },
+          { id: "e4", source: "char-kaelen", target: "char-inquisitor", label: "RIVAL", color: "#9c27b0" },
+        ],
+      },
+    ];
+  }
+
+  if (projectId === "book-frostgate") {
+    return [
+      {
+        id: "1",
+        name: "Main Plot",
+        nodes: [
+          { id: "char-torvin", x: 420, y: 260 },
+          { id: "char-freyja", x: 680, y: 200 },
+          { id: "char-astrid", x: 230, y: 240 },
+          { id: "char-malakor", x: 480, y: 470 },
+        ],
+        edges: [
+          { id: "e1", source: "char-torvin", target: "char-freyja", label: "ALLY", color: "#78c3b4" },
+          { id: "e2", source: "char-torvin", target: "char-astrid", label: "FAMILY", color: "#6184d8" },
+          { id: "e3", source: "char-torvin", target: "char-malakor", label: "ENEMY", color: "#e15b64" },
+          { id: "e4", source: "char-freyja", target: "char-malakor", label: "RIVAL", color: "#9c27b0" },
+        ],
+      },
+    ];
+  }
+
+  if (projectId === "book-silent-harbor" || (!projectId && chars.some((c) => c.id === "1"))) {
+    return [
+      {
+        id: "1",
+        name: "Main Plot",
+        nodes: [
+          { id: "1", x: 420, y: 280 },
+          { id: "2", x: 680, y: 220 },
+          { id: "3", x: 260, y: 440 },
+        ],
+        edges: [
+          { id: "e1", source: "1", target: "2", label: "ALLY", color: "#78c3b4" },
+          { id: "e2", source: "1", target: "3", label: "FAMILY", color: "#6184d8" },
+        ],
+      },
+    ];
+  }
+
+  // Dynamic layout for any custom characters
+  if (chars && chars.length > 0) {
+    const layoutPositions = [
+      { x: 420, y: 260 },
+      { x: 680, y: 200 },
+      { x: 230, y: 240 },
+      { x: 480, y: 470 },
+      { x: 720, y: 450 },
+      { x: 200, y: 450 },
+    ];
+    const dynNodes = chars.map((c, i) => {
+      const pos = layoutPositions[i % layoutPositions.length];
+      return { id: c.id, x: pos.x, y: pos.y };
+    });
+    const dynEdges: any[] = [];
+    if (chars.length >= 2) {
+      dynEdges.push({ id: "e1", source: chars[0].id, target: chars[1].id, label: "ALLY", color: "#78c3b4" });
+    }
+    if (chars.length >= 3) {
+      dynEdges.push({ id: "e2", source: chars[0].id, target: chars[2].id, label: "FAMILY", color: "#6184d8" });
+    }
+    if (chars.length >= 4) {
+      dynEdges.push({ id: "e3", source: chars[0].id, target: chars[3].id, label: "ENEMY", color: "#e15b64" });
+    }
+    return [{ id: "1", name: "Main Plot", nodes: dynNodes, edges: dynEdges }];
+  }
+
+  return [{ id: "1", name: "Main Plot", nodes: MOCK_NODES, edges: MOCK_EDGES }];
+}
+
 export default function Characters() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { project } = useProject();
 
   const [viewMode, setViewMode] = useState<"registry" | "connections" | "editor">(
     "connections",
   );
   const [previousViewMode, setPreviousViewMode] = useState<"registry" | "connections">("connections");
-  const [characters, setCharacters] = useState<Array<{
-    id: string;
-    name: string;
-    role: string;
-    status?: string;
-    age: string;
-    aliases: string[];
-    backstory: string;
-    traits: string[];
-    imageUrl: string;
-    group?: string;
-  }>>(CATALOG_CHARACTERS);
+  const [characters, setCharacters] = useState<Array<any>>(() => {
+    if (id) {
+      const data = storage.getProjectData(id);
+      if (data?.characters && data.characters.length > 0) {
+        return data.characters;
+      }
+    }
+    return CATALOG_CHARACTERS;
+  });
+
+  useEffect(() => {
+    if (id) {
+      const data = storage.getProjectData(id);
+      if (data?.characters && data.characters.length > 0) {
+        setCharacters(data.characters);
+        const projectGraphs = buildDefaultProjectGraph(id, data.characters);
+        setGraphs(projectGraphs);
+        setActiveGraphId(projectGraphs[0]?.id || "1");
+      }
+    }
+  }, [id]);
 
   // Editor State
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
@@ -162,6 +321,7 @@ export default function Characters() {
   const [showClearGraphConfirm, setShowClearGraphConfirm] = useState(false);
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
   const [copiedEditor, setCopiedEditor] = useState(false);
+  const [quickImageChar, setQuickImageChar] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -327,12 +487,26 @@ ${formData.backstory}
     setNodes((prev) => [...prev, { id: duplicated.id, x: 200, y: 200 }]);
   };
 
-  const [graphs, setGraphs] = useState([
-    { id: "1", name: "Main Plot", nodes: MOCK_NODES, edges: MOCK_EDGES }
-  ]);
+  const [graphs, setGraphs] = useState(() => {
+    const initialChars = (() => {
+      if (id) {
+        const data = storage.getProjectData(id);
+        if (data?.characters && data.characters.length > 0) return data.characters;
+      }
+      return CATALOG_CHARACTERS;
+    })();
+    return buildDefaultProjectGraph(id, initialChars);
+  });
   const [activeGraphId, setActiveGraphId] = useState("1");
   const [showNewGraphModal, setShowNewGraphModal] = useState(false);
   const [newGraphName, setNewGraphName] = useState("");
+
+  // Persist graphs to storage whenever graphs changes
+  useEffect(() => {
+    if (id && graphs.length > 0) {
+      storage.saveProjectData(id, { characterGraphs: graphs });
+    }
+  }, [id, graphs]);
 
   const activeGraph = graphs.find(g => g.id === activeGraphId) || graphs[0];
 
@@ -758,21 +932,13 @@ ${formData.backstory}
           <div className="w-full lg:w-[320px] shrink-0 space-y-12">
             
             {/* Character Image */}
-            <div className="space-y-4">
-              <label className="text-[9px] font-bold text-stone-400 tracking-[0.2em] uppercase block text-center lg:text-left">Character Image</label>
-              <div className="bg-white p-3 pb-8 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-stone-100 rotate-[-1deg] hover:rotate-0 transition-transform origin-bottom-left group cursor-pointer relative max-w-[280px] mx-auto lg:mx-0">
-                <img
-                  src={formData.imageUrl}
-                  alt="Character"
-                  className="w-full aspect-[3/4] object-cover group-hover:brightness-95 transition-all"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center pointer-events-none">
-                   <div className="opacity-0 group-hover:opacity-100 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-sm backdrop-blur-sm transition-all scale-95 group-hover:scale-100 text-[#a66850]">
-                     <ImageIcon className="w-5 h-5 stroke-[1.5]" />
-                   </div>
-                </div>
-              </div>
-            </div>
+            <ImageDropzoneCard
+              type="character"
+              aspectRatio="portrait"
+              imageUrl={formData.imageUrl}
+              onImageChange={(newUrl) => setFormData(prev => ({ ...prev, imageUrl: newUrl }))}
+              label="Character Portrait"
+            />
 
             {/* Table of Contents */}
             <div className="space-y-4 hidden lg:block sticky top-24">
@@ -991,8 +1157,8 @@ ${formData.backstory}
                   if (!acc[group]) acc[group] = [];
                   acc[group].push(char);
                   return acc;
-                }, {} as Record<string, typeof characters>)
-              ).map(([groupName, groupChars]) => (
+                }, {} as Record<string, any[]>)
+              ).map(([groupName, groupChars]: [string, any[]]) => (
                 <div key={groupName} className="bg-[#fcfaf5] rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex flex-col relative h-[420px] cursor-pointer group mt-4 border border-[#e5e0d5]">
                   {/* Fake Folder Tab */}
                   <div
@@ -1073,8 +1239,12 @@ ${formData.backstory}
                   {/* Header (Portrait + Info) */}
                   <div className="flex gap-5 mb-5 relative z-0">
                     {/* Polaroid-style Portrait */}
-                    <div className="w-[85px] shrink-0">
-                      <div className="bg-white p-1.5 pb-4 shadow-sm rounded-sm border border-stone-200 rotate-[-3deg] group-hover:rotate-0 transition-transform origin-bottom-left">
+                    <div 
+                      className="w-[85px] shrink-0 cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setQuickImageChar(char); }}
+                      title="Click to change portrait (Upload / URL / Library)"
+                    >
+                      <div className="bg-white p-1.5 pb-4 shadow-sm rounded-sm border border-stone-200 rotate-[-3deg] group-hover:rotate-0 transition-transform origin-bottom-left relative">
                         <img
                           src={char.imageUrl}
                           alt={char.name}
@@ -1148,7 +1318,7 @@ ${formData.backstory}
           <div className="flex-1 flex flex-col h-full bg-black/20 overflow-hidden">
             <div className="flex-1 flex overflow-hidden">
               {/* Left Sidebar (CAST) */}
-              <div className="w-64 border-r border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md flex flex-col z-20">
+              <div className="w-72 border-r border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md flex flex-col z-20">
                 <div className="p-4 text-[10px] font-bold text-[#b8785e] tracking-widest uppercase flex items-center gap-2 border-b border-[#5d3f32]">
                   <Users className="w-3.5 h-3.5" /> CAST
                 </div>
@@ -1162,21 +1332,22 @@ ${formData.backstory}
                         e.dataTransfer.effectAllowed = "copy";
                       }}
                       className="flex items-center gap-3 p-2.5 bg-[#3d261d]/50 hover:bg-[#5d3f32]/60 rounded-sm cursor-grab border border-[#5d3f32]/50 transition-colors group shadow-inner"
+                      title={char.name}
                     >
                       <img
                         src={char.imageUrl}
-                        className="w-9 h-9 rounded-full object-cover border border-[#8c503c]/40 group-hover:border-[#d49a89] grayscale-[20%] sepia-[10%] group-hover:grayscale-0 group-hover:sepia-0 transition-all"
+                        className="w-9 h-9 shrink-0 rounded-full object-cover border border-[#8c503c]/40 group-hover:border-[#d49a89] grayscale-[20%] sepia-[10%] group-hover:grayscale-0 group-hover:sepia-0 transition-all"
                       />
-                      <div className="min-w-0">
-                        <div className="text-[11px] font-bold text-[#fcfaf5] uppercase truncate tracking-wider">
+                      <div className="min-w-0 flex-1 pr-1">
+                        <div className="text-[11px] font-bold text-[#fcfaf5] uppercase line-clamp-2 leading-tight tracking-wider group-hover:text-white transition-colors">
                           {char.name}
                         </div>
-                        <div className="text-[8px] font-bold text-[#d49a89]/60 uppercase truncate mt-0.5">
+                        <div className="text-[8.5px] font-bold text-[#d49a89]/70 uppercase truncate mt-0.5">
                           {char.role}
                         </div>
                       </div>
                       <button 
-                        className="ml-auto opacity-0 group-hover:opacity-100 text-[#d49a89]/50 hover:text-[#fcfaf5] transition-all"
+                        className="ml-auto shrink-0 opacity-0 group-hover:opacity-100 text-[#d49a89]/50 hover:text-[#fcfaf5] transition-all"
                         onClick={() => {
                           const existingNode = nodes.find(n => n.id === char.id);
                           if (!existingNode) {
@@ -1258,6 +1429,11 @@ ${formData.backstory}
                       );
                       if (!sourceNode || !targetNode) return null;
 
+                      // Safeguard: Ensure both source and target characters exist in the current project
+                      const sourceChar = characters.find((c) => c.id === edge.source);
+                      const targetChar = characters.find((c) => c.id === edge.target);
+                      if (!sourceChar || !targetChar) return null;
+
                       // Coordinates now map exactly to the avatar's center point
                       const sx = sourceNode.x;
                       const sy = sourceNode.y + 20;
@@ -1272,7 +1448,8 @@ ${formData.backstory}
                       const mx = (sx + tx) / 2;
                       const my = (sy + ty) / 2 + (sag * 0.5);
 
-                      const EdgeIcon = edge.icon;
+                      const relationOpt = RELATION_OPTIONS.find((r) => r.label === edge.label);
+                      const EdgeIcon = edge.icon || relationOpt?.icon || Swords;
 
                       return (
                         <g key={edge.id}>
@@ -1393,11 +1570,11 @@ ${formData.backstory}
                     return (
                       <div
                         key={node.id}
-                        className="absolute flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:z-10 group"
+                        className="absolute flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:z-20 group"
                         style={{
                           left: node.x,
                           top: node.y,
-                          transform: `translate(-50%, -36px) rotate(${rotation}deg)`,
+                          transform: `translate(-50%, -44px) rotate(${rotation}deg)`,
                           touchAction: "none",
                         }}
                         onPointerDown={(e) => handleNodePointerDown(e, node.id)}
@@ -1405,17 +1582,33 @@ ${formData.backstory}
                         onPointerUp={handlePointerUp}
                         onPointerCancel={handlePointerUp}
                       >
-                        <div className="w-[85px] h-[105px] shrink-0 bg-[#fcfaf5] p-1.5 pb-5 rounded-sm border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.3)] relative">
+                        {/* Hover Full Name Tooltip */}
+                        <div className="absolute -top-11 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 z-40 transform translate-y-1 group-hover:translate-y-0 shadow-lg">
+                          <div className="bg-[#241610] text-[#fcfaf5] text-[11px] font-bold tracking-wide uppercase px-2.5 py-1 rounded-xs border border-[#8c503c]/70 whitespace-nowrap flex items-center gap-1.5 shadow-md">
+                            <span>{char.name}</span>
+                            {char.role && (
+                              <span className="text-[9px] text-[#d49a89] font-normal tracking-normal capitalize">
+                                • {char.role}
+                              </span>
+                            )}
+                          </div>
+                          <div className="w-1.5 h-1.5 bg-[#241610] border-r border-b border-[#8c503c]/70 rotate-45 mx-auto -mt-1" />
+                        </div>
+
+                        <div 
+                          className="w-[114px] h-[142px] shrink-0 bg-[#fcfaf5] p-1.5 pb-8 rounded-sm border border-[#e5e0d5] shadow-[2px_4px_14px_rgba(0,0,0,0.35)] hover:shadow-[3px_6px_18px_rgba(0,0,0,0.45)] transition-shadow relative"
+                          title={char.name}
+                        >
                           {/* Pin */}
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#8c503c] shadow-sm z-10 opacity-90" />
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#d49a89] z-20" />
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#8c503c] shadow-sm z-10 opacity-95" />
+                          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#d49a89] z-20" />
                           
                           <img
                             src={char.imageUrl}
-                            className="w-full h-full object-cover border border-stone-200 grayscale-[20%] sepia-[10%] pointer-events-none"
+                            className="w-full h-full object-cover border border-stone-200 grayscale-[15%] sepia-[10%] pointer-events-none rounded-[1px]"
                           />
-                          <div className="absolute bottom-1 left-0 right-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-[9px] font-bold text-[#4a3225] uppercase tracking-wider whitespace-nowrap">
+                          <div className="absolute bottom-1 left-1 right-1 h-7 flex items-center justify-center pointer-events-none text-center px-0.5">
+                            <span className="text-[9.5px] font-bold text-[#4a3225] uppercase tracking-wider line-clamp-2 leading-[1.15] break-words">
                               {char.name}
                             </span>
                           </div>
@@ -1424,6 +1617,7 @@ ${formData.backstory}
                           <div 
                             className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-[#fcfaf5] border border-[#d49a89] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair hover:bg-[#8c503c] hover:text-white shadow-sm z-30"
                             onPointerDown={(e) => handleStartDrawEdge(e, node.id)}
+                            title="Connect relationship wire"
                           >
                             <Link2 className="w-3 h-3" />
                           </div>
@@ -1697,6 +1891,23 @@ ${formData.backstory}
           </div>
         </div>
       )}
+      {/* Quick Image Picker Modal for Character */}
+      <ImagePickerModal
+        isOpen={!!quickImageChar}
+        onClose={() => setQuickImageChar(null)}
+        type="character"
+        title={`Change Portrait for ${quickImageChar?.name || "Character"}`}
+        currentImage={quickImageChar?.imageUrl || ""}
+        onSelectImage={(newUrl) => {
+          if (quickImageChar) {
+            setCharacters(prev => prev.map(c => c.id === quickImageChar.id ? { ...c, imageUrl: newUrl } : c));
+            if (id) {
+              const updated = characters.map(c => c.id === quickImageChar.id ? { ...c, imageUrl: newUrl } : c);
+              storage.saveProjectData(id, { characters: updated });
+            }
+          }
+        }}
+      />
     </div>
   );
 }

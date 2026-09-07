@@ -1,12 +1,46 @@
 import React, { ReactNode, useState, useEffect, useRef } from "react";
-import { Maximize2, Plus, MoreVertical, FileText, Settings, Sparkles, Send, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight } from "lucide-react";
+import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MOCK_CHARACTERS, MOCK_LOCATIONS, MOCK_MANUSCRIPT, ManuscriptItem } from "@/mockData";
 import MentionEditor from "@/components/MentionEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { storage, ProjectData } from "@/lib/storage";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+
+// Helper functions for manuscript tree
+const findFirstSceneId = (items: ManuscriptItem[]): string => {
+  for (const item of items) {
+    if (item.type === 'scene') return item.id;
+    if (item.children) {
+      const found = findFirstSceneId(item.children);
+      if (found) return found;
+    }
+  }
+  return 'scene-1';
+};
+
+const findNodeById = (items: ManuscriptItem[], id: string): ManuscriptItem | null => {
+  for (const item of items) {
+    if (item.id === id) return item;
+    if (item.children) {
+      const found = findNodeById(item.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const findSceneContent = (items: ManuscriptItem[], sceneId: string): string => {
+  for (const item of items) {
+    if (item.id === sceneId) return item.content || '';
+    if (item.children) {
+      const found = findSceneContent(item.children, sceneId);
+      if (found !== '') return found;
+    }
+  }
+  return '';
+};
 
 export default function WritingStudio() {
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -16,37 +50,133 @@ export default function WritingStudio() {
   const [isManuscriptOpen, setIsManuscriptOpen] = useState(true);
   
   const { id: projectId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sceneParam = searchParams.get('scene');
 
-  // Manuscript state
-  const [manuscript, setManuscript] = useState<ManuscriptItem[]>([]);
-  
-  // Load data on mount
+  // Entities & Notes state with synchronous lazy initialization
+  const [characters, setCharacters] = useState<any[]>(() => {
+    if (projectId) {
+      const data = storage.getProjectData(projectId);
+      if (data?.characters && data.characters.length > 0) return data.characters;
+    }
+    return MOCK_CHARACTERS;
+  });
+
+  const [locations, setLocations] = useState<any[]>(() => {
+    if (projectId) {
+      const data = storage.getProjectData(projectId);
+      if (data?.locations && data.locations.length > 0) return data.locations;
+    }
+    return MOCK_LOCATIONS;
+  });
+
+  const [sceneNotes, setSceneNotes] = useState<Record<string, string>>(() => {
+    if (projectId) {
+      const data = storage.getProjectData(projectId);
+      if (data?.notes) return data.notes;
+    }
+    return {};
+  });
+
+  const [scratchpad, setScratchpad] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedEntityId, setExpandedEntityId] = useState<string | null>(null);
+  const [copiedEntityName, setCopiedEntityName] = useState<string | null>(null);
+  const noteSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Manuscript state with synchronous lazy initialization
+  const [manuscript, setManuscript] = useState<ManuscriptItem[]>(() => {
+    if (projectId) {
+      const data = storage.getProjectData(projectId);
+      if (data?.manuscript && data.manuscript.length > 0) {
+        return data.manuscript;
+      }
+    }
+    return MOCK_MANUSCRIPT;
+  });
+
+  // Active scene and content initialized with support for sceneParam or lastActiveSceneId
+  const [activeDocId, setActiveDocId] = useState<string>(() => {
+    const data = projectId ? storage.getProjectData(projectId) : null;
+    const initManuscript = data?.manuscript && data.manuscript.length > 0 
+      ? data.manuscript 
+      : MOCK_MANUSCRIPT;
+    
+    if (sceneParam && findNodeById(initManuscript, sceneParam)) {
+      return sceneParam;
+    }
+    if (data?.lastActiveSceneId && findNodeById(initManuscript, data.lastActiveSceneId)) {
+      return data.lastActiveSceneId;
+    }
+    return findFirstSceneId(initManuscript);
+  });
+
+  const [activeContent, setActiveContent] = useState<string>(() => {
+    const data = projectId ? storage.getProjectData(projectId) : null;
+    const initManuscript = data?.manuscript && data.manuscript.length > 0 
+      ? data.manuscript 
+      : MOCK_MANUSCRIPT;
+    
+    let targetId = findFirstSceneId(initManuscript);
+    if (sceneParam && findNodeById(initManuscript, sceneParam)) {
+      targetId = sceneParam;
+    } else if (data?.lastActiveSceneId && findNodeById(initManuscript, data.lastActiveSceneId)) {
+      targetId = data.lastActiveSceneId;
+    }
+    return findSceneContent(initManuscript, targetId);
+  });
+
+  // Keep in sync if projectId changes in route
   useEffect(() => {
     if (projectId) {
       const data = storage.getProjectData(projectId);
-      if (data && data.manuscript && data.manuscript.length > 0) {
-        setManuscript(data.manuscript);
+      if (data) {
+        const loadedManuscript = data.manuscript && data.manuscript.length > 0 ? data.manuscript : MOCK_MANUSCRIPT;
+        setManuscript(loadedManuscript);
         
-        // Find first scene to activate
-        const findFirstScene = (items: ManuscriptItem[]): string | null => {
-           for (const item of items) {
-             if (item.type === 'scene') return item.id;
-             if (item.children) {
-                const found = findFirstScene(item.children);
-                if (found) return found;
-             }
-           }
-           return null;
-        };
-        const first = findFirstScene(data.manuscript);
-        if (first) setActiveDocId(first);
-      } else {
-        setManuscript(MOCK_MANUSCRIPT);
+        let target = activeDocId;
+        if (sceneParam && findNodeById(loadedManuscript, sceneParam)) {
+          target = sceneParam;
+        } else if (data.lastActiveSceneId && findNodeById(loadedManuscript, data.lastActiveSceneId)) {
+          target = data.lastActiveSceneId;
+        } else if (!findNodeById(loadedManuscript, target)) {
+          target = findFirstSceneId(loadedManuscript);
+        }
+
+        setActiveDocId(target);
+        setActiveContent(findSceneContent(loadedManuscript, target));
+
+        setCharacters(data.characters && data.characters.length > 0 ? data.characters : MOCK_CHARACTERS);
+        setLocations(data.locations && data.locations.length > 0 ? data.locations : MOCK_LOCATIONS);
+        setSceneNotes(data.notes || {});
       }
     }
   }, [projectId]);
-  const [activeDocId, setActiveDocId] = useState<string>('scene-1');
-  const [activeContent, setActiveContent] = useState<string>('');
+
+  // Persist last active scene for Resume Drafting in Dashboard
+  useEffect(() => {
+    if (projectId && activeDocId && manuscript.length > 0) {
+      const activeNode = findNodeById(manuscript, activeDocId);
+      if (activeNode && activeNode.type === 'scene') {
+        storage.saveProjectData(projectId, {
+          lastActiveSceneId: activeDocId,
+          lastActiveSceneTitle: activeNode.title,
+        });
+      }
+    }
+  }, [projectId, activeDocId, manuscript]);
+
+  // React to URL sceneParam changes
+  useEffect(() => {
+    if (sceneParam && sceneParam !== activeDocId && manuscript.length > 0) {
+      const node = findNodeById(manuscript, sceneParam);
+      if (node) {
+        setActiveDocId(sceneParam);
+        setActiveContent(findSceneContent(manuscript, sceneParam));
+      }
+    }
+  }, [sceneParam, manuscript]);
   
 
   const [isSaving, setIsSaving] = useState(false);
@@ -92,20 +222,9 @@ export default function WritingStudio() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Load content ONLY when switching active docs to avoid overwriting ongoing edits
-    const findContent = (items: ManuscriptItem[]): string | null => {
-      for (const item of items) {
-        if (item.id === activeDocId) return item.content || '';
-        if (item.children) {
-          const found = findContent(item.children);
-          if (found !== null) return found;
-        }
-      }
-      return null;
-    };
-    
-    const content = findContent(manuscript);
-    setActiveContent(content || '');
+    // Load content when switching active scene
+    const content = findSceneContent(manuscript, activeDocId);
+    setActiveContent(content);
   }, [activeDocId]);
 
   const handleEntityClick = (entityId: string, entityType: 'character' | 'location') => {
@@ -118,6 +237,37 @@ export default function WritingStudio() {
       const el = document.getElementById(`entity-${entityId}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
+  };
+
+  const handleNoteChange = (newNoteText: string) => {
+    setSceneNotes(prev => {
+      const updated = { ...prev, [activeDocId]: newNoteText };
+      if (noteSaveTimeoutRef.current) clearTimeout(noteSaveTimeoutRef.current);
+      noteSaveTimeoutRef.current = setTimeout(() => {
+        if (projectId) {
+          storage.saveProjectData(projectId, { notes: updated });
+        }
+      }, 600);
+      return updated;
+    });
+  };
+
+  const getEntityMentionCount = (name: string) => {
+    if (!activeContent || !name) return 0;
+    try {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`@${escaped}|data-label="${escaped}"|\\b${escaped}\\b`, 'gi');
+      const matches = activeContent.match(regex);
+      return matches ? matches.length : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const handleCopyEntityTag = (name: string) => {
+    navigator.clipboard.writeText(`@${name}`);
+    setCopiedEntityName(name);
+    setTimeout(() => setCopiedEntityName(null), 1800);
   };
 
   const handleContentChange = (newHtml: string) => {
@@ -575,11 +725,11 @@ export default function WritingStudio() {
             </div>
 
             {/* Toggle Context Panel */}
-            {!isContextOpen && !isFocusMode && (
+            {!isFocusMode && (
               <button 
-                onClick={() => setIsContextOpen(true)}
-                className="p-1.5 text-stone-500 hover:text-stone-800 hover:bg-[#E5E0D5] rounded-sm transition-colors ml-1"
-                title="Open Sidebar"
+                onClick={() => setIsContextOpen(!isContextOpen)}
+                className={`p-1.5 rounded-sm transition-colors ml-1 ${isContextOpen ? 'bg-[#E5E0D5] text-[#4A3225]' : 'text-stone-500 hover:text-stone-800 hover:bg-[#E5E0D5]'}`}
+                title={isContextOpen ? "Hide Sidebar (Characters, Locations, Notes)" : "Show Sidebar (Characters, Locations, Notes)"}
               >
                 <PanelRight className="w-4 h-4" />
               </button>
@@ -646,6 +796,458 @@ export default function WritingStudio() {
           </div>
         </div>
       </div>
+
+      {/* Right Panel: Context Panel (Characters, Locations, Notes) */}
+      {isContextOpen && !isFocusMode && (
+        <div className="w-80 bg-[#FCFAF5] border-l border-[#E5E0D5] flex flex-col shrink-0 h-full relative z-20 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.05)] transition-all">
+          {/* Header with Navigation Tabs and Close */}
+          <div className="p-2.5 border-b border-[#E5E0D5] bg-[#FCFAF5] shrink-0 flex items-center justify-between gap-1">
+            <div className="flex items-center gap-1 bg-[#EDE8DC] p-0.5 rounded-sm flex-1">
+              <button
+                onClick={() => { setActiveTab('chars'); setSearchQuery(''); }}
+                className={`flex-1 py-1 px-1.5 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all flex items-center justify-center gap-1 ${
+                  activeTab === 'chars'
+                    ? 'bg-[#8C503C] text-white shadow-sm'
+                    : 'text-[#5D3F32] hover:text-[#8C503C]'
+                }`}
+              >
+                <Users className="w-3 h-3" />
+                <span>Characters</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab('locs'); setSearchQuery(''); }}
+                className={`flex-1 py-1 px-1.5 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all flex items-center justify-center gap-1 ${
+                  activeTab === 'locs'
+                    ? 'bg-[#8C503C] text-white shadow-sm'
+                    : 'text-[#5D3F32] hover:text-[#8C503C]'
+                }`}
+              >
+                <MapPin className="w-3 h-3" />
+                <span>Locations</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab('notes'); setSearchQuery(''); }}
+                className={`flex-1 py-1 px-1.5 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all flex items-center justify-center gap-1 ${
+                  activeTab === 'notes'
+                    ? 'bg-[#8C503C] text-white shadow-sm'
+                    : 'text-[#5D3F32] hover:text-[#8C503C]'
+                }`}
+              >
+                <StickyNote className="w-3 h-3" />
+                <span>Notes</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsContextOpen(false)}
+              className="text-stone-400 hover:text-stone-700 hover:bg-[#E5E0D5] p-1 rounded-sm transition-colors shrink-0"
+              title="Close Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Search Bar for Characters and Locations */}
+          {(activeTab === 'chars' || activeTab === 'locs') && (
+            <div className="p-2.5 border-b border-[#E5E0D5] bg-[#F9F6ED] shrink-0">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={activeTab === 'chars' ? "Filter characters..." : "Filter locations..."}
+                  className="w-full bg-white border border-[#E5E0D5] rounded-sm pl-8 pr-7 py-1 text-xs text-[#4A3225] font-serif placeholder:text-stone-400 focus:outline-none focus:border-[#8C503C]"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT 1: CHARACTERS */}
+          {activeTab === 'chars' && (
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
+                {characters
+                  .filter((c) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      (c.name && c.name.toLowerCase().includes(query)) ||
+                      (c.role && c.role.toLowerCase().includes(query)) ||
+                      (c.description && c.description.toLowerCase().includes(query)) ||
+                      (c.traits && Array.isArray(c.traits) && c.traits.some((t: string) => t.toLowerCase().includes(query)))
+                    );
+                  })
+                  .map((char) => {
+                    const isExpanded = expandedEntityId === `char-${char.id}` || selectedEntity?.id === String(char.id);
+                    const mentionCount = getEntityMentionCount(char.name);
+
+                    return (
+                      <div
+                        key={char.id}
+                        id={`entity-${char.id}`}
+                        className={`border rounded-sm transition-all overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] ${
+                          isExpanded ? 'border-[#8C503C] ring-1 ring-[#8C503C]/20' : 'border-[#E5E0D5] hover:border-[#D49A89]'
+                        }`}
+                      >
+                        {/* Header Row */}
+                        <div
+                          onClick={() => setExpandedEntityId(isExpanded ? null : `char-${char.id}`)}
+                          className="p-2.5 flex items-start justify-between gap-2 cursor-pointer select-none hover:bg-[#F9F6ED]/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {char.imageUrl ? (
+                              <img
+                                src={char.imageUrl}
+                                alt={char.name}
+                                className="w-8 h-8 rounded-sm object-cover shrink-0 border border-[#E5E0D5]"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-sm bg-[#8C503C]/10 text-[#8C503C] border border-[#8C503C]/20 flex items-center justify-center font-serif font-bold text-xs shrink-0">
+                                {char.name ? char.name.charAt(0).toUpperCase() : '?'}
+                              </div>
+                            )}
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-serif text-xs font-bold text-[#4A3225] truncate">
+                                  {char.name}
+                                </h4>
+                                {mentionCount > 0 && (
+                                  <span className="bg-[#8C503C]/10 text-[#8C503C] text-[8px] font-bold px-1 rounded-sm font-mono shrink-0">
+                                    {mentionCount} {mentionCount === 1 ? 'mention' : 'mentions'}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-stone-500 font-sans truncate">
+                                {char.role || 'Character'} {char.age ? `• ${char.age} yrs` : ''}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0 text-stone-400">
+                            {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+
+                        {/* Expandable Details */}
+                        {isExpanded && (
+                          <div className="px-2.5 pb-2.5 pt-1 border-t border-[#F4F1EA] bg-[#FCFAF5] space-y-2 text-xs">
+                            {char.motivation && (
+                              <div>
+                                <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400 block mb-0.5">
+                                  Motivation:
+                                </span>
+                                <p className="font-serif text-[#4A3225] leading-relaxed text-[11px]">
+                                  {char.motivation}
+                                </p>
+                              </div>
+                            )}
+
+                            {(char.description || char.backstory) && (
+                              <div>
+                                <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400 block mb-0.5">
+                                  Profile / Backstory:
+                                </span>
+                                <p className="font-serif text-stone-600 leading-relaxed text-[11px] line-clamp-4">
+                                  {char.description || char.backstory}
+                                </p>
+                              </div>
+                            )}
+
+                            {char.traits && Array.isArray(char.traits) && char.traits.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {char.traits.map((trait: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="bg-[#EDE8DC] text-[#5D3F32] text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                                  >
+                                    {trait}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="pt-1.5 flex items-center justify-between border-t border-[#E5E0D5]/60">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyEntityTag(char.name);
+                                }}
+                                className="text-[10px] font-bold uppercase tracking-wider text-[#8C503C] hover:text-[#B8785E] flex items-center gap-1 transition-colors"
+                              >
+                                {copiedEntityName === char.name ? (
+                                  <><Check className="w-3 h-3 text-emerald-600" /> Copied @{char.name}</>
+                                ) : (
+                                  <><Copy className="w-3 h-3" /> Copy @{char.name}</>
+                                )}
+                              </button>
+
+                              {projectId && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/project/${projectId}/characters`);
+                                  }}
+                                  className="text-[9px] text-stone-400 hover:text-stone-700 flex items-center gap-0.5"
+                                >
+                                  Edit <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                {characters.length === 0 && (
+                  <div className="text-center p-6 text-stone-400 font-serif">
+                    <Users className="w-8 h-8 text-stone-300 mx-auto mb-2 stroke-[1.5]" />
+                    <p className="text-xs font-bold text-stone-600">No characters recorded</p>
+                    <p className="text-[10px] text-stone-400 mt-1">Add characters in the Story Bible to reference them here.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Link to Story Bible */}
+              {projectId && (
+                <div className="p-2 border-t border-[#E5E0D5] bg-[#F9F6ED] shrink-0 text-center">
+                  <button
+                    onClick={() => navigate(`/project/${projectId}/characters`)}
+                    className="text-[10px] font-bold tracking-widest uppercase text-[#8C503C] hover:text-[#4A3225] flex items-center justify-center gap-1.5 w-full py-1 transition-colors"
+                  >
+                    <span>Manage Characters in Story Bible</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT 2: LOCATIONS */}
+          {activeTab === 'locs' && (
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
+                {locations
+                  .filter((loc) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      (loc.name && loc.name.toLowerCase().includes(query)) ||
+                      (loc.type && loc.type.toLowerCase().includes(query)) ||
+                      (loc.description && loc.description.toLowerCase().includes(query))
+                    );
+                  })
+                  .map((loc) => {
+                    const isExpanded = expandedEntityId === `loc-${loc.id}` || selectedEntity?.id === String(loc.id);
+                    const mentionCount = getEntityMentionCount(loc.name);
+
+                    return (
+                      <div
+                        key={loc.id}
+                        id={`entity-${loc.id}`}
+                        className={`border rounded-sm transition-all overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] ${
+                          isExpanded ? 'border-[#8C503C] ring-1 ring-[#8C503C]/20' : 'border-[#E5E0D5] hover:border-[#D49A89]'
+                        }`}
+                      >
+                        {/* Header Row */}
+                        <div
+                          onClick={() => setExpandedEntityId(isExpanded ? null : `loc-${loc.id}`)}
+                          className="p-2.5 flex items-start justify-between gap-2 cursor-pointer select-none hover:bg-[#F9F6ED]/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {loc.imageUrl ? (
+                              <img
+                                src={loc.imageUrl}
+                                alt={loc.name}
+                                className="w-8 h-8 rounded-sm object-cover shrink-0 border border-[#E5E0D5]"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-sm bg-[#8C503C]/10 text-[#8C503C] border border-[#8C503C]/20 flex items-center justify-center font-serif font-bold text-xs shrink-0">
+                                <MapPin className="w-4 h-4" />
+                              </div>
+                            )}
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-serif text-xs font-bold text-[#4A3225] truncate">
+                                  {loc.name}
+                                </h4>
+                                {mentionCount > 0 && (
+                                  <span className="bg-[#8C503C]/10 text-[#8C503C] text-[8px] font-bold px-1 rounded-sm font-mono shrink-0">
+                                    {mentionCount} {mentionCount === 1 ? 'mention' : 'mentions'}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-stone-500 font-sans truncate">
+                                {loc.type || 'Setting'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0 text-stone-400">
+                            {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+
+                        {/* Expandable Details */}
+                        {isExpanded && (
+                          <div className="px-2.5 pb-2.5 pt-1 border-t border-[#F4F1EA] bg-[#FCFAF5] space-y-2 text-xs">
+                            {loc.imageUrl && (
+                              <div className="rounded-sm overflow-hidden border border-[#E5E0D5] my-1">
+                                <img src={loc.imageUrl} alt={loc.name} className="w-full h-24 object-cover" />
+                              </div>
+                            )}
+
+                            {loc.description && (
+                              <div>
+                                <span className="text-[9px] uppercase tracking-wider font-bold text-stone-400 block mb-0.5">
+                                  Atmosphere & Details:
+                                </span>
+                                <p className="font-serif text-stone-600 leading-relaxed text-[11px]">
+                                  {loc.description}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="pt-1.5 flex items-center justify-between border-t border-[#E5E0D5]/60">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyEntityTag(loc.name);
+                                }}
+                                className="text-[10px] font-bold uppercase tracking-wider text-[#8C503C] hover:text-[#B8785E] flex items-center gap-1 transition-colors"
+                              >
+                                {copiedEntityName === loc.name ? (
+                                  <><Check className="w-3 h-3 text-emerald-600" /> Copied @{loc.name}</>
+                                ) : (
+                                  <><Copy className="w-3 h-3" /> Copy @{loc.name}</>
+                                )}
+                              </button>
+
+                              {projectId && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/project/${projectId}/locations`);
+                                  }}
+                                  className="text-[9px] text-stone-400 hover:text-stone-700 flex items-center gap-0.5"
+                                >
+                                  Edit <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                {locations.length === 0 && (
+                  <div className="text-center p-6 text-stone-400 font-serif">
+                    <MapPin className="w-8 h-8 text-stone-300 mx-auto mb-2 stroke-[1.5]" />
+                    <p className="text-xs font-bold text-stone-600">No locations recorded</p>
+                    <p className="text-[10px] text-stone-400 mt-1">Add locations in Story Bible to reference them here.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Link to Story Bible */}
+              {projectId && (
+                <div className="p-2 border-t border-[#E5E0D5] bg-[#F9F6ED] shrink-0 text-center">
+                  <button
+                    onClick={() => navigate(`/project/${projectId}/locations`)}
+                    className="text-[10px] font-bold tracking-widest uppercase text-[#8C503C] hover:text-[#4A3225] flex items-center justify-center gap-1.5 w-full py-1 transition-colors"
+                  >
+                    <span>Manage Locations in Story Bible</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT 3: NOTES */}
+          {activeTab === 'notes' && (
+            <div className="flex-1 flex flex-col min-h-0 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+              {/* Active Scene Note Box */}
+              <div className="bg-white border border-[#E5E0D5] rounded-sm p-3 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between pb-2 border-b border-[#F4F1EA] mb-2">
+                  <div>
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-[#8C503C]">
+                      Scene Scratchpad
+                    </span>
+                    <h4 className="font-serif text-xs font-bold text-[#4A3225] truncate max-w-[180px]">
+                      {currentDoc?.title || 'Current Scene'}
+                    </h4>
+                  </div>
+                  <span className="text-[9px] text-stone-400 italic">
+                    Auto-saved
+                  </span>
+                </div>
+
+                <textarea
+                  value={sceneNotes[activeDocId] || ''}
+                  onChange={(e) => handleNoteChange(e.target.value)}
+                  placeholder="Record sensory details, motives, secrets to reveal, dialogue cues, or revisions for this specific scene..."
+                  rows={8}
+                  className="w-full bg-[#FCFAF5] border border-[#E5E0D5] rounded-sm p-2.5 text-xs text-[#332218] font-serif leading-relaxed placeholder:text-stone-400 focus:outline-none focus:border-[#8C503C] resize-none"
+                />
+              </div>
+
+              {/* Crafting Prompts / Checkpoints */}
+              <div className="bg-[#F9F6ED] border border-[#E5E0D5] rounded-sm p-3 space-y-2">
+                <span className="text-[9px] uppercase tracking-widest font-bold text-[#5D3F32] block">
+                  Scene Focus Checkpoints
+                </span>
+                <ul className="space-y-1.5 text-[11px] font-serif text-stone-600">
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-[#8C503C] font-bold">•</span>
+                    <span>What does the viewpoint character desire right now?</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-[#8C503C] font-bold">•</span>
+                    <span>What sensory detail roots the reader in this space?</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-[#8C503C] font-bold">•</span>
+                    <span>What conflict or unexpected turn shifts the tension?</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Global Project Scratchpad */}
+              <div className="bg-white border border-[#E5E0D5] rounded-sm p-3 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#F4F1EA] mb-2">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-stone-500">
+                    General Manuscript Notes
+                  </span>
+                </div>
+                <textarea
+                  value={scratchpad}
+                  onChange={(e) => setScratchpad(e.target.value)}
+                  placeholder="Universal story ideas, future plot turns, questions to research..."
+                  rows={4}
+                  className="w-full bg-[#FCFAF5] border border-[#E5E0D5] rounded-sm p-2 text-xs text-[#332218] font-serif leading-relaxed placeholder:text-stone-400 focus:outline-none focus:border-[#8C503C] resize-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

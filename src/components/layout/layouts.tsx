@@ -191,11 +191,18 @@ export function ProjectLayout() {
 
         <div className="flex flex-col gap-2 mt-auto shrink-0 pt-2">
           <button
+            onClick={() => {
+              const projId = location.pathname.split("/")[2] || "1";
+              navigate(`/project/${projId}/workspace/settings?tab=profile`);
+            }}
             className={cn(
-              "flex items-center rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors",
+              "flex items-center rounded-xl transition-colors",
               isExpanded
                 ? "w-full px-4 h-10 gap-3"
                 : "w-10 h-10 justify-center mx-auto",
+              location.pathname.includes("settings") && (location.search.includes("tab=profile") || !location.search.includes("tab="))
+                ? "bg-[#8A5252] text-white shadow-inner"
+                : "text-white/60 hover:text-white hover:bg-white/10"
             )}
             title="Profile"
           >
@@ -203,12 +210,18 @@ export function ProjectLayout() {
             {isExpanded && <span className="font-medium text-sm">Profile</span>}
           </button>
           <button
-            onClick={() => navigate(`/project/${location.pathname.split("/")[2] || "1"}/settings`)}
+            onClick={() => {
+              const projId = location.pathname.split("/")[2] || "1";
+              navigate(`/project/${projId}/workspace/settings?tab=preferences`);
+            }}
             className={cn(
-              "flex items-center rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors",
+              "flex items-center rounded-xl transition-colors",
               isExpanded
                 ? "w-full px-4 h-10 gap-3"
                 : "w-10 h-10 justify-center mx-auto",
+              location.pathname.includes("settings") && location.search.includes("tab=preferences")
+                ? "bg-[#8A5252] text-white shadow-inner"
+                : "text-white/60 hover:text-white hover:bg-white/10"
             )}
             title="Settings"
           >

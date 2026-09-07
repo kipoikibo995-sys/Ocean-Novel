@@ -13,10 +13,55 @@ export interface ProjectMeta {
   themeColor: string;
 }
 
+export interface StoryBibleData {
+  title?: string;
+  genre?: string;
+  subgenre?: string;
+  targetAudience?: string;
+  pov?: string;
+  tone?: string;
+  premise?: string;
+  mainConflict?: string;
+  storyGoal?: string;
+  themes?: string;
+  timePeriod?: string;
+  primarySetting?: string;
+  worldDescription?: string;
+  importantRules?: string;
+  narrativeStyle?: string;
+  dialogueStyle?: string;
+  pacing?: string;
+  aiInstructions?: string;
+}
+
+export interface UserProfile {
+  name: string;
+  penName: string;
+  email: string;
+  bio: string;
+  avatarUrl?: string;
+  plan: 'free' | 'pro';
+  defaultFont: string;
+  fontSize: string;
+  defaultPov: string;
+  defaultTone: string;
+  theme: 'light' | 'dark' | 'system';
+}
+
 export interface ProjectData {
   manuscript: ManuscriptItem[];
   characters: any[];
   locations: any[];
+  characterGraphs?: Array<{ id: string; name: string; nodes: any[]; edges: any[] }>;
+  locationMap?: {
+    nodes: Array<{ id: string; x: number; y: number }>;
+    edges: Array<{ id: string; source: string; target: string; label: string }>;
+    unmapped?: any[];
+  };
+  notes?: Record<string, string>; // sceneId -> note content
+  lastActiveSceneId?: string;
+  lastActiveSceneTitle?: string;
+  storyBible?: StoryBibleData;
 }
 
 export interface StudioTask {
@@ -184,5 +229,34 @@ export const storage = {
       
       storage.saveProject(project);
     }
+  },
+
+  getUserProfile: (): UserProfile => {
+    const defaultProfile: UserProfile = {
+      name: "Jane Smith",
+      penName: "J. S. Hawthorne",
+      email: "jane.smith@example.com",
+      bio: "Historical fiction & noir mystery novelist with a fondness for fog-drenched coasts and moody characters.",
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+      plan: "pro",
+      defaultFont: "Merriweather (Serif)",
+      fontSize: "Medium (18px)",
+      defaultPov: "Third Person Limited",
+      defaultTone: "Suspenseful",
+      theme: "light",
+    };
+    try {
+      const stored = localStorage.getItem('writing_studio_user_profile');
+      return stored ? { ...defaultProfile, ...JSON.parse(stored) } : defaultProfile;
+    } catch (e) {
+      return defaultProfile;
+    }
+  },
+
+  saveUserProfile: (profile: Partial<UserProfile>): UserProfile => {
+    const current = storage.getUserProfile();
+    const updated = { ...current, ...profile };
+    localStorage.setItem('writing_studio_user_profile', JSON.stringify(updated));
+    return updated;
   }
 };

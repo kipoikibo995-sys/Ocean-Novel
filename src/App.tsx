@@ -30,6 +30,7 @@ function AnimatedRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateProject />} />
+          <Route path="/settings" element={<Settings />} />
 
           <Route element={<ProjectLayout />}>
             <Route path="/project/:id" element={<ProjectOverview />} />
@@ -39,7 +40,10 @@ function AnimatedRoutes() {
             <Route path="/project/:id/workspace/locations" element={<Locations />} />
             <Route path="/project/:id/workspace/plot" element={<Plot />} />
             <Route path="/project/:id/workspace/studio" element={<WritingStudio />} />
+            <Route path="/project/:id/studio" element={<WritingStudio />} />
             <Route path="/project/:id/workspace/settings" element={<Settings />} />
+            <Route path="/project/:id/settings" element={<Settings />} />
+            <Route path="/project/:id/profile" element={<Settings />} />
           </Route>
         </Route>
 

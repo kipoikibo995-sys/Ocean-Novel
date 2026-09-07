@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Sparkles, BookOpen } from "lucide-react";
+import { ChevronLeft, BookOpen } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { storage } from "@/lib/storage";

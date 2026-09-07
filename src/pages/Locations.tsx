@@ -1,9 +1,156 @@
 import React, { useState } from "react";
-import { Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, Pen, Link2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { storage } from "@/lib/storage";
+import { Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, Pen, Link2, ZoomIn, ZoomOut, Maximize2, Image as ImageIcon } from "lucide-react";
 import { MOCK_LOCATIONS, MOCK_CHARACTERS, MOCK_MANUSCRIPT } from "@/mockData";
 import { Users, BookOpen } from "lucide-react";
+import ImageDropzoneCard from "@/components/ImageDropzoneCard";
+
+export interface LocationNode {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface LocationEdge {
+  id: string;
+  source: string;
+  target: string;
+  label: string;
+}
+
+// Helper to build project-specific location nodes and edges
+export function buildDefaultProjectLocationMap(projectId: string | undefined, locList: any[]) {
+  // Clean up old legacy global keys that leaked across books
+  try {
+    localStorage.removeItem('story_nodes');
+    localStorage.removeItem('story_edges');
+    localStorage.removeItem('story_unmapped');
+    localStorage.removeItem('story_locations');
+  } catch (e) {}
+
+  // 1. If stored in project data, validate that nodes and edges match current locations
+  if (projectId) {
+    const data = storage.getProjectData(projectId);
+    if (data?.locationMap?.nodes && data.locationMap.nodes.length > 0) {
+      const validNodes = data.locationMap.nodes.filter(n => locList.some(l => l.id === n.id));
+      if (validNodes.length > 0) {
+        const validEdges = (data.locationMap.edges || []).filter(e =>
+          validNodes.some(n => n.id === e.source) && validNodes.some(n => n.id === e.target)
+        );
+        return {
+          nodes: validNodes,
+          edges: validEdges,
+          unmapped: data.locationMap.unmapped || []
+        };
+      }
+    }
+  }
+
+  // 2. Pre-configured relationships for each fantasy book
+  if (projectId === "book-golden-oasis") {
+    return {
+      nodes: [
+        { id: "loc-golden-oasis", x: 240, y: 200 },
+        { id: "loc-volcano-desert", x: 620, y: 160 },
+        { id: "loc-harbor-desert", x: 430, y: 440 },
+      ],
+      edges: [
+        { id: "e1", source: "loc-golden-oasis", target: "loc-volcano-desert", label: "Dune Caravan (4 days)" },
+        { id: "e2", source: "loc-golden-oasis", target: "loc-harbor-desert", label: "Dry Riverbed Trail" },
+      ],
+      unmapped: []
+    };
+  }
+
+  if (projectId === "book-sunken-crown") {
+    return {
+      nodes: [
+        { id: "loc-volcano", x: 240, y: 200 },
+        { id: "loc-oasis", x: 620, y: 160 },
+        { id: "loc-peak", x: 430, y: 440 },
+      ],
+      edges: [
+        { id: "e1", source: "loc-volcano", target: "loc-oasis", label: "Trade Caravan (5 days)" },
+        { id: "e2", source: "loc-volcano", target: "loc-peak", label: "Dragon Flight Path" },
+      ],
+      unmapped: []
+    };
+  }
+
+  if (projectId === "book-astral-spire") {
+    return {
+      nodes: [
+        { id: "loc-astral", x: 440, y: 160 },
+        { id: "loc-woods", x: 220, y: 440 },
+        { id: "loc-lighthouse-astral", x: 660, y: 440 },
+      ],
+      edges: [
+        { id: "e1", source: "loc-astral", target: "loc-woods", label: "Enchanted Trail" },
+        { id: "e2", source: "loc-astral", target: "loc-lighthouse-astral", label: "Celestial Ley Line" },
+      ],
+      unmapped: []
+    };
+  }
+
+  if (projectId === "book-frostgate") {
+    return {
+      nodes: [
+        { id: "loc-frostgate", x: 240, y: 200 },
+        { id: "loc-harbor-frost", x: 620, y: 160 },
+        { id: "loc-woods-frost", x: 430, y: 440 },
+      ],
+      edges: [
+        { id: "e1", source: "loc-frostgate", target: "loc-harbor-frost", label: "Glacial Sled Route" },
+        { id: "e2", source: "loc-frostgate", target: "loc-woods-frost", label: "Snowshoe Pass" },
+      ],
+      unmapped: []
+    };
+  }
+
+  if (projectId === "book-silent-harbor" || (!projectId && locList.some(l => l.id === "1"))) {
+    return {
+      nodes: [
+        { id: "1", x: 240, y: 200 },
+        { id: "2", x: 620, y: 160 },
+        { id: "3", x: 430, y: 440 },
+      ],
+      edges: [
+        { id: "e1", source: "1", target: "2", label: "2 days by boat" },
+        { id: "e2", source: "1", target: "3", label: "Mountain pass" },
+      ],
+      unmapped: []
+    };
+  }
+
+  // 3. Dynamic layout fallback for custom books / locations
+  if (locList && locList.length > 0) {
+    const layoutPositions = [
+      { x: 240, y: 200 },
+      { x: 620, y: 160 },
+      { x: 430, y: 440 },
+      { x: 740, y: 440 },
+      { x: 180, y: 440 },
+    ];
+    const dynNodes = locList.map((l, i) => {
+      const pos = layoutPositions[i % layoutPositions.length];
+      return { id: l.id, x: pos.x, y: pos.y };
+    });
+    const dynEdges: LocationEdge[] = [];
+    if (locList.length >= 2) {
+      dynEdges.push({ id: "e1", source: locList[0].id, target: locList[1].id, label: "Direct Route" });
+    }
+    if (locList.length >= 3) {
+      dynEdges.push({ id: "e2", source: locList[0].id, target: locList[2].id, label: "Mountain Pass" });
+    }
+    return { nodes: dynNodes, edges: dynEdges, unmapped: [] };
+  }
+
+  return { nodes: [], edges: [], unmapped: [] };
+}
 
 export default function Locations() {
+  const { id } = useParams<{ id: string }>();
 
   const getAssociatedScenes = (locId: string) => {
     const scenes: { title: string, content: string }[] = [];
@@ -27,36 +174,76 @@ export default function Locations() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  const [locations, setLocations] = useState(() => {
-    const saved = localStorage.getItem('story_locations');
-    return saved ? JSON.parse(saved) : MOCK_LOCATIONS.map(loc => ({
-      ...loc,
-      atmosphere: (loc as any).atmosphere || "Mysterious",
-      region: (loc as any).region || "Unknown Region"
-    }));
-  });
+  // Initialize project-specific locations and map state
+  const initialBundle = React.useMemo(() => {
+    let locs: any[] = [];
+    if (id) {
+      const data = storage.getProjectData(id);
+      if (data?.locations && data.locations.length > 0) {
+        locs = data.locations.map(loc => ({
+          ...loc,
+          atmosphere: (loc as any).atmosphere || "Mysterious",
+          region: (loc as any).region || "Ancient Realm"
+        }));
+      }
+    }
+    if (locs.length === 0) {
+      locs = MOCK_LOCATIONS.map(loc => ({
+        ...loc,
+        atmosphere: (loc as any).atmosphere || "Mysterious",
+        region: (loc as any).region || "Unknown Region"
+      }));
+    }
+    const map = buildDefaultProjectLocationMap(id, locs);
+    return { locs, map };
+  }, [id]);
+
+  const [locations, setLocations] = useState(initialBundle.locs);
+  const [nodes, setNodes] = useState<LocationNode[]>(initialBundle.map.nodes);
+  const [edges, setEdges] = useState<LocationEdge[]>(initialBundle.map.edges);
+  const [unmappedLocations, setUnmappedLocations] = useState<any[]>(initialBundle.map.unmapped);
+
+  // Synchronize when active project ID changes
+  React.useEffect(() => {
+    if (id) {
+      const data = storage.getProjectData(id);
+      const locs = (data?.locations && data.locations.length > 0)
+        ? data.locations.map(loc => ({
+            ...loc,
+            atmosphere: (loc as any).atmosphere || "Mysterious",
+            region: (loc as any).region || "Ancient Realm"
+          }))
+        : MOCK_LOCATIONS.map(loc => ({
+            ...loc,
+            atmosphere: (loc as any).atmosphere || "Mysterious",
+            region: (loc as any).region || "Unknown Region"
+          }));
+      setLocations(locs);
+
+      const map = buildDefaultProjectLocationMap(id, locs);
+      setNodes(map.nodes);
+      setEdges(map.edges);
+      setUnmappedLocations(map.unmapped || []);
+    }
+  }, [id]);
+
+  // Persist location map changes to project storage
+  React.useEffect(() => {
+    if (id) {
+      storage.saveProjectData(id, {
+        locations,
+        locationMap: {
+          nodes,
+          edges,
+          unmapped: unmappedLocations
+        }
+      });
+    }
+  }, [id, locations, nodes, edges, unmappedLocations]);
 
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
-  const initialNodes = MOCK_LOCATIONS.map((loc, index) => ({
-    id: loc.id,
-    x: 100 + (index % 3) * 300,
-    y: 100 + Math.floor(index / 3) * 200
-  }));
-  const [nodes, setNodes] = useState<{id: string, x: number, y: number}[]>(() => {
-    const saved = localStorage.getItem('story_nodes');
-    return saved ? JSON.parse(saved) : initialNodes;
-  });
-  const [edges, setEdges] = useState<{id: string, source: string, target: string, label: string}[]>(() => {
-    const saved = localStorage.getItem('story_edges');
-    return saved ? JSON.parse(saved) : [
-      { id: "e1", source: "1", target: "2", label: "2 days by boat" },
-      { id: "e2", source: "1", target: "3", label: "Mountain pass" },
-    ];
-  });
-
-  
   const canvasRef = React.useRef<HTMLDivElement>(null);
-    const [drawingEdge, setDrawingEdge] = useState<{source: string, currentX: number, currentY: number} | null>(null);
+  const [drawingEdge, setDrawingEdge] = useState<{source: string, currentX: number, currentY: number} | null>(null);
   const [newEdgePopup, setNewEdgePopup] = useState<{source: string, target: string, label: string} | null>(null);
 
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -64,24 +251,9 @@ export default function Locations() {
   const [isPanning, setIsPanning] = useState(false);
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   
-    const [mapMode, setMapMode] = useState<"pan" | "draw">("pan");
+  const [mapMode, setMapMode] = useState<"pan" | "draw">("pan");
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [edgeToDelete, setEdgeToDelete] = useState<string | null>(null);
-  
-  const [unmappedLocations, setUnmappedLocations] = useState(() => {
-    const saved = localStorage.getItem('story_unmapped');
-    return saved ? JSON.parse(saved) : [
-      { id: "u1", name: "Whispering Woods", type: "Forest", icon: "TreePine", imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788769187/08_enchanted_forest_of_older_paths_azvbp4.jpg" },
-      { id: "u2", name: "Dragon's Peak", type: "Mountain", icon: "Mountain", imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788769187/02_frostgate_citadel_in_the_snowstorm_zy2pb8.jpg" }
-    ];
-  });
-
-
-  
-  React.useEffect(() => { localStorage.setItem('story_locations', JSON.stringify(locations)); }, [locations]);
-  React.useEffect(() => { localStorage.setItem('story_nodes', JSON.stringify(nodes)); }, [nodes]);
-  React.useEffect(() => { localStorage.setItem('story_edges', JSON.stringify(edges)); }, [edges]);
-  React.useEffect(() => { localStorage.setItem('story_unmapped', JSON.stringify(unmappedLocations)); }, [unmappedLocations]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -205,12 +377,13 @@ export default function Locations() {
     type: "",
     description: "",
     atmosphere: "",
-    region: ""
+    region: "",
+    imageUrl: "",
   });
 
   const handleOpenCreate = () => {
     setEditingLocId(null);
-    setFormData({ name: "", type: "", description: "", atmosphere: "", region: "" });
+    setFormData({ name: "", type: "", description: "", atmosphere: "", region: "", imageUrl: "" });
     setIsModalOpen(true);
   };
 
@@ -221,7 +394,8 @@ export default function Locations() {
       type: loc.type || "",
       description: loc.description || "",
       atmosphere: loc.atmosphere || "",
-      region: loc.region || ""
+      region: loc.region || "",
+      imageUrl: (loc as any).imageUrl || "",
     });
     setIsModalOpen(true);
   };
@@ -235,6 +409,8 @@ export default function Locations() {
   const confirmDelete = () => {
     if (locToDelete) {
       setLocations(prev => prev.filter(l => l.id !== locToDelete));
+      setNodes(prev => prev.filter(n => n.id !== locToDelete));
+      setEdges(prev => prev.filter(e => e.source !== locToDelete && e.target !== locToDelete));
       setLocToDelete(null);
     }
   };
@@ -454,24 +630,58 @@ export default function Locations() {
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                 {edges.map(edge => {
+                  const sourceLoc = locations.find(l => l.id === edge.source);
+                  const targetLoc = locations.find(l => l.id === edge.target);
+                  // SAFEGUARD: Both locations must exist in the active project to prevent orphan/ghost connection lines
+                  if (!sourceLoc || !targetLoc) return null;
+
                   const sourceNode = nodes.find(n => n.id === edge.source);
                   const targetNode = nodes.find(n => n.id === edge.target);
                   if (!sourceNode || !targetNode) return null;
                   
-                  const dx = targetNode.x - sourceNode.x;
-                  const dy = targetNode.y - sourceNode.y;
-                  const midX = sourceNode.x + dx / 2;
-                  const midY = sourceNode.y + dy / 2;
+                  const sHasImg = !!sourceLoc.imageUrl;
+                  const tHasImg = !!targetLoc.imageUrl;
+                  const x1 = sourceNode.x + 90;
+                  const y1 = sourceNode.y + (sHasImg ? 70 : 40);
+                  const x2 = targetNode.x + 90;
+                  const y2 = targetNode.y + (tHasImg ? 70 : 40);
+
+                  const midX = (x1 + x2) / 2;
+                  const midY = (y1 + y2) / 2;
+                  const pillWidth = Math.max(edge.label.length * 7 + 28, 76);
                   
                   return (
-                    <g key={edge.id}>
+                    <g 
+                      key={edge.id} 
+                      className="pointer-events-auto group/edge cursor-pointer" 
+                      onClick={() => setEdgeToDelete(edge.id)}
+                    >
                       <line 
-                        x1={sourceNode.x + 90} y1={sourceNode.y + (locations.find(l => l.id === sourceNode.id)?.imageUrl ? 70 : 30)} 
-                        x2={targetNode.x + 90} y2={targetNode.y + (locations.find(l => l.id === targetNode.id)?.imageUrl ? 70 : 30)} 
-                        stroke="#a66850" strokeWidth="2" strokeDasharray="6 6" opacity="0.6"
+                        x1={x1} y1={y1} 
+                        x2={x2} y2={y2} 
+                        stroke="#a66850" strokeWidth="2.5" strokeDasharray="6 6" opacity="0.75"
+                        className="group-hover/edge:stroke-[#e28868] group-hover/edge:stroke-[3.5] transition-all"
                       />
-                      <rect x={midX - 10} y={midY - 12} width={edge.label.length * 6 + 20} height="24" fill="#fcfaf5" rx="4" stroke="#d49a89" />
-                      <text x={midX + (edge.label.length * 3)} y={midY + 4} fontSize="9" fill="#8a5b46" fontWeight="bold" textAnchor="middle" letterSpacing="0.1em">
+                      <rect 
+                        x={midX - pillWidth / 2} 
+                        y={midY - 13} 
+                        width={pillWidth} 
+                        height="26" 
+                        fill="#fcfaf5" 
+                        rx="5" 
+                        stroke="#d49a89" 
+                        className="group-hover/edge:stroke-[#8c503c] group-hover/edge:fill-[#fff5ee] transition-all shadow-md"
+                      />
+                      <text 
+                        x={midX} 
+                        y={midY + 4} 
+                        fontSize="9.5" 
+                        fill="#8a5b46" 
+                        fontWeight="bold" 
+                        textAnchor="middle" 
+                        letterSpacing="0.08em"
+                        className="select-none pointer-events-none group-hover/edge:fill-[#4a3225]"
+                      >
                         {edge.label.toUpperCase()}
                       </text>
                     </g>
@@ -646,60 +856,70 @@ export default function Locations() {
                   </div>
                 </div>
 
-                {editingLocId && (
-                  <div className="w-full lg:w-[280px] shrink-0 space-y-6">
-                    <h3 className="text-sm font-bold text-[#4a3225] border-b border-[#e5e0d5] pb-2 flex items-center gap-2">
-                      Cross-References
-                    </h3>
-                    
-                    {/* Residents */}
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-bold text-[#a66850] uppercase tracking-widest flex items-center gap-2">
-                        <Users className="w-3.5 h-3.5" />
-                        Residents
-                      </h4>
-                      <div className="space-y-2">
-                        {MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).length > 0 ? (
-                          MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).map((char: any) => (
-                            <div key={char.id} className="bg-white border border-[#e5e0d5] rounded-sm p-2 flex items-center gap-2 shadow-sm">
-                              <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
-                                {char.name.charAt(0)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-[#4a3225] truncate">{char.name}</p>
-                                <p className="text-[9px] text-stone-400 uppercase tracking-wider truncate">{char.role}</p>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-xs text-stone-400 italic">No known residents.</p>
-                        )}
-                      </div>
-                    </div>
+                <div className="w-full lg:w-[320px] shrink-0 space-y-6">
+                  <h3 className="text-sm font-bold text-[#4a3225] border-b border-[#e5e0d5] pb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#a66850]" />
+                    Location Artwork
+                  </h3>
+                  <ImageDropzoneCard
+                    type="location"
+                    aspectRatio="landscape"
+                    imageUrl={formData.imageUrl}
+                    onImageChange={(newUrl) => setFormData(prev => ({ ...prev, imageUrl: newUrl }))}
+                    label="Illustration / Map View"
+                  />
 
-                    {/* Associated Events */}
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-bold text-[#a66850] uppercase tracking-widest flex items-center gap-2">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        Plot Events
-                      </h4>
-                      <div className="space-y-2">
-                        {getAssociatedScenes(editingLocId).length > 0 ? (
-                          getAssociatedScenes(editingLocId).map((scene, idx) => (
-                            <div key={idx} className="bg-white border border-[#e5e0d5] rounded-sm p-2 shadow-sm">
-                              <p className="text-xs font-bold text-[#4a3225] truncate">{scene.title}</p>
-                              <p className="text-[10px] text-stone-500 mt-1 line-clamp-2 italic">
-                                Appears in manuscript scene.
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-xs text-stone-400 italic">No events recorded here.</p>
-                        )}
+                  {editingLocId && (
+                    <>
+                      {/* Residents */}
+                      <div className="space-y-3 pt-2">
+                        <h4 className="text-[10px] font-bold text-[#a66850] uppercase tracking-widest flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5" />
+                          Residents
+                        </h4>
+                        <div className="space-y-2">
+                          {MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).length > 0 ? (
+                            MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).map((char: any) => (
+                              <div key={char.id} className="bg-white border border-[#e5e0d5] rounded-sm p-2 flex items-center gap-2 shadow-sm">
+                                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
+                                  {char.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-[#4a3225] truncate">{char.name}</p>
+                                  <p className="text-[9px] text-stone-400 uppercase tracking-wider truncate">{char.role}</p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-stone-400 italic">No known residents.</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+
+                      {/* Associated Events */}
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-bold text-[#a66850] uppercase tracking-widest flex items-center gap-2">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          Plot Events
+                        </h4>
+                        <div className="space-y-2">
+                          {getAssociatedScenes(editingLocId).length > 0 ? (
+                            getAssociatedScenes(editingLocId).map((scene, idx) => (
+                              <div key={idx} className="bg-white border border-[#e5e0d5] rounded-sm p-2 shadow-sm">
+                                <p className="text-xs font-bold text-[#4a3225] truncate">{scene.title}</p>
+                                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2 italic">
+                                  Appears in manuscript scene.
+                                </p>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-stone-400 italic">No events recorded here.</p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
             </div>

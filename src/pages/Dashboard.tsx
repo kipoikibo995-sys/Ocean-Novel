@@ -6,17 +6,20 @@ import {
   CheckCircle2,
   Circle,
   AlertCircle,
-  BookOpen,
   PenTool,
   ArrowRight,
   TrendingUp,
   Flame,
   Coffee,
   Type,
-  Sparkles,
   Trash2,
   X,
   Users,
+  Settings as SettingsIcon,
+  Maximize2,
+  Search,
+  ArrowUpRight,
+  BarChart2,
 } from "lucide-react";
 import {
   MOCK_PROJECT,
@@ -28,6 +31,7 @@ import {
 } from "@/mockData";
 import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
+import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { useProject } from "@/context/ProjectContext";
 
 export default function Dashboard() {
@@ -45,34 +49,24 @@ export default function Dashboard() {
   const [newTaskType, setNewTaskType] = useState<StudioTask['type']>("writing");
   const [newTaskUrgency, setNewTaskUrgency] = useState<StudioTask['urgency']>("medium");
 
+  // World Radar Expand Modal State
+  const [isRadarExpanded, setIsRadarExpanded] = useState(false);
+  const [radarSearch, setRadarSearch] = useState("");
+  const [radarFilter, setRadarFilter] = useState<'all' | 'active' | 'silent'>('all');
+
   useEffect(() => {
-    let projects = storage.getProjects();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isRadarExpanded) {
+        setIsRadarExpanded(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isRadarExpanded]);
 
-    // Seed sample project on first load if empty
-    if (projects.length === 0) {
-      const sampleId = 'sample-' + Date.now();
-
-      storage.saveProject({
-        id: sampleId,
-        title: MOCK_PROJECT.title,
-        author: 'Sarah Cole',
-        genre: MOCK_PROJECT.genre,
-        audience: 'Adult',
-        logline: MOCK_PROJECT.premise,
-        wordGoal: MOCK_PROJECT.targetWords,
-        currentWords: MOCK_PROJECT.currentWords,
-        lastModified: Date.now(),
-        themeColor: 'bg-[#2a1a14]'
-      });
-
-      storage.saveProjectData(sampleId, {
-        manuscript: MOCK_MANUSCRIPT,
-        characters: MOCK_CHARACTERS,
-        locations: MOCK_LOCATIONS
-      });
-
-      projects = storage.getProjects();
-    }
+  useEffect(() => {
+    // Ensure all 5 fantasy sample books exist with complete manuscripts and characters
+    const projects = ensureFantasyBooksSeeded();
 
     const sorted = projects.sort((a, b) => b.lastModified - a.lastModified);
     setSavedProjects(sorted);
@@ -166,19 +160,22 @@ export default function Dashboard() {
 
     // Calculate time ago
     const diffMs = Date.now() - (activeProject.lastModified || Date.now());
-    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    const mins = Math.floor(diffMs / 60000);
     const hours = Math.floor(mins / 60);
     const days = Math.floor(hours / 24);
 
     let timeAgo = "Just now";
     if (days > 0) timeAgo = `${days}d ago`;
     else if (hours > 0) timeAgo = `${hours}h ago`;
-    else if (mins > 1) timeAgo = `${mins}m ago`;
+    else if (mins >= 1) timeAgo = `${mins}m ago`;
+    else timeAgo = "Just now";
+
+    const displaySceneTitle = activeProjectData?.lastActiveSceneTitle || firstSceneTitle || "Chapter 1";
 
     return {
       chapters: chaptersCount || 1,
       scenes: scenesCount || 1,
-      currentSceneTitle: firstSceneTitle || "Chapter 1",
+      currentSceneTitle: displaySceneTitle,
       timeAgo,
     };
   }, [activeProject, activeProjectData]);
@@ -192,7 +189,7 @@ export default function Dashboard() {
       ? activeProjectData.characters
       : MOCK_CHARACTERS;
 
-    const charMap: Record<string, { id: string; name: string; count: number; role: string }> = {};
+    const charMap: Record<string, { id: string; name: string; count: number; role: string; description?: string }> = {};
 
     // Register known characters
     rawCharacters.forEach((c: any) => {
@@ -203,55 +200,60 @@ export default function Dashboard() {
           name: name,
           count: 0,
           role: c.role || "Character",
+          description: c.description || c.shortBio || "",
         };
       }
     });
 
     let totalMentions = 0;
+    let scenesScanned = 0;
 
     const scanForMentions = (items: ManuscriptItem[]) => {
       for (const item of items) {
-        if (item.type === "scene" && item.content) {
-          const content = item.content;
-          const plain = content.replace(/<[^>]*>?/gm, " ");
+        if (item.type === "scene") {
+          scenesScanned++;
+          if (item.content) {
+            const content = item.content;
+            const plain = content.replace(/<[^>]*>?/gm, " ");
 
-          // 1. TipTap Mention tags: data-label="..."
-          const labelRegex = /data-label="([^"]+)"/gi;
-          let labelMatch;
-          while ((labelMatch = labelRegex.exec(content)) !== null) {
-            const label = labelMatch[1].trim();
-            const lower = label.toLowerCase();
-            if (!charMap[lower]) {
-              charMap[lower] = { id: label, name: label, count: 0, role: "Character" };
-            }
-            charMap[lower].count++;
-            totalMentions++;
-          }
-
-          // 2. Also check @Name pattern in plain text
-          const atRegex = /@([A-Z][a-zA-Z0-9_]+(?:\s+[A-Z][a-zA-Z0-9_]+)?)/g;
-          let atMatch;
-          while ((atMatch = atRegex.exec(plain)) !== null) {
-            const name = atMatch[1].trim();
-            const lower = name.toLowerCase();
-            if (charMap[lower] && charMap[lower].count === 0) {
+            // 1. TipTap Mention tags: data-label="..."
+            const labelRegex = /data-label="([^"]+)"/gi;
+            let labelMatch;
+            while ((labelMatch = labelRegex.exec(content)) !== null) {
+              const label = labelMatch[1].trim();
+              const lower = label.toLowerCase();
+              if (!charMap[lower]) {
+                charMap[lower] = { id: label, name: label, count: 0, role: "Character" };
+              }
               charMap[lower].count++;
               totalMentions++;
             }
-          }
 
-          // 3. Check direct character name references in narrative
-          Object.values(charMap).forEach((char) => {
-            if (char.name && char.name.length >= 3) {
-              const escaped = char.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-              const regex = new RegExp(`\\b${escaped}\\b`, "gi");
-              const occurrences = (plain.match(regex) || []).length;
-              if (occurrences > char.count) {
-                totalMentions += occurrences - char.count;
-                char.count = occurrences;
+            // 2. Also check @Name pattern in plain text
+            const atRegex = /@([A-Z][a-zA-Z0-9_]+(?:\s+[A-Z][a-zA-Z0-9_]+)?)/g;
+            let atMatch;
+            while ((atMatch = atRegex.exec(plain)) !== null) {
+              const name = atMatch[1].trim();
+              const lower = name.toLowerCase();
+              if (charMap[lower] && charMap[lower].count === 0) {
+                charMap[lower].count++;
+                totalMentions++;
               }
             }
-          });
+
+            // 3. Check direct character name references in narrative
+            Object.values(charMap).forEach((char) => {
+              if (char.name && char.name.length >= 3) {
+                const escaped = char.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+                const occurrences = (plain.match(regex) || []).length;
+                if (occurrences > char.count) {
+                  totalMentions += occurrences - char.count;
+                  char.count = occurrences;
+                }
+              }
+            });
+          }
         }
         if (item.children) scanForMentions(item.children);
       }
@@ -262,8 +264,22 @@ export default function Dashboard() {
     const sortedMentions = Object.values(charMap)
       .sort((a, b) => b.count - a.count);
 
-    return { totalMentions, sortedMentions };
+    return { totalMentions, sortedMentions, scenesScanned };
   }, [activeProject, activeProjectData]);
+
+  // Filtered mentions for expanded World Radar modal
+  const filteredRadarMentions = useMemo(() => {
+    return worldRadarStats.sortedMentions.filter((item) => {
+      const matchesSearch = item.name.toLowerCase().includes(radarSearch.toLowerCase()) ||
+        (item.role && item.role.toLowerCase().includes(radarSearch.toLowerCase())) ||
+        (item.description && item.description.toLowerCase().includes(radarSearch.toLowerCase()));
+      if (!matchesSearch) return false;
+
+      if (radarFilter === 'active') return item.count > 0;
+      if (radarFilter === 'silent') return item.count === 0;
+      return true;
+    });
+  }, [worldRadarStats.sortedMentions, radarSearch, radarFilter]);
 
   // Filtered Tasks
   const filteredTasks = useMemo(() => {
@@ -367,122 +383,155 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate("/create")}
-              className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto shrink-0 border border-[#4a3225] relative z-10"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Archive
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
+              <button
+                onClick={() => navigate("/settings")}
+                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase transition-colors shadow-sm"
+                title="Author Profile & Settings"
+              >
+                <SettingsIcon className="w-3.5 h-3.5 text-[#8c503c]" />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
+              <button
+                onClick={() => navigate("/create")}
+                className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto border border-[#4a3225]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Archive
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-4 lg:gap-6 overflow-x-auto pb-6 pt-4 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth custom-scrollbar relative z-10">
+          {/* ARCHIVAL BOOK STACK (Physical Dossier Stack) */}
+          <div className="flex items-end overflow-x-auto pt-6 pb-8 px-4 sm:px-6 snap-x -mx-4 sm:mx-0 scroll-smooth custom-scrollbar relative z-10">
             {/* Render all projects from local storage */}
             {savedProjects.length === 0 && (
                <div className="flex items-center justify-center w-full h-[200px] border border-dashed border-[#e5e0d5] rounded-md bg-white/50">
                  <p className="text-stone-500 text-sm font-medium">No archives found. Start a new project.</p>
                </div>
             )}
-            {savedProjects.map((proj) => {
-              const covers = [
-                {
-                  bg: "bg-[#2a1a14]",
-                  text: "text-[#e5e0d5]",
-                  accent: "bg-[#b8785e]",
-                  ribbon: "bg-[#8c503c]",
-                },
+            {savedProjects.map((proj, index) => {
+              const TILT_ANGLES = [-1.2, 0.9, -0.8, 1.2, -1.0];
+              const tilt = TILT_ANGLES[index % TILT_ANGLES.length];
+
+              const THEMES = [
+                { bg: "bg-[#2a1a14]", border: "border-[#4a2e22]", spine: "bg-[#1a0f0b]", accent: "#8c503c" },
+                { bg: "bg-[#381c16]", border: "border-[#55271d]", spine: "bg-[#230f0a]", accent: "#a64228" },
+                { bg: "bg-[#182330]", border: "border-[#25394e]", spine: "bg-[#0e1620]", accent: "#3a607e" },
+                { bg: "bg-[#17252d]", border: "border-[#243d4a]", spine: "bg-[#0c161c]", accent: "#36687a" },
+                { bg: "bg-[#332212]", border: "border-[#4e3419]", spine: "bg-[#1f1409]", accent: "#966224" },
               ];
-              const style = covers[0];
+              const theme = THEMES[index % THEMES.length];
+              const isSelected = selectedProjectId === proj.id;
               const progress = Math.round(
-                ((proj.currentWords || 0) / proj.wordGoal) * 100,
+                ((proj.currentWords || 0) / (proj.wordGoal || 75000)) * 100,
               );
 
               return (
                 <div
                   key={proj.id}
                   onClick={() => navigate(`/project/${proj.id}`)}
-                  className="snap-center sm:snap-start shrink-0 group cursor-pointer"
+                  onMouseEnter={() => setSelectedProjectId(proj.id)}
+                  style={{
+                    zIndex: isSelected ? 25 : index + 2,
+                    transform: `rotate(${tilt}deg)`,
+                  }}
+                  className={cn(
+                    "snap-center sm:snap-start shrink-0 group cursor-pointer transition-all duration-300 relative select-none",
+                    index > 0 && "-ml-5 sm:-ml-6 lg:-ml-7",
+                    "hover:!z-40 hover:!rotate-0 hover:-translate-y-3.5 hover:scale-[1.02]",
+                    isSelected && "-translate-y-1.5 !rotate-0 shadow-[0_12px_28px_rgba(0,0,0,0.6)]"
+                  )}
                 >
                   <div
                     className={cn(
-                      "relative w-[130px] h-[180px] lg:w-[170px] lg:h-[230px] rounded-r-md rounded-l-sm shadow-[4px_8px_16px_rgba(0,0,0,0.4)] transition-all duration-300",
-                      "group-hover:-translate-y-2 group-hover:shadow-[6px_12px_24px_rgba(0,0,0,0.5)] border border-[#5d3f32]",
-                      style.bg,
+                      "relative w-[165px] h-[195px] sm:w-[190px] sm:h-[215px] lg:w-[215px] lg:h-[235px] rounded-r-md rounded-l-[3px] transition-all duration-300",
+                      "shadow-[-4px_4px_14px_rgba(0,0,0,0.35),_4px_8px_20px_rgba(0,0,0,0.45)]",
+                      "group-hover:shadow-[-6px_10px_24px_rgba(0,0,0,0.45),_6px_16px_36px_rgba(0,0,0,0.65)]",
+                      "border",
+                      theme.bg,
+                      theme.border,
+                      isSelected ? "ring-2 ring-[#c99846]/80 ring-offset-1 ring-offset-[#2a1a14]" : ""
                     )}
                   >
-                    {/* Spine Binding */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[12px] lg:w-[16px] bg-black/40 border-r border-[#5d3f32] rounded-l-sm shadow-inner" />
+                    {/* Spine Binding (Distinct book spine with embossed horizontal bands) */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[20px] lg:w-[24px] bg-gradient-to-r from-black/60 via-black/40 to-black/20 border-r border-black/80 rounded-l-[3px] shadow-[inset_-2px_0_4px_rgba(0,0,0,0.6)] flex flex-col justify-between py-5 px-[3px] z-20">
+                      {/* Embossed spine ribs/bands */}
+                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
+                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
+                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
+                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
+                    </div>
 
-                    {/* Cover Texture */}
+                    {/* Right Fore-Edge (Simulating layered book pages inside) */}
+                    <div className="absolute right-0 top-[2px] bottom-[2px] w-[5px] bg-[#e6dfd1] rounded-r-[2px] border-l border-[#baa791] shadow-inner opacity-90 flex flex-col justify-around py-3 pointer-events-none z-10">
+                      <div className="w-full h-[1px] bg-black/15" />
+                      <div className="w-full h-[1px] bg-black/15" />
+                      <div className="w-full h-[1px] bg-black/15" />
+                      <div className="w-full h-[1px] bg-black/15" />
+                    </div>
+
+                    {/* Leather/Cloth Cover Texture */}
                     <div
-                      className="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none rounded-r-md rounded-l-[3px]"
+                      className="absolute inset-0 opacity-[0.22] mix-blend-overlay pointer-events-none rounded-r-md rounded-l-[3px]"
                       style={{
                         backgroundImage:
                           'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")',
                       }}
-                    ></div>
+                    />
 
-                    {/* Book Cover Content */}
-                    <div className="absolute inset-0 flex flex-col p-3 lg:p-4 pt-6 lg:pt-8 z-10 pointer-events-none ml-[12px] lg:ml-[16px]">
-                      <div className="flex-1 flex flex-col items-center text-center mt-2">
-                        {/* Tape */}
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-10 h-3 bg-white/40 rotate-2 opacity-50" />
-                        
-                        <div className="w-[80%] bg-[#fcfaf5] p-2 border border-[#e5e0d5] shadow-sm transform -rotate-1">
-                          <span
-                            className={cn(
-                              "block text-[6px] lg:text-[7px] font-bold uppercase tracking-[0.2em] mb-1 text-[#8c503c]",
-                            )}
-                          >
-                            Case File
-                          </span>
-                          <h2
-                            className={cn(
-                              "text-xs lg:text-sm font-serif font-bold leading-tight text-[#4a3225] line-clamp-3",
-                            )}
-                          >
+                    {/* Selected Archive Bookmark Ribbon */}
+                    {isSelected && (
+                      <div className="absolute -top-1.5 right-4 w-3.5 h-6 bg-[#8c503c] shadow-md flex items-center justify-center rounded-b-xs pointer-events-none z-30">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#fcead0]" />
+                      </div>
+                    )}
+
+                    {/* Integrated Archival Case File Cover Plate */}
+                    <div className="absolute inset-0 ml-[22px] lg:ml-[26px] mr-[8px] my-[8px] h-[calc(100%-16px)] z-10 pointer-events-none flex flex-col">
+                      <div className="h-full bg-[#faf6ed] border border-[#dad1be] shadow-[inset_0_1px_3px_rgba(0,0,0,0.06),_1px_2px_6px_rgba(0,0,0,0.15)] rounded-[2px] p-2.5 sm:p-3 flex flex-col justify-between relative overflow-hidden">
+                        {/* Archival Tape on Top */}
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-12 h-3 bg-white/60 border-t border-b border-black/5 rotate-[-0.5deg] pointer-events-none shadow-[0_1px_2px_rgba(0,0,0,0.06)]" />
+
+                        {/* Top: Case File Header */}
+                        <div>
+                          <div className="flex items-center justify-between border-b border-[#e8ded0] pb-1 mb-1.5">
+                            <span className="block text-[7.5px] lg:text-[8.5px] font-sans font-bold uppercase tracking-[0.2em] text-[#8c503c]">
+                              Case File {index < 9 ? `· No. 0${index + 1}` : `· No. ${index + 1}`}
+                            </span>
+                            <span className="text-[#8c503c]/60 text-[8px] font-serif">✦</span>
+                          </div>
+
+                          {/* Large Readable Book Title */}
+                          <h2 className="text-xs sm:text-[13px] lg:text-[14.5px] font-serif font-bold leading-[1.25] text-[#2c1b13] line-clamp-3 text-left tracking-tight">
                             {proj.title}
                           </h2>
+
+                          {/* Subtle Divider Line */}
+                          <div className="w-8 h-[1.5px] bg-[#8c503c]/30 my-1.5" />
+
+                          {/* Genre / Subgenre */}
+                          <p className="text-[8.5px] lg:text-[9.5px] font-serif italic text-[#745344] line-clamp-1 text-left">
+                            {proj.genre || "Fantasy Archive"}
+                          </p>
                         </div>
 
-                        <div className="mt-2 lg:mt-4 opacity-40">
-                          <BookOpen
-                            className={cn(
-                              "w-3 h-3 lg:w-3.5 lg:h-3.5",
-                              style.text,
-                            )}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Progress */}
-                      <div className="mt-auto pl-1 lg:pl-2">
-                        <div className="flex justify-between items-end mb-1 lg:mb-1.5 px-0.5">
-                          <span
-                            className={cn(
-                              "text-[6px] lg:text-[7px] uppercase tracking-widest font-bold opacity-60",
-                              style.text,
-                            )}
-                          >
-                            Words
-                          </span>
-                          <span
-                            className={cn(
-                              "text-[7px] lg:text-[8px] font-serif font-bold opacity-90",
-                              style.text,
-                            )}
-                          >
-                            {(proj.currentWords || 0).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="w-full bg-black/40 h-[2px] lg:h-[3px] rounded-full overflow-hidden shadow-inner">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all duration-1000",
-                              style.accent,
-                            )}
-                            style={{ width: `${progress}%` }}
-                          />
+                        {/* Bottom: Word Count & Progress */}
+                        <div className="mt-auto pt-1.5 border-t border-[#ebdcd0]">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-[7px] lg:text-[7.5px] uppercase font-bold tracking-widest text-[#8c503c]/70">
+                              Words
+                            </span>
+                            <span className="text-[8.5px] lg:text-[9.5px] font-serif font-bold text-[#2c1b13]">
+                              {(proj.currentWords || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="w-full bg-[#e7decfa0] h-[3px] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#8c503c] rounded-full transition-all duration-700"
+                              style={{ width: `${Math.min(100, Math.max(5, progress))}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -748,7 +797,10 @@ export default function Dashboard() {
               {activeProject ? (
                 <div
                   className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32]"
-                  onClick={() => navigate(`/project/${activeProject.id}/studio`)}
+                  onClick={() => {
+                    const targetScene = activeProjectData?.lastActiveSceneId;
+                    navigate(`/project/${activeProject.id}/workspace/studio${targetScene ? `?scene=${targetScene}` : ''}`);
+                  }}
                 >
                   {/* Journal texture */}
                   <div 
@@ -808,25 +860,62 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* World Radar (Polaroid style mini grid) */}
-              <div className="bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex-1 flex flex-col min-h-0 relative">
+              {/* World Radar (Polaroid style mini grid - clickable to expand) */}
+              <div 
+                className="bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex-1 flex flex-col min-h-0 relative group/card cursor-pointer hover:border-[#8c503c]/40 hover:shadow-[2px_6px_16px_rgba(0,0,0,0.25)] transition-all"
+                onClick={() => setIsRadarExpanded(true)}
+                title="Click to expand full World Radar"
+              >
                 {/* Tape decoration */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 rotate-1 opacity-70 shadow-sm" />
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 rotate-1 opacity-70 shadow-sm pointer-events-none" />
                 
-                <div className="flex justify-between items-end mb-2 lg:mb-3 shrink-0 border-b border-[#e5e0d5] pb-2 mt-1">
+                <div className="flex justify-between items-start mb-2 lg:mb-3 shrink-0 border-b border-[#e5e0d5] pb-2 mt-1">
                   <div>
-                    <h3 className="font-serif text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide">
-                      World Radar
-                    </h3>
-                    {activeProject && (
-                      <p className="text-[8px] lg:text-[9px] text-[#8c503c] font-medium truncate max-w-[140px]">
-                        {activeProject.title}
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-serif text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide group-hover/card:text-[#8c503c] transition-colors">
+                        World Radar
+                      </h3>
+                      <span className="text-[8px] lg:text-[9px] bg-[#8c503c]/10 text-[#8c503c] font-sans font-bold px-1.5 py-0.5 rounded-sm">
+                        {worldRadarStats.totalMentions} Mentions
+                      </span>
+                    </div>
+                    {savedProjects.length > 1 ? (
+                      <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[8px] text-stone-500 font-serif">Book:</span>
+                        <select
+                          value={selectedProjectId || activeProject?.id || ""}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setSelectedProjectId(e.target.value);
+                          }}
+                          className="text-[9px] text-[#8c503c] font-bold font-serif bg-white/80 border border-[#e5e0d5] rounded-xs px-1 py-0.2 focus:outline-none max-w-[130px] truncate"
+                          title="Switch active book for World Radar"
+                        >
+                          {savedProjects.map((p) => (
+                            <option key={p.id} value={p.id} className="text-stone-800 bg-[#fcfaf5]">
+                              {p.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : activeProject ? (
+                      <p className="text-[8px] lg:text-[9px] text-[#8c503c] font-medium truncate max-w-[140px]" title={activeProject.title}>
+                        Book: {activeProject.title}
                       </p>
-                    )}
+                    ) : null}
                   </div>
-                  <span className="text-[8px] lg:text-[9px] font-bold text-[#8c503c] tracking-widest uppercase">
-                    {worldRadarStats.totalMentions} Mentions
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsRadarExpanded(true);
+                    }}
+                    className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider"
+                    title="Expand World Radar to full screen"
+                  >
+                    <span className="hidden sm:inline">Expand</span>
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {worldRadarStats.sortedMentions.length > 0 ? (
@@ -841,13 +930,12 @@ export default function Dashboard() {
                         return (
                           <div
                             key={item.id}
-                            className="relative group shrink-0 cursor-pointer"
-                            onClick={() => {
-                              if (activeProject) {
-                                navigate(`/project/${activeProject.id}/characters`);
-                              }
+                            className="relative group shrink-0"
+                            onClick={(e) => {
+                              // Clicking row directly also opens expanded view or character dossier
+                              e.stopPropagation();
+                              setIsRadarExpanded(true);
                             }}
-                            title={`Click to view ${item.name} in Story Bible`}
                           >
                             <div className="flex justify-between items-end mb-1">
                               <span className="text-[10px] lg:text-xs font-serif font-bold text-[#4a3225] group-hover:text-[#8c503c] transition-colors truncate pr-2">
@@ -888,10 +976,293 @@ export default function Dashboard() {
                     </p>
                   </div>
                 )}
+
+                {/* Card footer prompt */}
+                {worldRadarStats.sortedMentions.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-[#e5e0d5] flex items-center justify-between text-[9px] font-serif text-[#8c503c] shrink-0">
+                    <span className="group-hover/card:underline">Click to view all {worldRadarStats.sortedMentions.length} characters</span>
+                    <Maximize2 className="w-3 h-3 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </section>
+
+        {/* Expanded World Radar Modal Dialog */}
+        <AnimatePresence>
+          {isRadarExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+              onClick={() => setIsRadarExpanded(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 12 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 12 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-[#FCFAF5] border-2 border-[#5D3F32] rounded-sm shadow-[0_25px_60px_rgba(0,0,0,0.5)] max-w-4xl w-full max-h-[88vh] flex flex-col overflow-hidden relative text-stone-800"
+              >
+                {/* Vintage Leather Trim */}
+                <div className="h-2 w-full bg-[#8C503C] border-b border-[#5D3F32]" />
+
+                {/* Modal Header */}
+                <div className="p-4 sm:p-6 border-b border-[#E5E0D5] bg-[#F4EFE6] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#8C503C] bg-white px-2 py-0.5 rounded-sm border border-[#E5E0D5]">
+                        World Radar • Expanded View
+                      </span>
+                      {savedProjects.length > 1 ? (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <span className="text-[11px] text-stone-600 font-serif">Book:</span>
+                          <select
+                            value={selectedProjectId || activeProject?.id || ""}
+                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                            className="text-xs font-serif font-bold text-[#4A3225] bg-white border border-[#E5E0D5] rounded-sm px-2 py-0.5 focus:ring-1 focus:ring-[#8C503C]"
+                          >
+                            {savedProjects.map((p) => (
+                              <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : activeProject ? (
+                        <span className="text-[11px] text-stone-600 font-serif">
+                          Book: <strong className="text-[#4A3225]">{activeProject.title}</strong>
+                        </span>
+                      ) : null}
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#4A3225]">
+                      Character Frequency & Narrative Density
+                    </h2>
+                    <p className="text-xs text-stone-600 font-serif mt-0.5">
+                      Analyzed from {worldRadarStats.scenesScanned} scenes in "{activeProject?.title}". Real-time breakdown of character mentions and relative presence.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {activeProject && (
+                      <button
+                        onClick={() => {
+                          setIsRadarExpanded(false);
+                          navigate(`/project/${activeProject.id}/characters`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider bg-[#8C503C] hover:bg-[#723F2F] text-white transition-colors shadow-sm"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Cast Dossier</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsRadarExpanded(false)}
+                      className="p-1.5 rounded-sm text-stone-500 hover:text-[#4A3225] hover:bg-[#E5E0D5] transition-colors"
+                      title="Close (ESC)"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats Summary & Search / Filter Controls */}
+                <div className="px-4 sm:px-6 py-3 bg-[#FCFAF5] border-b border-[#E5E0D5] flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
+                      <BarChart2 className="w-3.5 h-3.5 text-[#8C503C]" />
+                      <span className="font-bold text-[#4A3225]">{worldRadarStats.totalMentions}</span>
+                      <span className="text-stone-500">Total Mentions</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
+                      <Users className="w-3.5 h-3.5 text-[#8C503C]" />
+                      <span className="font-bold text-[#4A3225]">{worldRadarStats.sortedMentions.length}</span>
+                      <span className="text-stone-500">Characters Tracked</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
+                    <div className="relative w-full sm:w-52">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                      <input
+                        type="text"
+                        placeholder="Search name, role, details..."
+                        value={radarSearch}
+                        onChange={(e) => setRadarSearch(e.target.value)}
+                        className="w-full pl-8 pr-6 py-1 bg-white border border-[#E5E0D5] rounded-sm text-xs font-serif focus:outline-none focus:ring-1 focus:ring-[#8C503C]"
+                      />
+                      {radarSearch && (
+                        <button
+                          onClick={() => setRadarSearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center bg-[#E5E0D5]/70 p-0.5 rounded-sm border border-[#E5E0D5] text-[10px] font-bold uppercase tracking-wider">
+                      <button
+                        onClick={() => setRadarFilter('all')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all",
+                          radarFilter === 'all' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        All ({worldRadarStats.sortedMentions.length})
+                      </button>
+                      <button
+                        onClick={() => setRadarFilter('active')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all",
+                          radarFilter === 'active' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        Active ({worldRadarStats.sortedMentions.filter(m => m.count > 0).length})
+                      </button>
+                      <button
+                        onClick={() => setRadarFilter('silent')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all",
+                          radarFilter === 'silent' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        Silent ({worldRadarStats.sortedMentions.filter(m => m.count === 0).length})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Body: Full grid showing all characters without vertical scroll crunch */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-3">
+                  {filteredRadarMentions.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                      {filteredRadarMentions.map((item, idx) => {
+                        const topCount = Math.max(1, worldRadarStats.sortedMentions[0]?.count || 1);
+                        const percentage = item.count > 0
+                          ? Math.round((item.count / topCount) * 100)
+                          : 0;
+                        const mentionShare = worldRadarStats.totalMentions > 0
+                          ? Math.round((item.count / worldRadarStats.totalMentions) * 100)
+                          : 0;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-4 rounded-sm border border-[#E5E0D5] bg-white hover:border-[#8C503C] hover:shadow-md transition-all flex flex-col justify-between group"
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex items-start gap-2.5">
+                                  <span className={cn(
+                                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5",
+                                    idx === 0 && item.count > 0 ? "bg-[#8C503C] text-white shadow-xs" :
+                                    idx === 1 && item.count > 0 ? "bg-[#B8785E] text-white" :
+                                    "bg-stone-200 text-stone-700"
+                                  )}>
+                                    #{idx + 1}
+                                  </span>
+                                  <div>
+                                    <h4 className="font-serif font-bold text-base text-[#4A3225] group-hover:text-[#8C503C] transition-colors leading-tight">
+                                      {item.name}
+                                    </h4>
+                                    <span className="text-[10px] font-bold text-[#8C503C] tracking-widest uppercase inline-block mt-0.5">
+                                      {item.role || "Character"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  <span className={cn(
+                                    "text-sm font-bold font-sans block",
+                                    item.count > 0 ? "text-[#8C503C]" : "text-stone-400"
+                                  )}>
+                                    {item.count} {item.count === 1 ? 'mention' : 'mentions'}
+                                  </span>
+                                  {worldRadarStats.totalMentions > 0 && (
+                                    <span className="text-[9px] text-stone-500 font-sans block">
+                                      {mentionShare}% narrative share
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {item.description && (
+                                <p className="text-xs text-stone-600 font-serif line-clamp-2 mt-1 mb-2 italic">
+                                  "{item.description}"
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Relative Frequency Bar */}
+                            <div className="mt-2 pt-2 border-t border-stone-100">
+                              <div className="flex justify-between text-[9px] text-stone-500 mb-1 font-sans">
+                                <span>Manuscript Density</span>
+                                <span>{percentage}%</span>
+                              </div>
+                              <div className="h-2 w-full bg-[#E5E0D5] rounded-xs overflow-hidden border border-[#D49A89]/20">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-xs transition-all duration-700",
+                                    item.count > 0
+                                      ? "bg-gradient-to-r from-[#D49A89] via-[#B8785E] to-[#8C503C]"
+                                      : "bg-stone-200"
+                                  )}
+                                  style={{ width: `${Math.max(percentage, item.count > 0 ? 6 : 0)}%` }}
+                                />
+                              </div>
+
+                              <div className="mt-3 flex items-center justify-between">
+                                <span className="text-[10px] text-stone-400 font-serif">
+                                  {item.count > 0 ? 'Active in scenes' : 'Not mentioned yet'}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setIsRadarExpanded(false);
+                                    if (activeProject) {
+                                      navigate(`/project/${activeProject.id}/characters`);
+                                    }
+                                  }}
+                                  className="text-[10px] font-bold uppercase tracking-wider text-[#8C503C] hover:text-[#4A3225] flex items-center gap-1 group-hover:underline"
+                                >
+                                  <span>View Dossier</span>
+                                  <ArrowUpRight className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center bg-white rounded-sm border border-[#E5E0D5]">
+                      <Users className="w-8 h-8 text-stone-400 mx-auto mb-2" />
+                      <p className="font-serif font-bold text-stone-700 text-sm">
+                        No characters found matching filter
+                      </p>
+                      <p className="text-xs text-stone-500 font-serif mt-1">
+                        Try changing your search term or select "All" characters above.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-3 sm:p-4 bg-[#F4EFE6] border-t border-[#E5E0D5] flex items-center justify-between text-xs text-stone-600 font-serif">
+                  <span>Tip: In Writing Studio, type <strong className="text-[#8C503C]">@</strong> to quickly mention any character in your text.</span>
+                  <button
+                    onClick={() => setIsRadarExpanded(false)}
+                    className="px-4 py-1.5 bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors shadow-2xs"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
