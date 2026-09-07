@@ -37,6 +37,7 @@ export const MOCK_CHARACTERS = [
     description: 'Investigative journalist returning to her hometown after fifteen years.',
     age: '32',
     motivation: 'To find the truth about what happened to her sister.',
+    locationId: '1',
   },
   {
     id: '2',
@@ -45,6 +46,7 @@ export const MOCK_CHARACTERS = [
     description: 'Detective responsible for reopening the disappearance case.',
     age: '38',
     motivation: 'To solve the one case that always bothered him.',
+    locationId: '1',
   },
   {
     id: '3',
@@ -53,6 +55,7 @@ export const MOCK_CHARACTERS = [
     description: 'Sarah\'s emotionally distant mother.',
     age: '59',
     motivation: 'To keep family secrets buried.',
+    locationId: '3',
   }
 ];
 
@@ -62,18 +65,35 @@ export const MOCK_LOCATIONS = [
     name: 'Greyhaven',
     type: 'Coastal Town',
     description: 'A quiet isolated fishing town surrounded by cliffs and dense fog.',
+    imageUrl: 'https://res.cloudinary.com/mekoxs1q/image/upload/v1788769187/09_stormlit_harbor_of_the_cliffside_citadel_jpisuj.jpg'
   },
   {
     id: '2',
     name: 'Old Lighthouse',
     type: 'Landmark',
     description: 'An abandoned lighthouse overlooking the northern cliffs.',
+    imageUrl: 'https://res.cloudinary.com/mekoxs1q/image/upload/v1788769187/02_frostgate_citadel_in_the_snowstorm_zy2pb8.jpg'
   },
   {
     id: '3',
     name: 'Cole Family House',
     type: 'House',
     description: 'Sarah\'s childhood home.',
+    imageUrl: 'https://res.cloudinary.com/mekoxs1q/image/upload/v1788769186/06_golden_oasis_city_at_sunset_so7xdx.jpg'
+  },
+  {
+    id: '4',
+    name: 'Volcanic Citadel',
+    type: 'Castle',
+    description: 'A fortress built into the side of an active volcano.',
+    imageUrl: 'https://res.cloudinary.com/mekoxs1q/image/upload/v1788769186/04_volcanic_citadel_at_sunset_yafvd7.jpg'
+  },
+  {
+    id: '5',
+    name: 'Ruined Citadel',
+    type: 'Ruins',
+    description: 'Ancient ruins beneath a green storm.',
+    imageUrl: 'https://res.cloudinary.com/mekoxs1q/image/upload/v1788769186/07_ruined_citadel_beneath_the_green_storm_po3es7.jpg'
   }
 ];
 

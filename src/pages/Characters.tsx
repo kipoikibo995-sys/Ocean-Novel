@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -26,6 +26,8 @@ import {
   FileText,
   ClipboardCopy,
   Check,
+  Scissors,
+  Link2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -104,11 +106,20 @@ const MOCK_NODES = [
 ];
 
 const MOCK_EDGES = [
-  { source: "1", target: "3", label: "ENEMY", color: "#e15b64", icon: Swords },
-  { source: "1", target: "4", label: "FAMILY", color: "#6184d8", icon: Shield },
-  { source: "1", target: "2", label: "ALLY", color: "#78c3b4", icon: UserPlus },
-  { source: "1", target: "5", label: "LOVER", color: "#f9a8d4", icon: Heart },
-  { source: "3", target: "4", label: "ENEMY", color: "#e15b64", icon: Swords },
+  { id: "e1", source: "1", target: "3", label: "ENEMY", color: "#e15b64", icon: Swords },
+  { id: "e2", source: "1", target: "4", label: "FAMILY", color: "#6184d8", icon: Shield },
+  { id: "e3", source: "1", target: "2", label: "ALLY", color: "#78c3b4", icon: UserPlus },
+  { id: "e4", source: "1", target: "5", label: "LOVER", color: "#f9a8d4", icon: Heart },
+  { id: "e5", source: "3", target: "4", label: "ENEMY", color: "#e15b64", icon: Swords },
+];
+
+export const RELATION_OPTIONS = [
+  { label: "ALLY", color: "#78c3b4", icon: UserPlus },
+  { label: "ENEMY", color: "#e15b64", icon: Swords },
+  { label: "FAMILY", color: "#6184d8", icon: Shield },
+  { label: "LOVER", color: "#f9a8d4", icon: Heart },
+  { label: "FRIEND", color: "#fca311", icon: Users },
+  { label: "RIVAL", color: "#9c27b0", icon: Swords },
 ];
 
 export default function Characters() {
@@ -118,6 +129,7 @@ export default function Characters() {
   const [viewMode, setViewMode] = useState<"registry" | "connections" | "editor">(
     "connections",
   );
+  const [previousViewMode, setPreviousViewMode] = useState<"registry" | "connections">("connections");
   const [characters, setCharacters] = useState<Array<{
     id: string;
     name: string;
@@ -147,7 +159,9 @@ export default function Characters() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
+  const [showClearGraphConfirm, setShowClearGraphConfirm] = useState(false);
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
+  const [copiedEditor, setCopiedEditor] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -168,6 +182,7 @@ export default function Characters() {
   });
 
   const handleOpenEditorNew = () => {
+    setPreviousViewMode(viewMode === "editor" ? previousViewMode : viewMode);
     setEditingCharId(null);
     setAliasInput("");
     setTraitInput("");
@@ -193,6 +208,7 @@ export default function Characters() {
   };
 
   const handleOpenEditorEdit = (char: any) => {
+    setPreviousViewMode(viewMode === "editor" ? previousViewMode : viewMode);
     setEditingCharId(char.id);
     setAliasInput("");
     setTraitInput("");
@@ -283,6 +299,23 @@ ${char.backstory}
     });
   };
 
+  const handleCopyEditor = () => {
+    const textContent = `Name: ${formData.name || 'Unknown'}
+Role: ${formData.role || 'Unknown'}
+Age: ${formData.age || 'Unknown'}
+Status: ${formData.status || 'Unknown'}
+${formData.mbti ? `MBTI: ${formData.mbti}` : ''}
+Traits: ${formData.traits.join(', ')}
+
+Backstory:
+${formData.backstory}
+`;
+    navigator.clipboard.writeText(textContent).then(() => {
+      setCopiedEditor(true);
+      setTimeout(() => setCopiedEditor(false), 2000);
+    });
+  };
+
   const handleDuplicateCharacter = (char: any, e: React.MouseEvent) => {
     e.stopPropagation();
     const duplicated = {
@@ -294,49 +327,134 @@ ${char.backstory}
     setNodes((prev) => [...prev, { id: duplicated.id, x: 200, y: 200 }]);
   };
 
-  const [nodes, setNodes] = useState(MOCK_NODES);
+  const [graphs, setGraphs] = useState([
+    { id: "1", name: "Main Plot", nodes: MOCK_NODES, edges: MOCK_EDGES }
+  ]);
+  const [activeGraphId, setActiveGraphId] = useState("1");
+  const [showNewGraphModal, setShowNewGraphModal] = useState(false);
+  const [newGraphName, setNewGraphName] = useState("");
+
+  const activeGraph = graphs.find(g => g.id === activeGraphId) || graphs[0];
+
+  const nodes = activeGraph.nodes;
+  const setNodes = (action: any) => {
+    setGraphs(prev => prev.map(g => {
+      if (g.id === activeGraphId) {
+        const nextNodes = typeof action === 'function' ? action(g.nodes) : action;
+        return { ...g, nodes: nextNodes };
+      }
+      return g;
+    }));
+  };
+
+  const edges = activeGraph.edges;
+  const setEdges = (action: any) => {
+    setGraphs(prev => prev.map(g => {
+      if (g.id === activeGraphId) {
+        const nextEdges = typeof action === 'function' ? action(g.edges) : action;
+        return { ...g, edges: nextEdges };
+      }
+      return g;
+    }));
+  };
+  
+  // Drawing Edges State
+  const [drawingEdge, setDrawingEdge] = useState<{ source: string, currentX: number, currentY: number } | null>(null);
+  const [pendingEdge, setPendingEdge] = useState<{ source: string, target: string, edgeId?: string } | null>(null);
+
   // Drag, Pan & Zoom State
+  const canvasRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [panHasDragged, setPanHasDragged] = useState(false);
+  
+  // Selection State
+  const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
+
   const [draggingNode, setDraggingNode] = useState<{
     id: string;
     startX: number;
     startY: number;
+    hasDragged: boolean;
   } | null>(null);
 
   const handleNodePointerDown = (e: React.PointerEvent, id: string) => {
     e.stopPropagation();
-    (e.target as Element).setPointerCapture(e.pointerId);
-    setDraggingNode({ id, startX: e.clientX, startY: e.clientY });
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch(e) {}
+    setDraggingNode({ id, startX: e.clientX, startY: e.clientY, hasDragged: false });
   };
 
   const handleNodePointerMove = (e: React.PointerEvent) => {
     if (!draggingNode) return;
     e.stopPropagation();
-    const dx = (e.clientX - draggingNode.startX) / scale;
-    const dy = (e.clientY - draggingNode.startY) / scale;
-    setNodes((ns) =>
-      ns.map((n) =>
-        n.id === draggingNode.id ? { ...n, x: n.x + dx, y: n.y + dy } : n,
-      ),
-    );
-    setDraggingNode({
-      id: draggingNode.id,
-      startX: e.clientX,
-      startY: e.clientY,
-    });
+    
+    const dxReal = e.clientX - draggingNode.startX;
+    const dyReal = e.clientY - draggingNode.startY;
+    
+    if (!draggingNode.hasDragged && (Math.abs(dxReal) > 3 || Math.abs(dyReal) > 3)) {
+      setDraggingNode(prev => prev ? { ...prev, hasDragged: true } : null);
+    }
+    
+    if (draggingNode.hasDragged) {
+      const dx = (e.clientX - draggingNode.startX) / scale;
+      const dy = (e.clientY - draggingNode.startY) / scale;
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === draggingNode.id ? { ...n, x: n.x + dx, y: n.y + dy } : n,
+        ),
+      );
+      setDraggingNode({
+        id: draggingNode.id,
+        startX: e.clientX,
+        startY: e.clientY,
+        hasDragged: true
+      });
+    }
+  };
+
+  const handleStartDrawEdge = (e: React.PointerEvent, sourceId: string) => {
+    e.stopPropagation();
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch(e) {}
+    
+    if (canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - pan.x) / scale;
+      const y = (e.clientY - rect.top - pan.y) / scale;
+      setDrawingEdge({ source: sourceId, currentX: x, currentY: y });
+    }
+  };
+
+  const handleDrawEdgeMove = (e: React.PointerEvent) => {
+    if (!drawingEdge || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left - pan.x) / scale;
+    const y = (e.clientY - rect.top - pan.y) / scale;
+    setDrawingEdge({ ...drawingEdge, currentX: x, currentY: y });
   };
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    (e.target as Element).setPointerCapture(e.pointerId);
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch(e) {}
     setIsPanning(true);
     setPanStart({ x: e.clientX, y: e.clientY });
+    setPanHasDragged(false);
+    setSelectedCharId(null);
   };
 
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (drawingEdge) {
+      handleDrawEdgeMove(e);
+      return;
+    }
     if (!isPanning) return;
+    
+    const dxReal = e.clientX - panStart.x;
+    const dyReal = e.clientY - panStart.y;
+    if (!panHasDragged && (Math.abs(dxReal) > 3 || Math.abs(dyReal) > 3)) {
+      setPanHasDragged(true);
+    }
+
     const dx = e.clientX - panStart.x;
     const dy = e.clientY - panStart.y;
     setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
@@ -344,12 +462,34 @@ ${char.backstory}
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (drawingEdge) {
+      try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch(e) {}
+      
+      const dropX = drawingEdge.currentX;
+      const dropY = drawingEdge.currentY;
+      
+      const targetNode = nodes.find(n => {
+        if (n.id === drawingEdge.source) return false;
+        // The center of the polaroid is roughly node.x, node.y + 40
+        const dist = Math.sqrt(Math.pow(n.x - dropX, 2) + Math.pow((n.y + 40) - dropY, 2));
+        return dist < 80;
+      });
+
+      if (targetNode) {
+        setPendingEdge({ source: drawingEdge.source, target: targetNode.id });
+      }
+      setDrawingEdge(null);
+    }
+    
     if (draggingNode) {
-      (e.target as Element).releasePointerCapture(e.pointerId);
+      try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch(e) {}
+      if (!draggingNode.hasDragged) {
+         setSelectedCharId(draggingNode.id === selectedCharId ? null : draggingNode.id);
+      }
       setDraggingNode(null);
     }
     if (isPanning) {
-      (e.target as Element).releasePointerCapture(e.pointerId);
+      try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch(e) {}
       setIsPanning(false);
     }
   };
@@ -406,14 +546,12 @@ ${char.backstory}
         <div className="sticky top-0 z-40 flex items-center justify-between px-8 py-4 bg-[#fcfaf5]/90 backdrop-blur-sm border-b border-[#e5e0d5]/50">
           <div className="flex items-center gap-4 text-[#8a5b46]"></div>
           <div className="flex items-center gap-3">
-            <button className="w-8 h-8 flex items-center justify-center rounded-sm text-[#8a5b46] hover:bg-[#e5e0d5]/40 transition-colors border border-[#e5e0d5]/50 shadow-sm bg-[#fcfaf5]">
-              <Bookmark className="w-4 h-4 stroke-[1.5]" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-sm text-[#8a5b46] hover:bg-[#e5e0d5]/40 transition-colors border border-[#e5e0d5]/50 shadow-sm bg-[#fcfaf5]">
-              <Download className="w-4 h-4 stroke-[1.5]" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-sm text-[#8a5b46] hover:bg-[#e5e0d5]/40 transition-colors border border-[#e5e0d5]/50 shadow-sm bg-[#fcfaf5]">
-              <Clock className="w-4 h-4 stroke-[1.5]" />
+            <button 
+              onClick={handleCopyEditor}
+              title="Copy Info (For ChatGPT)"
+              className="w-8 h-8 flex items-center justify-center rounded-sm text-[#8a5b46] hover:bg-[#e5e0d5]/40 hover:text-[#b8785e] transition-colors border border-[#e5e0d5]/50 shadow-sm bg-[#fcfaf5]"
+            >
+              {copiedEditor ? <Check className="w-4 h-4 text-green-600" /> : <FileText className="w-4 h-4 stroke-[1.5]" />}
             </button>
             <button
               onClick={handleSaveEditor}
@@ -428,7 +566,7 @@ ${char.backstory}
             </button>
             <div className="w-px h-6 bg-[#e5e0d5] mx-1" />
             <button
-              onClick={() => setViewMode("registry")}
+              onClick={() => setViewMode(previousViewMode)}
               className="w-8 h-8 flex items-center justify-center rounded-sm text-stone-400 hover:text-[#b8785e] transition-colors"
             >
               <X className="w-6 h-6 stroke-[1.5]" />
@@ -649,9 +787,31 @@ ${char.backstory}
             {/* Relationships */}
             <div className="space-y-4 hidden lg:block">
               <label className="text-[10px] font-bold text-[#a66850] tracking-[0.2em] uppercase block border-b border-stone-200 pb-2">Relationships</label>
-              <div className="pt-2">
-                <button className="w-full py-2.5 bg-[#fcfaf5] border border-stone-200 text-stone-400 text-[9px] font-bold tracking-[0.2em] uppercase hover:bg-white hover:text-[#a66850] hover:border-[#a66850] transition-colors flex items-center justify-center gap-2">
-                  <Plus className="w-3 h-3" /> Add Relationship
+              <div className="pt-2 space-y-2">
+                {edges.filter(e => e.source === editingCharId || e.target === editingCharId).map(edge => {
+                  const relatedId = edge.source === editingCharId ? edge.target : edge.source;
+                  const relatedChar = characters.find(c => c.id === relatedId);
+                  if (!relatedChar) return null;
+                  return (
+                    <div key={edge.id} className="flex items-center justify-between p-2.5 bg-white border border-stone-200 rounded-sm hover:border-[#d49a89] transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <img src={relatedChar.imageUrl} alt={relatedChar.name} className="w-8 h-8 rounded-sm object-cover border border-[#e5e0d5]" />
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-[#4a3225] uppercase tracking-wider">{relatedChar.name}</span>
+                          <span className="text-[9px] font-bold text-[#a66850] uppercase tracking-widest">{edge.label || "Connected"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {edges.filter(e => e.source === editingCharId || e.target === editingCharId).length === 0 && (
+                  <p className="text-[10px] font-serif italic text-stone-500 mb-2">No relationships recorded.</p>
+                )}
+                <button 
+                  onClick={() => setViewMode("connections")}
+                  className="w-full py-2.5 bg-[#fcfaf5] border border-stone-200 text-stone-400 text-[9px] font-bold tracking-[0.2em] uppercase hover:bg-white hover:text-[#a66850] hover:border-[#a66850] transition-colors flex items-center justify-center gap-2 mt-2"
+                >
+                  <Plus className="w-3 h-3" /> Go to Board to link
                 </button>
               </div>
             </div>
@@ -680,15 +840,6 @@ ${char.backstory}
       <div className="flex-1 relative z-10 flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] overflow-hidden">
         {/* Top Header */}
         <div className={`flex flex-col shrink-0 ${viewMode === "registry" ? "p-6 lg:p-10 pb-6 max-w-[1600px] mx-auto w-full" : "p-4 border-b border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md"}`}>
-          <div
-            className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#d49a89]/70 mb-2 cursor-pointer hover:text-[#d49a89] w-fit transition-colors"
-            onClick={() => navigate(`/project/${project.id}`)}
-          >
-            <span className="text-[#c17a7a]">&lt; RETURN</span>
-            <span className="px-1 text-[#d49a89]/30">|</span>
-            <span>Character Sheets</span>
-          </div>
-            
           {viewMode === "registry" && (
             <h1 className="text-4xl lg:text-5xl font-serif text-[#fcfaf5] tracking-wide mb-6 uppercase drop-shadow-md">
               Character Sheets
@@ -778,15 +929,22 @@ ${char.backstory}
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-4">
-                <button className="px-4 py-1.5 bg-[#c17a7a] text-white text-[10px] font-bold rounded-sm flex items-center gap-2 uppercase tracking-widest shadow-sm">
-                  <Home className="w-3.5 h-3.5" /> MAIN{" "}
-                  <Edit3 className="w-3 h-3 ml-1 opacity-70" />
-                </button>
-                <button className="px-4 py-1.5 text-white/60 hover:text-white/90 text-[10px] font-bold rounded-sm uppercase tracking-widest transition-colors">
-                  FAMILY TREES
-                </button>
-                <button className="px-4 py-1.5 text-white/40 hover:text-white/80 text-[10px] font-bold rounded-sm flex items-center gap-1.5 uppercase tracking-widest transition-colors ml-4">
+              <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+                {graphs.map(g => (
+                  <button 
+                    key={g.id}
+                    onClick={() => setActiveGraphId(g.id)}
+                    className={`px-4 py-1.5 text-[10px] font-bold rounded-sm flex items-center gap-2 uppercase tracking-widest transition-all ${activeGraphId === g.id ? 'bg-[#c17a7a] text-white shadow-sm' : 'text-white/60 hover:text-white/90'}`}
+                  >
+                    {activeGraphId === g.id ? <Home className="w-3.5 h-3.5" /> : null}
+                    {g.name}
+                  </button>
+                ))}
+                
+                <button 
+                  onClick={() => setShowNewGraphModal(true)}
+                  className="px-4 py-1.5 text-white/40 hover:text-white/80 text-[10px] font-bold rounded-sm flex items-center gap-1.5 uppercase tracking-widest transition-colors ml-4"
+                >
                   <Plus className="w-3.5 h-3.5" /> NEW GRAPH
                 </button>
               </div>
@@ -944,7 +1102,7 @@ ${char.backstory}
                       Backstory:
                     </p>
                     <p className="font-serif text-[12px] leading-relaxed text-[#5d3f32] italic line-clamp-4">
-                      {char.backstory}
+                      {char.backstory || "No backstory recorded."}
                     </p>
                   </div>
 
@@ -990,34 +1148,51 @@ ${char.backstory}
           <div className="flex-1 flex flex-col h-full bg-black/20 overflow-hidden">
             <div className="flex-1 flex overflow-hidden">
               {/* Left Sidebar (CAST) */}
-              <div className="w-64 border-r border-white/10 bg-black/20 flex flex-col">
-                <div className="p-4 text-[10px] font-bold text-[#c17a7a] tracking-widest uppercase flex items-center gap-2 border-b border-white/5">
+              <div className="w-64 border-r border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md flex flex-col z-20">
+                <div className="p-4 text-[10px] font-bold text-[#b8785e] tracking-widest uppercase flex items-center gap-2 border-b border-[#5d3f32]">
                   <Users className="w-3.5 h-3.5" /> CAST
                 </div>
                 <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-3 space-y-2">
                   {characters.map((char) => (
                     <div
                       key={char.id}
-                      className="flex items-center gap-3 p-2.5 bg-white/5 hover:bg-white/10 rounded-sm cursor-grab border border-white/5 transition-colors group"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("application/char-id", char.id);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      className="flex items-center gap-3 p-2.5 bg-[#3d261d]/50 hover:bg-[#5d3f32]/60 rounded-sm cursor-grab border border-[#5d3f32]/50 transition-colors group shadow-inner"
                     >
                       <img
                         src={char.imageUrl}
-                        className="w-9 h-9 rounded-full object-cover border border-white/10 group-hover:border-white/30"
+                        className="w-9 h-9 rounded-full object-cover border border-[#8c503c]/40 group-hover:border-[#d49a89] grayscale-[20%] sepia-[10%] group-hover:grayscale-0 group-hover:sepia-0 transition-all"
                       />
                       <div className="min-w-0">
-                        <div className="text-[11px] font-bold text-[#eaddcf] uppercase truncate tracking-wider">
+                        <div className="text-[11px] font-bold text-[#fcfaf5] uppercase truncate tracking-wider">
                           {char.name}
                         </div>
-                        <div className="text-[8px] font-bold text-white/40 uppercase truncate mt-0.5">
+                        <div className="text-[8px] font-bold text-[#d49a89]/60 uppercase truncate mt-0.5">
                           {char.role}
                         </div>
                       </div>
-                      <button className="ml-auto opacity-0 group-hover:opacity-100 text-white/30 hover:text-white/80 transition-all">
-                        <Plus className="w-3.5 h-3.5" />
+                      <button 
+                        className="ml-auto opacity-0 group-hover:opacity-100 text-[#d49a89]/50 hover:text-[#fcfaf5] transition-all"
+                        onClick={() => {
+                          const existingNode = nodes.find(n => n.id === char.id);
+                          if (!existingNode) {
+                            setNodes(prev => [...prev, { id: char.id, x: 200 - (pan.x / scale), y: 200 - (pan.y / scale) }]);
+                          }
+                        }}
+                        title={nodes.find(n => n.id === char.id) ? "Already on board" : "Add to board"}
+                      >
+                        {nodes.find(n => n.id === char.id) ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   ))}
-                  <button className="w-full mt-2 py-3 border border-dashed border-white/10 rounded-sm text-white/30 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 hover:text-white/60 transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={handleOpenEditorNew}
+                    className="w-full mt-2 py-3 border border-dashed border-[#8c503c]/30 rounded-sm text-[#d49a89]/60 text-[10px] font-bold uppercase tracking-widest hover:bg-[#5d3f32]/40 hover:border-[#8c503c]/60 hover:text-[#fcfaf5] transition-all flex items-center justify-center gap-2"
+                  >
                     <Plus className="w-3 h-3" /> Add Character
                   </button>
                 </div>
@@ -1025,10 +1200,26 @@ ${char.backstory}
 
               {/* Canvas Area */}
               <div
-                className="flex-1 relative bg-gradient-to-br from-black/10 to-transparent overflow-hidden cursor-grab active:cursor-grabbing"
+                ref={canvasRef}
+                className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing bg-[#3d261d]"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const charId = e.dataTransfer.getData("application/char-id");
+                  if (charId && !nodes.find(n => n.id === charId) && canvasRef.current) {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const dropX = (e.clientX - rect.left - pan.x) / scale;
+                    const dropY = (e.clientY - rect.top - pan.y) / scale;
+                    setNodes(prev => [...prev, { id: charId, x: dropX, y: dropY }]);
+                  }
+                }}
                 onPointerDown={handleCanvasPointerDown}
                 onPointerMove={(e) => {
-                  if (isPanning) handleCanvasPointerMove(e);
+                  if (drawingEdge) handleCanvasPointerMove(e);
+                  else if (isPanning) handleCanvasPointerMove(e);
                   else if (draggingNode) handleNodePointerMove(e);
                 }}
                 onPointerUp={handlePointerUp}
@@ -1038,6 +1229,18 @@ ${char.backstory}
                   else handleZoomOut();
                 }}
               >
+                {/* Immersive Vintage Wallpaper Background */}
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-40" 
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                  }}
+                />
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
+                  <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
+                </div>
+                
                 <div
                   className="absolute inset-0 w-full h-full origin-top-left"
                   style={{
@@ -1046,7 +1249,7 @@ ${char.backstory}
                 >
                   {/* SVG Edges */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    {MOCK_EDGES.map((edge, i) => {
+                    {edges.map((edge) => {
                       const sourceNode = nodes.find(
                         (n) => n.id === edge.source,
                       );
@@ -1057,46 +1260,61 @@ ${char.backstory}
 
                       // Coordinates now map exactly to the avatar's center point
                       const sx = sourceNode.x;
-                      const sy = sourceNode.y;
+                      const sy = sourceNode.y + 20;
                       const tx = targetNode.x;
-                      const ty = targetNode.y;
+                      const ty = targetNode.y + 20;
+                      
+                      const dist = Math.sqrt(Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2));
+                      const sag = dist * 0.15; // Gravity sag
+                      const cx = (sx + tx) / 2;
+                      const cy = (sy + ty) / 2 + sag;
+                      
                       const mx = (sx + tx) / 2;
-                      const my = (sy + ty) / 2;
+                      const my = (sy + ty) / 2 + (sag * 0.5);
 
                       const EdgeIcon = edge.icon;
 
                       return (
-                        <g key={i}>
-                          <line
-                            x1={sx}
-                            y1={sy}
-                            x2={tx}
-                            y2={ty}
+                        <g key={edge.id}>
+                          <path
+                            d={`M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`}
                             stroke={edge.color}
-                            strokeWidth="1.5"
-                            opacity="0.8"
+                            strokeWidth="2.5"
+                            opacity="0.9"
+                            fill="none"
+                            strokeDasharray="4 2"
+                            strokeLinecap="round"
+                            className="drop-shadow-sm"
                           />
 
-                          {/* Badge for relation */}
+                          {/* Badge for relation (Paper Label style) */}
                           <g
                             transform={`translate(${mx}, ${my})`}
-                            className="pointer-events-auto cursor-pointer"
+                            className="pointer-events-auto cursor-pointer group"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingEdge({ source: edge.source, target: edge.target, edgeId: edge.id });
+                            }}
                           >
+                            {/* Tape decoration */}
+                            <rect x="-15" y="-14" width="30" height="6" fill="white" opacity="0.4" transform="rotate(-5)" />
+                            
                             <rect
                               x="-35"
-                              y="-12"
+                              y="-10"
                               width="70"
-                              height="24"
-                              rx="12"
-                              fill="white"
-                              stroke={edge.color}
-                              strokeWidth="1.5"
+                              height="20"
+                              fill="#f4efe6"
+                              stroke="#e5e0d5"
+                              strokeWidth="1"
+                              rx="1"
+                              className="shadow-sm group-hover:stroke-[#d49a89] transition-colors"
                             />
                             <foreignObject
-                              x="-30"
-                              y="-8"
-                              width="16"
-                              height="16"
+                              x="-32"
+                              y="-7"
+                              width="14"
+                              height="14"
                             >
                               <div className="w-full h-full flex items-center justify-center">
                                 <EdgeIcon
@@ -1106,34 +1324,80 @@ ${char.backstory}
                               </div>
                             </foreignObject>
                             <text
-                              x="-10"
+                              x="-14"
                               y="3"
                               fontSize="8"
                               fontWeight="800"
-                              fill={edge.color}
+                              fill="#4a3225"
                               alignmentBaseline="middle"
                               letterSpacing="0.5"
                             >
                               {edge.label}
                             </text>
+                            
+                            {/* Hover Scissors Icon */}
+                            <foreignObject x="35" y="-12" width="20" height="20" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                className="w-5 h-5 bg-white border border-rose-200 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-50 hover:scale-110 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEdges(prev => prev.filter(eItem => eItem.id !== edge.id));
+                                }}
+                              >
+                                <Scissors className="w-2.5 h-2.5" />
+                              </button>
+                            </foreignObject>
                           </g>
                         </g>
                       );
                     })}
+                    
+                    {/* Drawing Edge */}
+                    {drawingEdge && (() => {
+                      const sourceNode = nodes.find((n) => n.id === drawingEdge.source);
+                      if (!sourceNode) return null;
+                      const sx = sourceNode.x;
+                      const sy = sourceNode.y + 20;
+                      const tx = drawingEdge.currentX;
+                      const ty = drawingEdge.currentY;
+                      
+                      const dist = Math.sqrt(Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2));
+                      const sag = dist * 0.15;
+                      const cx = (sx + tx) / 2;
+                      const cy = (sy + ty) / 2 + sag;
+                      
+                      return (
+                        <path
+                          d={`M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`}
+                          stroke="#ef4444"
+                          strokeWidth="3"
+                          opacity="0.8"
+                          fill="none"
+                          strokeDasharray="4 4"
+                          strokeLinecap="round"
+                          className="drop-shadow-sm animate-pulse"
+                        />
+                      );
+                    })()}
                   </svg>
 
                   {/* HTML Nodes */}
                   {nodes.map((node) => {
                     const char = characters.find((c) => c.id === node.id);
                     if (!char) return null;
+                    
+                    // Generate a stable random rotation based on ID string
+                    const charCodeSum = node.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+                    const rotation = (charCodeSum % 7) - 3; // -3 to +3 degrees
+
                     return (
                       <div
                         key={node.id}
-                        className="absolute flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:z-10"
+                        className="absolute flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:z-10 group"
                         style={{
                           left: node.x,
                           top: node.y,
-                          transform: "translate(-50%, -36px)",
+                          transform: `translate(-50%, -36px) rotate(${rotation}deg)`,
                           touchAction: "none",
                         }}
                         onPointerDown={(e) => handleNodePointerDown(e, node.id)}
@@ -1141,19 +1405,118 @@ ${char.backstory}
                         onPointerUp={handlePointerUp}
                         onPointerCancel={handlePointerUp}
                       >
-                        <div className="w-[72px] h-[72px] shrink-0 bg-stone-100 rounded-full border-4 border-white shadow-xl overflow-hidden relative group">
+                        <div className="w-[85px] h-[105px] shrink-0 bg-[#fcfaf5] p-1.5 pb-5 rounded-sm border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.3)] relative">
+                          {/* Pin */}
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#8c503c] shadow-sm z-10 opacity-90" />
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#d49a89] z-20" />
+                          
                           <img
                             src={char.imageUrl}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 pointer-events-none"
+                            className="w-full h-full object-cover border border-stone-200 grayscale-[20%] sepia-[10%] pointer-events-none"
                           />
-                        </div>
-                        <div className="bg-white rounded-sm px-3 py-1.5 flex flex-col items-center shadow-lg pointer-events-none min-w-[100px]">
-                          <span className="text-[10px] font-bold text-stone-800 uppercase tracking-wider whitespace-nowrap">
-                            {char.name}
-                          </span>
-                          <span className="text-[7px] font-bold text-stone-400 uppercase tracking-widest mt-0.5 whitespace-nowrap">
-                            {char.role}
-                          </span>
+                          <div className="absolute bottom-1 left-0 right-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-[9px] font-bold text-[#4a3225] uppercase tracking-wider whitespace-nowrap">
+                              {char.name}
+                            </span>
+                          </div>
+                          
+                          {/* Link Anchor (shows on hover) */}
+                          <div 
+                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-[#fcfaf5] border border-[#d49a89] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair hover:bg-[#8c503c] hover:text-white shadow-sm z-30"
+                            onPointerDown={(e) => handleStartDrawEdge(e, node.id)}
+                          >
+                            <Link2 className="w-3 h-3" />
+                          </div>
+
+                          {/* Dossier Popup Card */}
+                          {selectedCharId === node.id && (
+                            <div 
+                              className="absolute left-[110%] top-[-20%] w-72 bg-[#fcfaf5] rounded-sm shadow-[8px_16px_32px_rgba(0,0,0,0.4)] border border-[#e5e0d5] p-5 cursor-auto z-50 animate-in fade-in zoom-in-95 duration-200 text-left"
+                              style={{ 
+                                touchAction: 'auto',
+                                transform: `rotate(${-rotation}deg)` // Counteract the polaroid rotation to make card straight
+                              }}
+                              onPointerDown={e => e.stopPropagation()} // prevent drag
+                            >
+                              {/* Tape decoration */}
+                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-5 bg-white/60 rotate-2 opacity-70 shadow-sm border border-[#e5e0d5]/50" />
+                              
+                              <div className="flex gap-4 mb-4">
+                                <div className="w-[70px] h-[90px] shrink-0 bg-white p-1 pb-3 rounded-sm border border-[#e5e0d5] shadow-sm relative rotate-[-2deg]">
+                                  <img src={char.imageUrl} className="w-full h-full object-cover grayscale-[20%] sepia-[10%]" />
+                                </div>
+                                <div className="flex-1 min-w-0 pt-1">
+                                  <h3 className="font-serif text-xl font-bold text-[#4a3225] truncate">
+                                    {char.name}
+                                  </h3>
+                                  <div className="text-[10px] font-bold text-[#8c503c] uppercase tracking-widest mt-1 truncate">
+                                    {char.role}
+                                  </div>
+                                  <div className="text-[10px] font-medium text-stone-500 uppercase mt-0.5">
+                                    AGE: {char.age || 'Unknown'}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="mb-4">
+                                <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Backstory:</h4>
+                                <p className="font-serif italic text-sm text-[#4a3225] line-clamp-4 leading-relaxed">
+                                  {char.backstory || "No backstory recorded in the archives."}
+                                </p>
+                              </div>
+                              
+                              {char.traits && char.traits.length > 0 && (
+                                <div className="mb-4">
+                                  <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Traits:</h4>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {char.traits.map(trait => (
+                                      <span key={trait} className="px-2 py-0.5 bg-[#f4efe6] border border-[#e5e0d5] text-[#8c503c] text-[9px] font-bold uppercase tracking-widest rounded-sm">
+                                        {trait}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mb-4">
+                                <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Relationships:</h4>
+                                <div className="space-y-1.5">
+                                  {edges.filter(e => e.source === char.id || e.target === char.id).map(edge => {
+                                    const relatedId = edge.source === char.id ? edge.target : edge.source;
+                                    const relatedChar = characters.find(c => c.id === relatedId);
+                                    if (!relatedChar) return null;
+                                    return (
+                                      <div key={edge.id} className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#8c503c]" />
+                                        <span className="text-[10px] font-bold text-[#4a3225] uppercase tracking-wider">{relatedChar.name}</span>
+                                        <span className="text-[9px] font-medium text-stone-500 uppercase italic">— {edge.label || "Connected"}</span>
+                                      </div>
+                                    );
+                                  })}
+                                  {edges.filter(e => e.source === char.id || e.target === char.id).length === 0 && (
+                                    <p className="text-[10px] font-serif italic text-stone-500">No relationships recorded.</p>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#e5e0d5] mt-2 text-stone-400">
+                                <button 
+                                  className="hover:text-[#8c503c] transition-colors" 
+                                  title="Edit Profile"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenEditorEdit(char); }}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  className="hover:text-rose-600 transition-colors" 
+                                  title="Delete"
+                                  onClick={(e) => { e.stopPropagation(); setCharacterToDelete(char.id); }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1161,21 +1524,98 @@ ${char.backstory}
                 </div>
 
                 {/* Zoom Controls */}
-                <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 bg-black/20 backdrop-blur-md rounded-sm p-1.5 border border-white/10 shadow-lg">
+                <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 bg-[#fcfaf5] rounded-sm p-1.5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)]">
                   <button
                     onClick={handleZoomIn}
-                    className="w-7 h-7 flex items-center justify-center text-white/70 hover:bg-white/20 hover:text-white rounded-sm transition-colors"
+                    className="w-7 h-7 flex items-center justify-center text-[#8c503c] hover:bg-[#b8785e] hover:text-white rounded-sm transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
-                  <div className="w-full h-px bg-white/10" />
+                  <div className="w-full h-px bg-stone-200" />
                   <button
                     onClick={handleZoomOut}
-                    className="w-7 h-7 flex items-center justify-center text-white/70 hover:bg-white/20 hover:text-white rounded-sm transition-colors"
+                    className="w-7 h-7 flex items-center justify-center text-[#8c503c] hover:bg-[#b8785e] hover:text-white rounded-sm transition-colors"
                   >
                     <div className="w-3 h-[2px] bg-current" />
                   </button>
                 </div>
+
+                {/* Relationship Select Modal */}
+                {pendingEdge && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onPointerDown={e => e.stopPropagation()}>
+                    <div className="bg-[#fcfaf5] p-6 rounded-sm border border-[#e5e0d5] shadow-[4px_8px_24px_rgba(0,0,0,0.4)] max-w-sm w-full mx-4">
+                      <h3 className="font-serif text-lg font-bold text-[#4a3225] mb-4 uppercase tracking-widest text-center border-b border-[#e5e0d5] pb-3">
+                        {pendingEdge.edgeId ? "Update Link" : "Establish Link"}
+                      </h3>
+                      <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                        {RELATION_OPTIONS.map(opt => {
+                          const OptIcon = opt.icon;
+                          return (
+                            <button
+                              key={opt.label}
+                              className="w-full flex items-center gap-3 p-3 rounded-sm border border-transparent hover:border-[#d49a89] transition-all bg-white shadow-sm hover:shadow-md"
+                              onClick={() => {
+                                if (pendingEdge.edgeId) {
+                                  setEdges(prev => prev.map(e => e.id === pendingEdge.edgeId ? { ...e, label: opt.label, color: opt.color, icon: opt.icon } : e));
+                                } else {
+                                  setEdges(prev => [...prev, {
+                                    id: Date.now().toString(),
+                                    source: pendingEdge.source,
+                                    target: pendingEdge.target,
+                                    label: opt.label,
+                                    color: opt.color,
+                                    icon: opt.icon
+                                  }]);
+                                }
+                                setPendingEdge(null);
+                              }}
+                            >
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center border" style={{ backgroundColor: opt.color + '15', color: opt.color, borderColor: opt.color + '40' }}>
+                                <OptIcon className="w-4 h-4" />
+                              </div>
+                              <span className="font-bold text-[#4a3225] tracking-widest text-sm">{opt.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-[#e5e0d5]">
+                        <p className="text-[10px] font-bold text-[#8c503c] uppercase tracking-widest mb-2">Or type custom relation:</p>
+                        <input 
+                          type="text" 
+                          autoFocus
+                          placeholder="e.g. MASTERMIND (Press Enter)" 
+                          className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-bold text-[#4a3225] focus:outline-none focus:border-[#d49a89] uppercase placeholder:normal-case placeholder:font-normal placeholder:text-stone-400 shadow-inner"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const val = e.currentTarget.value.trim().toUpperCase();
+                              if (pendingEdge.edgeId) {
+                                setEdges(prev => prev.map(edge => edge.id === pendingEdge.edgeId ? { ...edge, label: val, color: "#8c503c", icon: Bookmark } : edge));
+                              } else {
+                                setEdges(prev => [...prev, {
+                                  id: Date.now().toString(),
+                                  source: pendingEdge.source,
+                                  target: pendingEdge.target,
+                                  label: val,
+                                  color: "#8c503c",
+                                  icon: Bookmark
+                                }]);
+                              }
+                              setPendingEdge(null);
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <button 
+                        className="mt-4 w-full py-3 text-sm font-bold text-[#8c503c] uppercase tracking-widest hover:bg-[#8c503c]/10 rounded-sm transition-colors border border-transparent hover:border-[#8c503c]/20"
+                        onClick={() => setPendingEdge(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1202,6 +1642,56 @@ ${char.backstory}
                 className="px-4 py-2 text-xs font-bold tracking-widest uppercase bg-[#c17a7a] text-white rounded-sm shadow-sm hover:bg-[#a66850] transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Graph Modal */}
+      {showNewGraphModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#fcfaf5] border border-[#e5e0d5] rounded-sm shadow-2xl p-6 max-w-sm w-full relative">
+            <h2 className="text-xl font-serif font-bold text-[#4a3225] mb-2 uppercase tracking-wide">New Graph</h2>
+            <p className="text-sm text-stone-600 mb-4">
+              Enter a name for the new graph.
+            </p>
+            <input 
+              type="text" 
+              value={newGraphName}
+              onChange={(e) => setNewGraphName(e.target.value)}
+              placeholder="e.g. Royal Family"
+              className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#b8785e] mb-6"
+            />
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  setShowNewGraphModal(false);
+                  setNewGraphName("");
+                }}
+                className="px-4 py-2 text-xs font-bold tracking-widest uppercase text-stone-500 hover:text-stone-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                disabled={!newGraphName.trim()}
+                onClick={() => {
+                  const newGraph = {
+                    id: Date.now().toString(),
+                    name: newGraphName.trim(),
+                    nodes: [],
+                    edges: []
+                  };
+                  setGraphs(prev => [...prev, newGraph]);
+                  setActiveGraphId(newGraph.id);
+                  setShowNewGraphModal(false);
+                  setNewGraphName("");
+                }}
+                className={`px-4 py-2 text-xs font-bold tracking-widest uppercase rounded-sm shadow-sm transition-colors ${
+                  !newGraphName.trim() ? "bg-stone-300 text-white cursor-not-allowed" : "bg-[#c17a7a] text-white hover:bg-[#a66850]"
+                }`}
+              >
+                Create
               </button>
             </div>
           </div>

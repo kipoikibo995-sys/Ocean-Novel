@@ -1,0 +1,496 @@
+const fs = require('fs');
+
+const fullCode = `import React, { useState } from "react";
+import { Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move } from "lucide-react";
+import { MOCK_LOCATIONS } from "@/mockData";
+
+export default function Locations() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [locations, setLocations] = useState(() => MOCK_LOCATIONS.map(loc => ({
+    ...loc,
+    atmosphere: (loc as any).atmosphere || "Mysterious",
+    region: (loc as any).region || "Unknown Region"
+  })));
+
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+  const initialNodes = MOCK_LOCATIONS.map((loc, index) => ({
+    id: loc.id,
+    x: 100 + (index % 3) * 300,
+    y: 100 + Math.floor(index / 3) * 200
+  }));
+  const [nodes, setNodes] = useState<{id: string, x: number, y: number}[]>(initialNodes);
+  const [edges, setEdges] = useState<{id: string, source: string, target: string, label: string}[]>([
+    { id: "e1", source: "1", target: "2", label: "2 days by boat" },
+    { id: "e2", source: "1", target: "3", label: "Mountain pass" },
+  ]);
+
+  const canvasRef = React.useRef<HTMLDivElement>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [draggingNode, setDraggingNode] = useState<string | null>(null);
+
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    if (e.target === canvasRef.current) {
+      setIsPanning(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isPanning) {
+      setPan(prev => ({
+        x: prev.x + e.movementX,
+        y: prev.y + e.movementY
+      }));
+    } else if (draggingNode) {
+      setNodes(prev => prev.map(n => 
+        n.id === draggingNode 
+          ? { ...n, x: n.x + e.movementX / scale, y: n.y + e.movementY / scale }
+          : n
+      ));
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsPanning(false);
+    setDraggingNode(null);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const [editingLocId, setEditingLocId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "",
+    description: "",
+    atmosphere: "",
+    region: ""
+  });
+
+  const handleOpenCreate = () => {
+    setEditingLocId(null);
+    setFormData({ name: "", type: "", description: "", atmosphere: "", region: "" });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (loc: any) => {
+    setEditingLocId(loc.id);
+    setFormData({
+      name: loc.name || "",
+      type: loc.type || "",
+      description: loc.description || "",
+      atmosphere: loc.atmosphere || "",
+      region: loc.region || ""
+    });
+    setIsModalOpen(true);
+  };
+
+  const [locToDelete, setLocToDelete] = useState<string | null>(null);
+
+  const handleDelete = (id: string) => {
+    setLocToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (locToDelete) {
+      setLocations(prev => prev.filter(l => l.id !== locToDelete));
+      setLocToDelete(null);
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    const t = (type || "").toLowerCase();
+    if (t.includes('town') || t.includes('city') || t.includes('village')) return <Building className="w-3.5 h-3.5" />;
+    if (t.includes('house') || t.includes('home') || t.includes('tavern') || t.includes('inn')) return <Home className="w-3.5 h-3.5" />;
+    if (t.includes('forest') || t.includes('woods')) return <TreePine className="w-3.5 h-3.5" />;
+    if (t.includes('mountain') || t.includes('peak')) return <Mountain className="w-3.5 h-3.5" />;
+    if (t.includes('castle') || t.includes('keep') || t.includes('fort')) return <Castle className="w-3.5 h-3.5" />;
+    return <MapPin className="w-3.5 h-3.5" />;
+  };
+
+  const handleSave = () => {
+    if (!formData.name.trim()) return;
+
+    if (editingLocId) {
+      setLocations(prev => prev.map(loc => 
+        loc.id === editingLocId ? { ...loc, ...formData } : loc
+      ));
+    } else {
+      const newLoc = {
+        id: Date.now().toString(),
+        ...formData
+      };
+      setLocations(prev => [newLoc, ...prev]);
+      setNodes(prev => [...prev, { id: newLoc.id, x: 200, y: 200 }]);
+    }
+    setIsModalOpen(false);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col w-full h-full overflow-hidden relative bg-[#3d261d]">
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-40" 
+        style={{
+          backgroundImage: \`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")\`
+        }}
+      />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
+        <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
+      </div>
+
+      <div className="p-4 lg:p-6 border-b border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+        <div>
+          <h1 className="font-serif text-3xl text-[#e5e0d5] font-bold">World Atlas</h1>
+          <p className="text-[#a66850] text-[11px] font-bold uppercase tracking-widest mt-1">Chart the regions and landmarks</p>
+        </div>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a66850]" />
+            <input 
+              type="text" 
+              placeholder="Search atlas..." 
+              className="w-full pl-9 pr-4 py-2 bg-[#1a0f0a]/60 border border-[#5d3f32] rounded-sm text-[#e5e0d5] text-sm font-serif italic placeholder:text-[#8a5b46] focus:outline-none focus:border-[#a66850] transition-colors shadow-inner"
+            />
+          </div>
+
+          {/* View Switcher */}
+          <div className="flex bg-[#2a1a14]/60 p-1 rounded-full border border-[#5d3f32] backdrop-blur-sm shadow-inner shrink-0 mr-4">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={\`px-4 py-1.5 flex items-center gap-2 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm \${viewMode === "grid" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}\`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={\`px-4 py-1.5 flex items-center gap-2 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm \${viewMode === "map" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}\`}
+            >
+              <Route className="w-3.5 h-3.5" />
+              Map
+            </button>
+          </div>
+
+          <button 
+            onClick={handleOpenCreate}
+            className="px-6 py-2 bg-[#b8785e] hover:bg-[#a66850] text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all flex items-center gap-2 shrink-0"
+          >
+            <Plus className="w-3 h-3" />
+            Add Location
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-64 shrink-0 bg-[#2a1a14]/60 backdrop-blur-md border-r border-[#5d3f32] flex flex-col hidden md:flex">
+          <div className="p-4 border-b border-[#5d3f32]">
+            <h3 className="text-[10px] font-bold text-[#a66850] tracking-[0.2em] uppercase">Regions</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-1">
+            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
+              <Castle className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+              Septentrionel
+            </button>
+            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
+              <Compass className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+              Ventir-Riyad Border
+            </button>
+            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
+              <MapIcon className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+              Lavern City
+            </button>
+            <div className="pt-4 mt-4 border-t border-[#5d3f32]/50">
+              <h4 className="text-[9px] font-bold text-[#8a5b46] tracking-[0.2em] uppercase px-3 mb-2">Unmapped Lands</h4>
+              <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
+                <TreePine className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+                Whispering Woods
+              </button>
+              <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
+                <Mountain className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+                Dragon's Peak
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {viewMode === "grid" ? (
+          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {locations.map((loc) => (
+                <div 
+                  key={loc.id} 
+                  className="relative group bg-[#F6F0E7] border border-[#d49a89]/40 rounded-sm shadow-[0_4px_12px_rgba(25,10,5,0.15)] hover:shadow-[0_8px_20px_rgba(25,10,5,0.2)] hover:-translate-y-[2px] hover:border-[#b8785e] transition-all duration-300 cursor-pointer flex flex-col overflow-hidden"
+                  onClick={() => handleOpenEdit(loc)}
+                >
+                  <div className="h-1 w-full bg-[#a66850] opacity-80" />
+                  
+                  <div className="p-6 flex flex-col h-full gap-4 relative">
+                    <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(loc); }}
+                        className="p-1.5 text-stone-500 hover:text-[#8a5b46] transition-colors rounded-sm hover:bg-[#e5e0d5]/60"
+                        title="Edit"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(loc.id); }}
+                        className="p-1.5 text-stone-500 hover:text-rose-600 transition-colors rounded-sm hover:bg-rose-50"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="pr-16">
+                      <h3 className="font-serif text-[22px] font-bold text-[#3d261d] leading-tight mb-2" title={loc.name}>
+                        {loc.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-[#8a5b46] text-[10px] font-bold tracking-[0.2em] uppercase">
+                        {getTypeIcon(loc.type)}
+                        <span className="truncate">{loc.type || 'Unknown Type'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="font-serif text-[15px] text-[#4a3225]/90 leading-relaxed line-clamp-4">
+                        {loc.description || "No description provided."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[#8c503c] text-[10px] font-bold mt-2">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="uppercase tracking-widest truncate">{loc.region || 'Unassigned'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div 
+            ref={canvasRef}
+            className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing bg-[#3d261d]"
+            onPointerDown={handleCanvasPointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onWheel={(e) => {
+              const zoomFactor = 0.1;
+              if (e.deltaY < 0) {
+                setScale(s => Math.min(s + zoomFactor, 2));
+              } else {
+                setScale(s => Math.max(s - zoomFactor, 0.3));
+              }
+            }}
+          >
+            <div
+              className="absolute inset-0 origin-top-left"
+              style={{
+                transform: \`translate(\${pan.x}px, \${pan.y}px) scale(\${scale})\`,
+              }}
+            >
+              <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                {edges.map(edge => {
+                  const sourceNode = nodes.find(n => n.id === edge.source);
+                  const targetNode = nodes.find(n => n.id === edge.target);
+                  if (!sourceNode || !targetNode) return null;
+                  
+                  const dx = targetNode.x - sourceNode.x;
+                  const dy = targetNode.y - sourceNode.y;
+                  const midX = sourceNode.x + dx / 2;
+                  const midY = sourceNode.y + dy / 2;
+                  
+                  return (
+                    <g key={edge.id}>
+                      <line 
+                        x1={sourceNode.x + 80} y1={sourceNode.y + 30} 
+                        x2={targetNode.x + 80} y2={targetNode.y + 30} 
+                        stroke="#a66850" strokeWidth="2" strokeDasharray="6 6" opacity="0.6"
+                      />
+                      <rect x={midX - 10} y={midY - 12} width={edge.label.length * 6 + 20} height="24" fill="#fcfaf5" rx="4" stroke="#d49a89" />
+                      <text x={midX + (edge.label.length * 3)} y={midY + 4} fontSize="9" fill="#8a5b46" fontWeight="bold" textAnchor="middle" letterSpacing="0.1em">
+                        {edge.label.toUpperCase()}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {nodes.map(node => {
+                const loc = locations.find(l => l.id === node.id);
+                if (!loc) return null;
+                
+                return (
+                  <div 
+                    key={node.id}
+                    className="absolute bg-[#F6F0E7] border border-[#d49a89] rounded-sm shadow-[0_8px_20px_rgba(25,10,5,0.3)] w-[160px] cursor-pointer hover:border-[#b8785e] hover:shadow-[0_12px_24px_rgba(25,10,5,0.4)] transition-colors"
+                    style={{ transform: \`translate(\${node.x}px, \${node.y}px)\` }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setDraggingNode(node.id);
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    }}
+                    onDoubleClick={() => handleOpenEdit(loc)}
+                  >
+                    <div className="h-1 w-full bg-[#a66850]" />
+                    <div className="p-3 text-center pointer-events-none">
+                      <div className="flex justify-center mb-1 text-[#8a5b46]">
+                        {getTypeIcon(loc.type)}
+                      </div>
+                      <h4 className="font-serif font-bold text-[#3d261d] leading-tight text-sm">
+                        {loc.name}
+                      </h4>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="bg-[#fcfaf5] rounded-sm shadow-[8px_16px_48px_rgba(0,0,0,0.5)] w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[#e5e0d5] relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-[#e5e0d5] bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-sm bg-[#f4efe6] border border-[#e5e0d5] flex items-center justify-center text-[#8a5b46]">
+                  <MapIcon className="w-5 h-5 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h2 className="font-serif text-2xl font-bold text-[#4a3225]">
+                    {editingLocId ? "Edit Location" : "Cartographer's Log"}
+                  </h2>
+                  <p className="text-[10px] font-bold text-[#a66850] tracking-widest uppercase mt-0.5">
+                    {editingLocId ? "Update existing records" : "Record a New Location"}
+                  </p>
+                </div>
+              </div>
+              <button 
+                className="w-8 h-8 flex items-center justify-center rounded-sm text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-[#fcfaf5]">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Location Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. The Old Lighthouse" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-bold text-[#4a3225] focus:outline-none focus:border-[#d49a89] shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Type (City, Landmark...)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Landmark" 
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-bold text-[#4a3225] focus:outline-none focus:border-[#d49a89] shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Short Description</label>
+                <textarea 
+                  className="w-full h-24 bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-serif italic text-[#4a3225] focus:outline-none focus:border-[#d49a89] shadow-inner resize-none" 
+                  placeholder="Describe the setting and its significance..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Atmosphere / Mood</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Cold, damp, imposing" 
+                    value={formData.atmosphere}
+                    onChange={(e) => setFormData({...formData, atmosphere: e.target.value})}
+                    className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-bold text-[#4a3225] focus:outline-none focus:border-[#d49a89] shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Region / Parent</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Whispering Woods" 
+                    value={formData.region}
+                    onChange={(e) => setFormData({...formData, region: e.target.value})}
+                    className="w-full bg-white border border-[#e5e0d5] rounded-sm px-3 py-2 text-sm font-bold text-[#4a3225] focus:outline-none focus:border-[#d49a89] shadow-inner"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-[#e5e0d5] flex justify-end gap-3 bg-white">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 text-[#8a5b46] text-[11px] font-bold tracking-widest uppercase hover:bg-stone-100 rounded-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSave}
+                disabled={!formData.name.trim()}
+                className={\`px-6 py-2 text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all \${
+                  !formData.name.trim() 
+                    ? 'bg-stone-300 cursor-not-allowed' 
+                    : 'bg-[#b8785e] hover:bg-[#a66850]'
+                }\`}
+              >
+                Save Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {locToDelete && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="bg-[#fcfaf5] rounded-sm shadow-[8px_16px_48px_rgba(0,0,0,0.5)] w-full max-w-sm flex flex-col overflow-hidden border border-[#e5e0d5] relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-12 h-12 mx-auto bg-rose-50 border border-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="font-serif text-xl font-bold text-[#4a3225]">Delete Location</h3>
+              <p className="text-sm font-serif italic text-stone-500">
+                Are you sure you want to delete this location? This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="p-4 border-t border-[#e5e0d5] flex justify-center gap-3 bg-white">
+              <button 
+                onClick={() => setLocToDelete(null)}
+                className="px-6 py-2 text-[#8a5b46] text-[11px] font-bold tracking-widest uppercase hover:bg-stone-100 rounded-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+`;
+
+fs.writeFileSync('src/pages/Locations.tsx', fullCode);

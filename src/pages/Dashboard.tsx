@@ -110,21 +110,34 @@ export default function Dashboard() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans selection:bg-[#965A5A] selection:text-white"
+      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#3d261d] flex flex-col relative font-sans selection:bg-[#965A5A] selection:text-white"
     >
-      {/* Abstract Artistic Background */}
+      {/* Immersive Vintage Wallpaper Background */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-40" 
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}
+      />
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-[400px] lg:w-[600px] h-[400px] lg:h-[600px] bg-[#E8E3D7] rounded-full mix-blend-multiply blur-[60px] lg:blur-[100px] opacity-70" />
-        <div className="absolute top-[30%] -left-20 w-[300px] lg:w-[500px] h-[300px] lg:h-[500px] bg-[#E2D9C8] rounded-full mix-blend-multiply blur-[60px] lg:blur-[120px] opacity-50" />
+        <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
+        <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
       </div>
 
       <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-4 lg:py-6 h-full relative z-10 flex flex-col gap-4">
         {/* SECTION 1: THE MANUSCRIPTS */}
         <section className="shrink-0 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6">
-              <h1 className="text-2xl lg:text-3xl font-serif font-bold text-stone-800 tracking-tight leading-none">
-                Active Projects
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fcfaf5] p-4 lg:p-6 rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.2)] border border-[#e5e0d5] relative">
+            {/* Archive Folder Tab Decoration */}
+            <div
+              className="absolute -top-4 left-4 w-32 h-5 bg-[#e5e0d5]"
+              style={{ clipPath: "polygon(0 0, 85% 0, 100% 100%, 0 100%)" }}
+            />
+            <div className="absolute -top-1 left-4 right-4 h-2 bg-[#fcfaf5] rounded-t-sm z-0" />
+            
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6 relative z-10">
+              <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#4a3225] tracking-tight leading-none uppercase">
+                Archive Projects
               </h1>
 
               {/* AUTHOR STATS STRIP */}
@@ -162,14 +175,14 @@ export default function Dashboard() {
                 <div className="w-px h-4 lg:h-5 bg-stone-300/50" />
 
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#E5E0D5] flex items-center justify-center text-stone-700 shadow-inner">
+                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#f4efe6] flex items-center justify-center text-[#8c503c] border border-[#e5e0d5]">
                     <Coffee className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                   </div>
                   <div>
                     <p className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-stone-500 leading-none mb-0.5">
                       Session
                     </p>
-                    <p className="text-[10px] lg:text-xs font-bold text-stone-800 leading-none">
+                    <p className="text-[10px] lg:text-xs font-bold text-[#4a3225] leading-none">
                       14h 20m
                     </p>
                   </div>
@@ -179,22 +192,22 @@ export default function Dashboard() {
 
             <button
               onClick={() => navigate("/create")}
-              className="flex items-center justify-center gap-2 bg-stone-800 text-white px-4 py-2 rounded-full text-[10px] lg:text-xs font-medium hover:bg-stone-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto shrink-0"
+              className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto shrink-0 border border-[#4a3225] relative z-10"
             >
               <Plus className="w-3.5 h-3.5" />
-              New Project
+              New Archive
             </button>
           </div>
 
-          <div className="flex gap-4 lg:gap-6 overflow-x-auto pb-4 pt-2 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth custom-scrollbar">
+          <div className="flex gap-4 lg:gap-6 overflow-x-auto pb-6 pt-4 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth custom-scrollbar relative z-10">
             {/* Render the single project from context */}
             {[project].map((proj) => {
               const covers = [
                 {
-                  bg: "bg-[#2B3A42]",
-                  text: "text-[#E5E0D5]",
-                  accent: "bg-[#965A5A]",
-                  ribbon: "bg-rose-700",
+                  bg: "bg-[#2a1a14]",
+                  text: "text-[#e5e0d5]",
+                  accent: "bg-[#b8785e]",
+                  ribbon: "bg-[#8c503c]",
                 },
               ];
               const style = covers[0];
@@ -206,62 +219,44 @@ export default function Dashboard() {
                 <div
                   key={proj.id}
                   onClick={() => navigate(`/project/${proj.id}`)}
-                  className="snap-center sm:snap-start shrink-0 group [perspective:1000px] cursor-pointer"
+                  className="snap-center sm:snap-start shrink-0 group cursor-pointer"
                 >
                   <div
                     className={cn(
-                      "relative w-[130px] h-[180px] lg:w-[170px] lg:h-[230px] rounded-r-md rounded-l-[3px] shadow-lg transition-all duration-500 [transform-style:preserve-3d]",
-                      "group-hover:-translate-y-1 lg:group-hover:-translate-y-2 group-hover:rotate-y-[-10deg] group-hover:rotate-x-[2deg] group-hover:shadow-[10px_10px_20px_rgba(0,0,0,0.25)]",
+                      "relative w-[130px] h-[180px] lg:w-[170px] lg:h-[230px] rounded-r-md rounded-l-sm shadow-[4px_8px_16px_rgba(0,0,0,0.4)] transition-all duration-300",
+                      "group-hover:-translate-y-2 group-hover:shadow-[6px_12px_24px_rgba(0,0,0,0.5)] border border-[#5d3f32]",
                       style.bg,
                     )}
                   >
-                    {/* Paper Edges (3D depth simulation) */}
-                    <div className="absolute inset-y-[2px] -right-[2px] lg:-right-[3px] w-[2px] lg:w-[3px] bg-[#E8E3D7] rounded-r-sm shadow-[inset_1px_0_2px_rgba(0,0,0,0.2)] transition-all duration-500 group-hover:w-[4px] lg:group-hover:w-[6px] group-hover:-right-[4px] lg:group-hover:-right-[6px]" />
-                    <div className="absolute -bottom-[2px] lg:-bottom-[3px] inset-x-[2px] h-[2px] lg:h-[3px] bg-[#E8E3D7] rounded-b-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-500 group-hover:h-[4px] lg:group-hover:h-[6px] group-hover:-bottom-[4px] lg:group-hover:-bottom-[6px]" />
+                    {/* Spine Binding */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[12px] lg:w-[16px] bg-black/40 border-r border-[#5d3f32] rounded-l-sm shadow-inner" />
 
                     {/* Cover Texture */}
                     <div
-                      className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none rounded-r-md rounded-l-[3px]"
+                      className="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none rounded-r-md rounded-l-[3px]"
                       style={{
                         backgroundImage:
                           'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")',
                       }}
                     ></div>
 
-                    {/* Spine Crease */}
-                    <div className="absolute left-0 inset-y-0 w-2 lg:w-3 bg-gradient-to-r from-black/60 via-black/20 to-transparent rounded-l-[3px] mix-blend-multiply pointer-events-none" />
-                    <div className="absolute left-[1px] inset-y-0 w-px bg-white/20 pointer-events-none" />
-                    <div className="absolute left-2 lg:left-3 inset-y-0 w-px bg-black/10 pointer-events-none" />
-
-                    {/* Bookmark Ribbon */}
-                    <div
-                      className={cn(
-                        "absolute top-0 left-4 lg:left-6 w-2 lg:w-3 h-8 lg:h-10 shadow-sm pointer-events-none",
-                        style.ribbon,
-                      )}
-                      style={{
-                        clipPath:
-                          "polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)",
-                      }}
-                    />
-
                     {/* Book Cover Content */}
-                    <div className="absolute inset-0 flex flex-col p-3 lg:p-4 pt-6 lg:pt-8 z-10 pointer-events-none">
-                      <div className="flex-1 flex flex-col items-center text-center">
-                        <span
-                          className={cn(
-                            "text-[6px] lg:text-[7px] font-bold uppercase tracking-[0.2em] mb-2 lg:mb-4 opacity-70",
-                            style.text,
-                          )}
-                        >
-                          {proj.tags[0]}
-                        </span>
-
-                        <div className="w-full border-t border-b border-white/10 py-2 lg:py-4 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 flex flex-col p-3 lg:p-4 pt-6 lg:pt-8 z-10 pointer-events-none ml-[12px] lg:ml-[16px]">
+                      <div className="flex-1 flex flex-col items-center text-center mt-2">
+                        {/* Tape */}
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-10 h-3 bg-white/40 rotate-2 opacity-50" />
+                        
+                        <div className="w-[80%] bg-[#fcfaf5] p-2 border border-[#e5e0d5] shadow-sm transform -rotate-1">
+                          <span
+                            className={cn(
+                              "block text-[6px] lg:text-[7px] font-bold uppercase tracking-[0.2em] mb-1 text-[#8c503c]",
+                            )}
+                          >
+                            Case File
+                          </span>
                           <h2
                             className={cn(
-                              "text-sm lg:text-lg font-serif font-bold leading-tight drop-shadow-md px-1",
-                              style.text,
+                              "text-xs lg:text-sm font-serif font-bold leading-tight text-[#4a3225] line-clamp-3",
                             )}
                           >
                             {proj.title}
@@ -319,24 +314,30 @@ export default function Dashboard() {
         {/* SECTION 2: STUDIO INTELLIGENCE (Bento Grid) */}
         <section className="flex-1 flex flex-col min-h-0 pb-2">
           <div className="mb-2 shrink-0">
-            <h2 className="text-lg lg:text-xl font-serif font-bold text-stone-800 tracking-tight">
-              Studio Intelligence
+            <h2 className="text-lg lg:text-xl font-serif font-bold text-[#fcfaf5] tracking-tight uppercase">
+              Investigation Board
             </h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0">
             {/* AI Editorial Tasks (Left Col) */}
-            <div className="lg:col-span-8 bg-white/60 backdrop-blur-md rounded-2xl p-4 lg:p-5 border border-white shadow-xl flex flex-col relative overflow-hidden group min-h-0 h-full">
-              <div className="absolute top-0 right-0 w-32 h-32 lg:w-64 lg:h-64 bg-[#965A5A]/5 rounded-full blur-[40px] lg:blur-[80px] pointer-events-none group-hover:bg-[#965A5A]/10 transition-colors duration-1000" />
+            <div className="lg:col-span-8 bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex flex-col relative overflow-hidden group min-h-0 h-full">
+              {/* Paper texture overlay */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-[0.03]" 
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+                }}
+              />
 
-              <div className="flex justify-between items-end mb-3 lg:mb-4 relative z-10 shrink-0">
+              <div className="flex justify-between items-end mb-3 lg:mb-4 relative z-10 shrink-0 border-b border-[#e5e0d5] pb-2">
                 <div>
-                  <h3 className="font-serif text-base lg:text-lg font-bold text-stone-800">
-                    Editorial Assistant
+                  <h3 className="font-serif text-base lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
+                    Task Notes
                   </h3>
                 </div>
-                <div className="bg-[#965A5A]/10 text-[#965A5A] px-2 py-1 lg:px-3 lg:py-1.5 rounded-full text-[9px] lg:text-[10px] font-bold tracking-widest uppercase">
-                  {tasks.filter((t) => !t.completed).length} Tasks
+                <div className="bg-[#8c503c] text-white px-2 py-1 lg:px-3 lg:py-1.5 rounded-sm text-[9px] lg:text-[10px] font-bold tracking-widest uppercase shadow-sm">
+                  {tasks.filter((t) => !t.completed).length} Pending
                 </div>
               </div>
 
@@ -348,18 +349,21 @@ export default function Dashboard() {
                       <div
                         key={task.id}
                         className={cn(
-                          "flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl border transition-all cursor-pointer",
+                          "flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-sm border transition-all cursor-pointer relative",
                           task.completed
                             ? "bg-transparent border-transparent opacity-50"
-                            : "bg-white border-[#E5E0D5] hover:border-[#D3BFA9] hover:shadow-sm",
+                            : "bg-[#fcfaf5] border-[#e5e0d5] hover:border-[#d49a89] hover:shadow-sm"
                         )}
                         onClick={() => toggleTask(task.id)}
                       >
-                        <button className="shrink-0 focus:outline-none">
+                        {!task.completed && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#8c503c] rounded-l-sm opacity-20" />
+                        )}
+                        <button className="shrink-0 focus:outline-none ml-1">
                           {task.completed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-emerald-600/70" />
+                            <CheckCircle2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#8c503c]/70" />
                           ) : (
-                            <div className="w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-full border-2 border-stone-300 hover:border-[#965A5A] transition-colors" />
+                            <div className="w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-sm border-2 border-[#d49a89] hover:border-[#8c503c] transition-colors" />
                           )}
                         </button>
 
@@ -369,7 +373,7 @@ export default function Dashboard() {
                               "text-xs lg:text-sm font-serif transition-colors truncate",
                               task.completed
                                 ? "text-stone-400 line-through"
-                                : "text-stone-800",
+                                : "text-[#4a3225] font-medium"
                             )}
                           >
                             {task.title}
@@ -378,20 +382,16 @@ export default function Dashboard() {
                           {!task.completed && (
                             <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
                               {task.urgency === "high" && (
-                                <span className="flex items-center gap-1 text-[8px] lg:text-[9px] uppercase tracking-widest font-bold text-rose-600">
+                                <span className="flex items-center gap-1 text-[8px] lg:text-[9px] uppercase tracking-widest font-bold text-[#c17a7a]">
                                   <AlertCircle className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                                 </span>
                               )}
                               <span
                                 className={cn(
-                                  "text-[8px] lg:text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-md",
+                                  "text-[8px] lg:text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-sm border",
                                   task.type === "writing"
-                                    ? "bg-amber-100/50 text-amber-800"
-                                    : task.type === "worldbuilding"
-                                      ? "bg-indigo-100/50 text-indigo-800"
-                                      : task.type === "editing"
-                                        ? "bg-rose-100/50 text-rose-800"
-                                        : "bg-stone-100 text-stone-600",
+                                    ? "bg-[#f4efe6] text-[#8c503c] border-[#e5e0d5]"
+                                    : "bg-stone-100 text-stone-600 border-stone-200"
                                 )}
                               >
                                 {task.type}
@@ -407,43 +407,56 @@ export default function Dashboard() {
 
             {/* Right Column (Stacked on small, flex col on large) */}
             <div className="lg:col-span-4 flex flex-row lg:flex-col gap-3 lg:gap-4 min-h-[140px] lg:min-h-0 h-full">
-              {/* Quick Jump */}
+              {/* Quick Jump (Vintage Journal style) */}
               <div
-                className="bg-[#3A3532] text-[#F9F6ED] rounded-2xl p-4 lg:p-5 shadow-xl flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none"
+                className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32]"
                 onClick={() => navigate(`/project/${project.id}/studio`)}
               >
-                <div className="absolute top-0 right-0 p-3 lg:p-4 opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700">
+                {/* Journal texture */}
+                <div 
+                  className="absolute inset-0 opacity-[0.4] mix-blend-overlay pointer-events-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+                  }}
+                />
+                {/* Leather binding */}
+                <div className="absolute left-0 top-0 bottom-0 w-3 bg-black/50 border-r border-[#5d3f32]" />
+                
+                <div className="absolute top-0 right-0 p-3 lg:p-4 opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700 text-[#d49a89]">
                   <PenTool className="w-10 h-10 lg:w-16 lg:h-16" />
                 </div>
-                <div className="relative z-10">
-                  <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-white/50 mb-1">
-                    Pick up where you left off
+                <div className="relative z-10 ml-2">
+                  <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-[#d49a89]/70 mb-1">
+                    Resume Drafting
                   </p>
-                  <h3 className="font-serif text-sm lg:text-lg font-bold line-clamp-1">
+                  <h3 className="font-serif text-sm lg:text-lg font-bold line-clamp-1 text-[#fcfaf5]">
                     {project.title}
                   </h3>
-                  <p className="text-white/70 text-[10px] lg:text-xs mt-0.5 lg:mt-1">
-                    Chapter {project.stats.chapters} • Last modified {project.lastModified}
+                  <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-0.5 lg:mt-1 font-serif italic">
+                    Chapter {project.stats.chapters} • Last updated {project.lastModified}
                   </p>
                 </div>
-                <div className="relative z-10 mt-2 lg:mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-1 lg:gap-1.5 bg-white/10 px-1.5 py-1 lg:px-2 lg:py-1 rounded-full text-[8px] lg:text-[10px] font-medium backdrop-blur-sm">
-                    <TrendingUp className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-emerald-400" />
+                <div className="relative z-10 mt-2 lg:mt-4 flex items-center justify-between ml-2">
+                  <div className="flex items-center gap-1 lg:gap-1.5 bg-[#fcfaf5]/10 px-1.5 py-1 lg:px-2 lg:py-1 rounded-sm text-[8px] lg:text-[10px] font-bold tracking-widest uppercase border border-[#fcfaf5]/20">
+                    <TrendingUp className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-[#d49a89]" />
                     +500 words
                   </div>
-                  <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white group-hover:text-[#3A3532] transition-colors">
+                  <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-sm bg-[#8c503c] border border-[#b8785e] flex items-center justify-center group-hover:bg-[#b8785e] transition-colors shadow-sm text-white">
                     <ArrowRight className="w-3 h-3 lg:w-4 lg:h-4" />
                   </div>
                 </div>
               </div>
 
-              {/* World Radar */}
-              <div className="bg-white/60 backdrop-blur-md rounded-2xl p-4 lg:p-5 border border-white shadow-xl flex-1 flex flex-col min-h-0">
-                <div className="flex justify-between items-end mb-2 lg:mb-4 shrink-0">
-                  <h3 className="font-serif text-sm lg:text-lg font-bold text-stone-800">
+              {/* World Radar (Polaroid style mini grid) */}
+              <div className="bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex-1 flex flex-col min-h-0 relative">
+                {/* Tape decoration */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 rotate-1 opacity-70 shadow-sm" />
+                
+                <div className="flex justify-between items-end mb-2 lg:mb-4 shrink-0 border-b border-[#e5e0d5] pb-2 mt-1">
+                  <h3 className="font-serif text-sm lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
                     World Radar
                   </h3>
-                  <span className="text-[8px] lg:text-[9px] font-bold text-stone-400 tracking-widest uppercase hidden lg:block">
+                  <span className="text-[8px] lg:text-[9px] font-bold text-[#8c503c] tracking-widest uppercase hidden lg:block">
                     Mentions
                   </span>
                 </div>
@@ -464,16 +477,16 @@ export default function Dashboard() {
                             className="relative group shrink-0"
                           >
                             <div className="flex justify-between items-end mb-1 lg:mb-1.5">
-                              <span className="text-[10px] lg:text-xs font-serif font-medium text-stone-700 group-hover:text-[#965A5A] transition-colors truncate pr-2 lg:pr-4">
+                              <span className="text-[10px] lg:text-xs font-serif font-bold text-[#4a3225] group-hover:text-[#8c503c] transition-colors truncate pr-2 lg:pr-4">
                                 {item.name}
                               </span>
-                              <span className="text-stone-400 font-sans text-[8px] lg:text-[10px] font-bold">
+                              <span className="text-[#8c503c] font-sans text-[8px] lg:text-[10px] font-bold">
                                 {item.count}
                               </span>
                             </div>
-                            <div className="h-1 lg:h-1.5 w-full bg-stone-200/50 rounded-full overflow-hidden">
+                            <div className="h-1 lg:h-1.5 w-full bg-[#e5e0d5] rounded-sm overflow-hidden border border-[#d49a89]/20">
                               <div
-                                className="h-full bg-gradient-to-r from-[#965A5A]/80 to-[#965A5A] rounded-full transition-all duration-1000 relative"
+                                className="h-full bg-gradient-to-r from-[#d49a89] to-[#8c503c] rounded-sm transition-all duration-1000 relative"
                                 style={{ width: `${percentage}%` }}
                               >
                                 <div className="absolute top-0 right-0 bottom-0 w-4 bg-white/20 blur-[2px]" />
