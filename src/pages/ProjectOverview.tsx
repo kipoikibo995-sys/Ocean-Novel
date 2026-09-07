@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "motion/react";
+import { useState, useRef } from "react";
 import {
   ChevronLeft,
   PenTool,
@@ -11,19 +12,37 @@ import {
   Users,
   Map,
   Edit3,
+  ImagePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useProject } from "@/context/ProjectContext";
 import { storage } from "@/lib/storage";
-import { useParams } from "react-router-dom";
 
 export default function ProjectOverview() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const savedProject = id ? storage.getProjects().find(p => p.id === id) : null;
   const projectData = id ? storage.getProjectData(id) : null;
+
+  const [coverUrl, setCoverUrl] = useState(
+    savedProject?.coverUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
+  );
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && id) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setCoverUrl(base64String);
+        storage.updateProject(id, { coverUrl: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const projectStats = {
     totalWords: savedProject?.currentWords || 0,
@@ -78,13 +97,31 @@ export default function ProjectOverview() {
           className="hidden md:block w-[35%] lg:w-[35%] h-full rounded-2xl overflow-hidden shadow-xl relative border border-[#E5E0D5] shrink-0 group"
         >
           <img
-            src="https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
+            src={coverUrl}
             alt="Cover"
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 transition-opacity" />
+          
+          {/* Change Cover overlay */}
+          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-2 bg-black/50 hover:bg-black/70 backdrop-blur-md text-white rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-white/20 transition-colors cursor-pointer"
+            >
+              <ImagePlus className="w-4 h-4" />
+              Change Cover
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
 
-          <div className="absolute bottom-8 left-8 right-8">
+          <div className="absolute bottom-8 left-8 right-8 z-20">
             <button
               onClick={() =>
                 navigate(`/project/${(id || '1')}/workspace/studio`)

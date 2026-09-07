@@ -1,5 +1,5 @@
 {
-  "name": "Novelist",
+  "name": "Lumina Writer",
   "description": "An AI-assisted novel writing and story planning platform.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

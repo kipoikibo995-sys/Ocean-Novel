@@ -11,6 +11,7 @@ export interface ProjectMeta {
   currentWords: number;
   lastModified: number;
   themeColor: string;
+  coverUrl?: string;
 }
 
 export interface StoryBibleData {
@@ -180,6 +181,15 @@ export const storage = {
       projects.push(project);
     }
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  },
+
+  updateProject: (id: string, updates: Partial<ProjectMeta>) => {
+    const projects = storage.getProjects();
+    const existingIndex = projects.findIndex(p => p.id === id);
+    if (existingIndex >= 0) {
+      projects[existingIndex] = { ...projects[existingIndex], ...updates };
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    }
   },
 
   deleteProject: (id: string) => {
