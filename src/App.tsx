@@ -24,6 +24,8 @@ import Settings from "./pages/Settings";
 import GlobalSearchPage from "./pages/GlobalSearchPage";
 import ConsistencyCheckerPage from "./pages/ConsistencyCheckerPage";
 
+import { AuthProvider } from "./lib/AuthContext";
+
 function AnimatedRoutes() {
   const location = useLocation();
   return (
@@ -62,9 +64,11 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <ProjectProvider>
-      <BrowserRouter>
-        <AnimatedRoutes />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </AuthProvider>
     </ProjectProvider>
   );
 }

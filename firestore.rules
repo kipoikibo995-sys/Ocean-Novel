@@ -23,6 +23,14 @@ service cloud.firestore {
       match /projectData/{projectId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
+
+      match /tasks/{taskId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /profile/{profileId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
   }
 }

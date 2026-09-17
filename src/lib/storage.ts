@@ -1,4 +1,6 @@
 import { ManuscriptItem } from "@/mockData";
+import { db, auth } from './firebase';
+import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export interface ProjectMeta {
   id: string;
@@ -12,6 +14,7 @@ export interface ProjectMeta {
   lastModified: number;
   themeColor: string;
   coverUrl?: string;
+  userId?: string;
 }
 
 export interface StoryBibleData {
@@ -63,6 +66,7 @@ export interface ProjectData {
   lastActiveSceneId?: string;
   lastActiveSceneTitle?: string;
   storyBible?: StoryBibleData;
+  userId?: string;
 }
 
 export interface StudioTask {
@@ -73,11 +77,51 @@ export interface StudioTask {
   completed: boolean;
   urgency: 'low' | 'medium' | 'high';
   createdAt: number;
+  userId?: string;
+}
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
 }
 
 const PROJECTS_KEY = 'writing_studio_projects';
 const PROJECT_DATA_PREFIX = 'writing_studio_data_';
 const TASKS_KEY = 'writing_studio_tasks';
+const PROFILE_KEY = 'writing_studio_profile';
 
 const DEFAULT_TASKS: StudioTask[] = [
   {
@@ -87,138 +131,203 @@ const DEFAULT_TASKS: StudioTask[] = [
     completed: false,
     urgency: 'high',
     createdAt: Date.now() - 3600000 * 24,
-  },
-  {
-    id: 'task-2',
-    title: 'Flesh out core motivation and backstory for protagonist',
-    type: 'worldbuilding',
-    completed: false,
-    urgency: 'medium',
-    createdAt: Date.now() - 3600000 * 12,
-  },
-  {
-    id: 'task-3',
-    title: 'Review pacing and dialogue flow in opening scene',
-    type: 'editing',
-    completed: false,
-    urgency: 'high',
-    createdAt: Date.now() - 3600000 * 6,
-  },
-  {
-    id: 'task-4',
-    title: 'Verify historical and geographical accuracy for settings',
-    type: 'research',
-    completed: true,
-    urgency: 'low',
-    createdAt: Date.now() - 3600000 * 48,
-  },
+  }
 ];
 
+const defaultProfile: UserProfile = {
+  name: "Jane Smith",
+  penName: "J. S. Hawthorne",
+  email: "jane.smith@example.com",
+  bio: "Historical fiction & noir mystery novelist with a fondness for fog-drenched coasts and moody characters.",
+  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+  plan: "pro",
+  defaultFont: "Merriweather (Serif)",
+  fontSize: "Medium (18px)",
+  defaultPov: "Third Person Limited",
+  defaultTone: "Suspenseful",
+  theme: "light",
+};
+
+// In-Memory Cache initialized from LocalStorage (Fallback if not logged in)
+let cachedProjects: ProjectMeta[] = (() => {
+  try { return JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]'); } catch { return []; }
+})();
+let cachedProjectData: Record<string, ProjectData> = {};
+let cachedTasks: StudioTask[] = (() => {
+  try {
+    const data = localStorage.getItem(TASKS_KEY);
+    return data ? JSON.parse(data) : DEFAULT_TASKS;
+  } catch { return DEFAULT_TASKS; }
+})();
+let cachedProfile: UserProfile | null = (() => {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
+})();
+let currentUserId: string | null = null;
+
 export const storage = {
-  getTasks: (projectId?: string): StudioTask[] => {
+  clearCache: () => {
+    // Only clears user memory when logging out. Still falls back to LocalStorage
+    cachedProjects = (() => {
+      try { return JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]'); } catch { return []; }
+    })();
+    cachedTasks = (() => {
+      try {
+        const data = localStorage.getItem(TASKS_KEY);
+        return data ? JSON.parse(data) : DEFAULT_TASKS;
+      } catch { return DEFAULT_TASKS; }
+    })();
+    cachedProfile = (() => {
+      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
+    })();
+    currentUserId = null;
+  },
+  
+  syncFromCloud: async (userId: string) => {
+    currentUserId = userId;
     try {
-      const data = localStorage.getItem(TASKS_KEY);
-      if (!data) {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(DEFAULT_TASKS));
-        return DEFAULT_TASKS;
-      }
-      const all: StudioTask[] = JSON.parse(data);
-      if (projectId) {
-        return all.filter((t) => !t.projectId || t.projectId === projectId);
-      }
-      return all;
+      // Load Profile
+      try {
+        const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
+        if (profileDoc.exists()) {
+          cachedProfile = profileDoc.data() as UserProfile;
+          localStorage.setItem(PROFILE_KEY, JSON.stringify(cachedProfile));
+        } else {
+          cachedProfile = cachedProfile || defaultProfile;
+          await setDoc(doc(db, `users/${userId}/profile/default`), cachedProfile);
+        }
+      } catch(e) { handleFirestoreError(e, OperationType.GET, `users/${userId}/profile/default`); }
+
+      // Load Projects
+      try {
+        const projSnapshot = await getDocs(collection(db, `users/${userId}/projects`));
+        cachedProjects = projSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMeta));
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`); }
+
+      // Load Tasks
+      try {
+        const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
+        cachedTasks = taskSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as StudioTask));
+        localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
+
     } catch (e) {
-      return DEFAULT_TASKS;
+      console.error("Critical Sync Error", e);
     }
   },
 
+  getTasks: (projectId?: string): StudioTask[] => {
+    if (projectId) {
+      return cachedTasks.filter((t) => !t.projectId || t.projectId === projectId);
+    }
+    return cachedTasks;
+  },
+
   saveTask: (task: StudioTask) => {
-    try {
-      const tasks = storage.getTasks();
-      const existingIndex = tasks.findIndex((t) => t.id === task.id);
-      if (existingIndex >= 0) {
-        tasks[existingIndex] = task;
-      } else {
-        tasks.unshift(task);
-      }
-      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-    } catch (e) {
-      console.error('Failed to save task', e);
+    const existingIndex = cachedTasks.findIndex((t) => t.id === task.id);
+    if (existingIndex >= 0) {
+      cachedTasks[existingIndex] = task;
+    } else {
+      cachedTasks.unshift(task);
+    }
+    
+    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    if (currentUserId) {
+      setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
+        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
     }
   },
 
   deleteTask: (taskId: string) => {
-    try {
-      const tasks = storage.getTasks().filter((t) => t.id !== taskId);
-      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-    } catch (e) {
-      console.error('Failed to delete task', e);
+    cachedTasks = cachedTasks.filter((t) => t.id !== taskId);
+    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    if (currentUserId) {
+      deleteDoc(doc(db, `users/${currentUserId}/tasks/${taskId}`))
+        .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/tasks/${taskId}`));
     }
   },
 
   saveAllTasks: (tasks: StudioTask[]) => {
-    try {
-      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-    } catch (e) {
-      console.error('Failed to save all tasks', e);
+    cachedTasks = tasks;
+    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    if (currentUserId) {
+      tasks.forEach(task => {
+        setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
+          .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
+      });
     }
   },
+
   getProjects: (): ProjectMeta[] => {
-    try {
-      const data = localStorage.getItem(PROJECTS_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (e) {
-      return [];
-    }
+    return cachedProjects;
   },
 
   saveProject: (project: ProjectMeta) => {
-    const projects = storage.getProjects();
-    const existingIndex = projects.findIndex(p => p.id === project.id);
+    const existingIndex = cachedProjects.findIndex(p => p.id === project.id);
     if (existingIndex >= 0) {
-      projects[existingIndex] = project;
+      cachedProjects[existingIndex] = project;
     } else {
-      projects.push(project);
+      cachedProjects.push(project);
     }
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    if (currentUserId) {
+      project.userId = currentUserId;
+      setDoc(doc(db, `users/${currentUserId}/projects/${project.id}`), project)
+        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${project.id}`));
+    }
   },
 
   updateProject: (id: string, updates: Partial<ProjectMeta>) => {
-    const projects = storage.getProjects();
-    const existingIndex = projects.findIndex(p => p.id === id);
+    const existingIndex = cachedProjects.findIndex(p => p.id === id);
     if (existingIndex >= 0) {
-      projects[existingIndex] = { ...projects[existingIndex], ...updates };
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+      cachedProjects[existingIndex] = { ...cachedProjects[existingIndex], ...updates };
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+      if (currentUserId) {
+        setDoc(doc(db, `users/${currentUserId}/projects/${id}`), cachedProjects[existingIndex], { merge: true })
+          .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${id}`));
+      }
     }
   },
 
   deleteProject: (id: string) => {
-    const projects = storage.getProjects().filter(p => p.id !== id);
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    cachedProjects = cachedProjects.filter(p => p.id !== id);
+    delete cachedProjectData[id];
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
     localStorage.removeItem(PROJECT_DATA_PREFIX + id);
+    if (currentUserId) {
+      deleteDoc(doc(db, `users/${currentUserId}/projects/${id}`))
+        .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/projects/${id}`));
+      deleteDoc(doc(db, `users/${currentUserId}/projectData/${id}`))
+        .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/projectData/${id}`));
+    }
   },
 
   getProjectData: (id: string): ProjectData | null => {
+    if (cachedProjectData[id]) return cachedProjectData[id];
+    
+    // Try localStorage if not in cache (e.g. initial load without cloud)
     try {
       const data = localStorage.getItem(PROJECT_DATA_PREFIX + id);
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      return null;
-    }
+      if (data) {
+        const parsed = JSON.parse(data);
+        cachedProjectData[id] = parsed;
+        return parsed;
+      }
+    } catch { return null; }
+    
+    return null;
   },
 
   saveProjectData: (id: string, data: Partial<ProjectData>) => {
     const existing = storage.getProjectData(id) || { manuscript: [], characters: [], locations: [] };
     const newData = { ...existing, ...data };
+    cachedProjectData[id] = newData;
     localStorage.setItem(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
     
-    // Update last modified on the meta object
-    const projects = storage.getProjects();
-    const project = projects.find(p => p.id === id);
+    const project = cachedProjects.find(p => p.id === id);
     if (project) {
       project.lastModified = Date.now();
-      
-      // Calculate total words if manuscript is provided
       if (data.manuscript) {
         let totalWords = 0;
         const countWords = (items: ManuscriptItem[]) => {
@@ -236,37 +345,30 @@ export const storage = {
         countWords(data.manuscript);
         project.currentWords = totalWords;
       }
-      
       storage.saveProject(project);
+    }
+
+    if (currentUserId) {
+      newData.userId = currentUserId;
+      newData.id = id;
+      setDoc(doc(db, `users/${currentUserId}/projectData/${id}`), newData)
+        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projectData/${id}`));
     }
   },
 
   getUserProfile: (): UserProfile => {
-    const defaultProfile: UserProfile = {
-      name: "Jane Smith",
-      penName: "J. S. Hawthorne",
-      email: "jane.smith@example.com",
-      bio: "Historical fiction & noir mystery novelist with a fondness for fog-drenched coasts and moody characters.",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-      plan: "pro",
-      defaultFont: "Merriweather (Serif)",
-      fontSize: "Medium (18px)",
-      defaultPov: "Third Person Limited",
-      defaultTone: "Suspenseful",
-      theme: "light",
-    };
-    try {
-      const stored = localStorage.getItem('writing_studio_user_profile');
-      return stored ? { ...defaultProfile, ...JSON.parse(stored) } : defaultProfile;
-    } catch (e) {
-      return defaultProfile;
-    }
+    return cachedProfile || defaultProfile;
   },
 
   saveUserProfile: (profile: Partial<UserProfile>): UserProfile => {
-    const current = storage.getUserProfile();
+    const current = cachedProfile || defaultProfile;
     const updated = { ...current, ...profile };
-    localStorage.setItem('writing_studio_user_profile', JSON.stringify(updated));
+    cachedProfile = updated;
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+    if (currentUserId) {
+      setDoc(doc(db, `users/${currentUserId}/profile/default`), updated)
+        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));
+    }
     return updated;
   }
 };
