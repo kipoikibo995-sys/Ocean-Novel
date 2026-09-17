@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { storage } from "@/lib/storage";
 import { Plus, MoreVertical, GripVertical, Clock, LayoutList, CheckCircle2, ChevronRight, Tags, MapPin, Users, Edit3, Trash2, Calendar, Columns, X, Spline, GitBranch, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { MOCK_CHARACTERS, MOCK_LOCATIONS } from "@/mockData";
 
@@ -71,25 +73,36 @@ const DEFAULT_EVENTS: StoryEvent[] = [
 ];
 
 export default function Plot() {
+  const { id } = useParams();
   const [view, setView] = useState<"list" | "board" | "tree">("tree");
   
   const [arcs, setArcs] = useState<PlotArc[]>(() => {
-    const saved = localStorage.getItem('story_arcs');
-    return saved ? JSON.parse(saved) : DEFAULT_ARCS;
+    if (id) {
+      const data = storage.getProjectData(id);
+      if (data?.plotArcs && data.plotArcs.length > 0) return data.plotArcs;
+    }
+    return DEFAULT_ARCS;
   });
 
   const [events, setEvents] = useState<StoryEvent[]>(() => {
-    const saved = localStorage.getItem('story_events');
-    return saved ? JSON.parse(saved).map((e: any) => ({...e, x: e.x || 500, y: e.y || 100, parentId: e.parentId || null})) : DEFAULT_EVENTS;
+    if (id) {
+      const data = storage.getProjectData(id);
+      if (data?.plotEvents && data.plotEvents.length > 0) return data.plotEvents.map((e: any) => ({...e, x: e.x || 500, y: e.y || 100, parentId: e.parentId || null}));
+    }
+    return DEFAULT_EVENTS;
   });
 
   useEffect(() => {
-    localStorage.setItem('story_arcs', JSON.stringify(arcs));
-  }, [arcs]);
+    if (id && arcs.length > 0) {
+      storage.saveProjectData(id, { plotArcs: arcs });
+    }
+  }, [arcs, id]);
 
   useEffect(() => {
-    localStorage.setItem('story_events', JSON.stringify(events));
-  }, [events]);
+    if (id && events.length > 0) {
+      storage.saveProjectData(id, { plotEvents: events });
+    }
+  }, [events, id]);
 
   const [editingEvent, setEditingEvent] = useState<StoryEvent | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);

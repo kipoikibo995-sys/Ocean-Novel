@@ -5,15 +5,26 @@
   --font-serif: 'Lora', serif;
 }
 
+body {
+  @apply select-none;
+}
+
+input, textarea, .ProseMirror, .select-text, .allow-select {
+  @apply select-text;
+}
+
 .ProseMirror {
   min-height: 100%;
 }
+
 .ProseMirror > * + * {
   margin-top: 0.75em;
 }
+
 .ProseMirror:focus {
   outline: none;
 }
+
 .ProseMirror p.is-editor-empty:first-child::before {
   color: #a8a29e;
   content: attr(data-placeholder);
@@ -30,66 +41,23 @@
   font-style: italic;
   color: #666;
 }
+
 .ProseMirror mark {
   background-color: #fef08a;
   border-radius: 2px;
   padding: 0 2px;
-}
-.ProseMirror ul {
-  list-style-type: disc;
-  padding-left: 1.5rem;
-}
-.ProseMirror ol {
-  list-style-type: decimal;
-  padding-left: 1.5rem;
-}
-.ProseMirror h1 {
-  font-size: 2em;
-  font-weight: bold;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-  line-height: 1.2;
-}
-.ProseMirror h2 {
-  font-size: 1.5em;
-  font-weight: bold;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-  line-height: 1.2;
-}
-.ProseMirror h3 {
-  font-size: 1.17em;
-  font-weight: bold;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-  line-height: 1.2;
-}
-.ProseMirror img {
-  max-width: 100%;
-  height: auto;
 }
 
-/* Tiptap rich text styling */
-.ProseMirror blockquote {
-  border-left: 3px solid #D49A89;
-  padding-left: 1rem;
-  margin-left: 0;
-  font-style: italic;
-  color: #666;
-}
-.ProseMirror mark {
-  background-color: #fef08a;
-  border-radius: 2px;
-  padding: 0 2px;
-}
 .ProseMirror ul {
   list-style-type: disc;
   padding-left: 1.5rem;
 }
+
 .ProseMirror ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
 }
+
 .ProseMirror h1 {
   font-size: 2em;
   font-weight: bold;
@@ -97,6 +65,7 @@
   margin-bottom: 0.5em;
   line-height: 1.2;
 }
+
 .ProseMirror h2 {
   font-size: 1.5em;
   font-weight: bold;
@@ -104,6 +73,7 @@
   margin-bottom: 0.5em;
   line-height: 1.2;
 }
+
 .ProseMirror h3 {
   font-size: 1.17em;
   font-weight: bold;
@@ -111,6 +81,7 @@
   margin-bottom: 0.5em;
   line-height: 1.2;
 }
+
 .ProseMirror img {
   max-width: 100%;
   height: auto;

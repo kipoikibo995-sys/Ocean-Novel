@@ -612,8 +612,8 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
  */
 export function ensureFantasyBooksSeeded(): ProjectMeta[] {
   const existingProjects = storage.getProjects();
-  const existingMap = new Map(existingProjects.map(p => [p.id, p]));
-  const existingTitleMap = new Map(existingProjects.map(p => [p.title.toLowerCase().trim(), p]));
+  const existingMap = new Map((existingProjects || []).map(p => [p.id, p]));
+  const existingTitleMap = new Map((existingProjects || []).map(p => [(p.title || "").toLowerCase().trim(), p]));
 
   let updated = false;
 

@@ -508,6 +508,12 @@ ${formData.backstory}
     }
   }, [id, graphs]);
 
+  useEffect(() => {
+    if (id && characters) {
+      storage.saveProjectData(id, { characters });
+    }
+  }, [id, characters]);
+
   const activeGraph = graphs.find(g => g.id === activeGraphId) || graphs[0];
 
   const nodes = activeGraph.nodes;

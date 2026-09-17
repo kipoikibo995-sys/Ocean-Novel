@@ -30,7 +30,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
     try {
       const manuscript = projectData?.manuscript || [];
       const title = project?.title || "Untitled Manuscript";
-      const author = storage.getUserProfile().displayName || "Author";
+      const profile = storage.getUserProfile();
+      const author = profile.penName || profile.name || "Author";
 
       if (format === "txt") {
         await exportTxt(manuscript, title, author);

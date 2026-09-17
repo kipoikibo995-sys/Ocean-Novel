@@ -53,6 +53,7 @@ export interface UserProfile {
 }
 
 export interface ProjectData {
+  id?: string;
   manuscript: ManuscriptItem[];
   characters: any[];
   locations: any[];
@@ -66,6 +67,8 @@ export interface ProjectData {
   lastActiveSceneId?: string;
   lastActiveSceneTitle?: string;
   storyBible?: StoryBibleData;
+  plotEvents?: any[];
+  plotArcs?: any[];
   userId?: string;
 }
 
@@ -179,6 +182,7 @@ export const storage = {
     cachedProfile = (() => {
       try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
     })();
+    cachedProjectData = {};
     currentUserId = null;
   },
   
@@ -211,12 +215,23 @@ export const storage = {
         localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
 
+      // Load all Project Data
+      try {
+        const pdSnapshot = await getDocs(collection(db, `users/${userId}/projectData`));
+        pdSnapshot.docs.forEach(d => {
+          const pData = d.data() as ProjectData;
+          cachedProjectData[d.id] = pData;
+          localStorage.setItem(PROJECT_DATA_PREFIX + d.id, JSON.stringify(pData));
+        });
+      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projectData`); }
+
     } catch (e) {
       console.error("Critical Sync Error", e);
     }
   },
 
   getTasks: (projectId?: string): StudioTask[] => {
+    if (!cachedTasks) return [];
     if (projectId) {
       return cachedTasks.filter((t) => !t.projectId || t.projectId === projectId);
     }
@@ -259,7 +274,7 @@ export const storage = {
   },
 
   getProjects: (): ProjectMeta[] => {
-    return cachedProjects;
+    return cachedProjects || [];
   },
 
   saveProject: (project: ProjectMeta) => {
@@ -321,7 +336,7 @@ export const storage = {
 
   saveProjectData: (id: string, data: Partial<ProjectData>) => {
     const existing = storage.getProjectData(id) || { manuscript: [], characters: [], locations: [] };
-    const newData = { ...existing, ...data };
+    const newData = { ...existing, ...data, id };
     cachedProjectData[id] = newData;
     localStorage.setItem(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
     

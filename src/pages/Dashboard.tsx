@@ -33,8 +33,16 @@ import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { useProject } from "@/context/ProjectContext";
+import { runFantasySeed } from "@/lib/seed";
 
 export default function Dashboard() {
+  useEffect(() => {
+    const seeded = runFantasySeed();
+    if (seeded) {
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  }, []);
+
   const navigate = useNavigate();
   const { project } = useProject();
 
@@ -68,7 +76,7 @@ export default function Dashboard() {
     // Ensure all 5 fantasy sample books exist with complete manuscripts and characters
     const projects = ensureFantasyBooksSeeded();
 
-    const sorted = projects.sort((a, b) => b.lastModified - a.lastModified);
+    const sorted = (projects || []).sort((a, b) => b.lastModified - a.lastModified);
     setSavedProjects(sorted);
     if (sorted.length > 0) {
       setSelectedProjectId(sorted[0].id);
@@ -185,14 +193,14 @@ export default function Dashboard() {
     if (!activeProject) return { totalMentions: 0, sortedMentions: [] };
 
     const manuscript = activeProjectData?.manuscript || [];
-    const rawCharacters = activeProjectData?.characters && activeProjectData.characters.length > 0
+    const rawCharacters = activeProjectData?.characters && Array.isArray(activeProjectData.characters) && activeProjectData.characters.length > 0
       ? activeProjectData.characters
       : MOCK_CHARACTERS;
 
     const charMap: Record<string, { id: string; name: string; count: number; role: string; description?: string }> = {};
 
     // Register known characters
-    rawCharacters.forEach((c: any) => {
+    (rawCharacters || []).forEach((c: any) => {
       const name = c.name?.trim() || "";
       if (name) {
         charMap[name.toLowerCase()] = {
@@ -390,143 +398,236 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ARCHIVAL BOOK STACK (Physical Dossier Stack) */}
-          <div className="flex items-end overflow-x-auto pt-6 pb-8 px-4 sm:px-6 snap-x -mx-4 sm:mx-0 scroll-smooth custom-scrollbar relative z-10">
-            {/* Render all projects from local storage */}
-            {savedProjects.length === 0 && (
-               <div className="flex items-center justify-center w-full h-[200px] border border-dashed border-[#e5e0d5] rounded-md bg-white/50">
-                 <p className="text-stone-500 text-sm font-medium">No archives found. Start a new project.</p>
-               </div>
-            )}
-            {savedProjects.map((proj, index) => {
-              const TILT_ANGLES = [-1.2, 0.9, -0.8, 1.2, -1.0];
-              const tilt = TILT_ANGLES[index % TILT_ANGLES.length];
+          {/* ARCHIVAL BOOKSHELF */}
+        <div className="relative pt-12 pb-0 px-2 sm:px-4 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar flex justify-start md:justify-center">
+          {/* Container cho kệ sách, ôm sát content */}
+          <div className="relative flex flex-col items-center shrink-0 min-w-min">
+            
+            {/* Wooden Shelf Base */}
+            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-[#5c371d] to-[#3a2211] rounded-t-[2px] shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] z-0" />
+            <div className="absolute -bottom-1 left-0 right-0 h-2 bg-[#26150a] shadow-xl z-0" />
+            
+            <div className="flex items-end h-[280px] gap-[2px] lg:gap-[3px] pb-6 relative z-10 px-4">
+              
+              {/* Left Bookend (chặn sách trái) */}
+              <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-r border-[#5c3a21] rounded-t-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] mr-1 z-20" />
 
-              const THEMES = [
-                { bg: "bg-[#2a1a14]", border: "border-[#4a2e22]", spine: "bg-[#1a0f0b]", accent: "#8c503c" },
-                { bg: "bg-[#381c16]", border: "border-[#55271d]", spine: "bg-[#230f0a]", accent: "#a64228" },
-                { bg: "bg-[#182330]", border: "border-[#25394e]", spine: "bg-[#0e1620]", accent: "#3a607e" },
-                { bg: "bg-[#17252d]", border: "border-[#243d4a]", spine: "bg-[#0c161c]", accent: "#36687a" },
-                { bg: "bg-[#332212]", border: "border-[#4e3419]", spine: "bg-[#1f1409]", accent: "#966224" },
-              ];
-              const theme = THEMES[index % THEMES.length];
-              const isSelected = selectedProjectId === proj.id;
-              const progress = Math.round(
-                ((proj.currentWords || 0) / (proj.wordGoal || 75000)) * 100,
-              );
+              {savedProjects.length === 0 && (
+                <div className="flex items-center justify-center w-full max-w-md h-[200px] border border-dashed border-[#e5e0d5] rounded-md bg-white/50 mb-4 mx-auto">
+                  <p className="text-stone-500 text-sm font-medium">No archives found. Start a new project.</p>
+                </div>
+              )}
+              {savedProjects.map((proj, index) => {
+                // 2. Cập nhật bảng màu rõ rệt hơn
+                const getGenreTheme = (gStr: string) => {
+                  const g = (gStr || "").toLowerCase();
+                  if (g.includes('fantasy')) return { bg: "bg-[#182330]", spine: "bg-[#0e1620]" }; // Navy
+                  if (g.includes('thriller') || g.includes('horror') || g.includes('mystery')) return { bg: "bg-[#6b1c1c]", spine: "bg-[#3d0f0f]" }; // Crimson Red
+                  if (g.includes('romance')) return { bg: "bg-[#592b45]", spine: "bg-[#331525]" }; // Deep Pink/Plum
+                  if (g.includes('sci-fi') || g.includes('science')) return { bg: "bg-[#17424d]", spine: "bg-[#0a232b]" }; // Teal
+                  if (g.includes('historical')) return { bg: "bg-[#423826]", spine: "bg-[#241e13]" }; // Olive
+                  return { bg: "bg-[#382218]", spine: "bg-[#24140d]" }; // Default Leather Brown
+                };
+                
+                const theme = getGenreTheme(proj.genre || "");
+                const isSelected = selectedProjectId === proj.id;
+                
+                const progressRatio = Math.min(1, Math.max(0, (proj.currentWords || 0) / (proj.wordGoal || 75000)));
+                const progressPercent = Math.round(progressRatio * 100);
+                
+                const spineWidth = 40 + Math.floor(progressRatio * 28); 
+                const spineVariant = index % 4;
+                
+                // Varied but smooth skyline
+                const HEIGHT_MAP = [230, 245, 235, 225, 250];
+                const baseHeight = HEIGHT_MAP[index % HEIGHT_MAP.length];
+                const bookHeight = isSelected ? baseHeight + 20 : baseHeight;
+                
+                const isComplete = progressRatio >= 1 && (proj.wordGoal || 0) > 0;
+                
+                // Giới hạn ribbon chỉ cho 2 sách cập nhật gần nhất
+                const recentProjectIds = [...savedProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0)).slice(0, 2).map(p => p.id);
+                const isRecent = recentProjectIds.includes(proj.id);
 
-              return (
-                <div
-                  key={proj.id}
-                  onClick={() => navigate(`/project/${proj.id}`)}
-                  onMouseEnter={() => setSelectedProjectId(proj.id)}
-                  style={{
-                    zIndex: isSelected ? 25 : index + 2,
-                    transform: `rotate(${tilt}deg)`,
-                  }}
-                  className={cn(
-                    "snap-center sm:snap-start shrink-0 group cursor-pointer transition-all duration-300 relative select-none",
-                    index > 0 && "-ml-5 sm:-ml-6 lg:-ml-7",
-                    "hover:!z-40 hover:!rotate-0 hover:-translate-y-3.5 hover:scale-[1.02]",
-                    isSelected && "-translate-y-1.5 !rotate-0 shadow-[0_12px_28px_rgba(0,0,0,0.6)]"
-                  )}
-                >
+                return (
                   <div
+                    key={proj.id}
+                    onClick={() => setSelectedProjectId(isSelected ? null : proj.id)}
                     className={cn(
-                      "relative w-[165px] h-[195px] sm:w-[190px] sm:h-[215px] lg:w-[215px] lg:h-[235px] rounded-r-md rounded-l-[3px] transition-all duration-300",
-                      "shadow-[-4px_4px_14px_rgba(0,0,0,0.35),_4px_8px_20px_rgba(0,0,0,0.45)]",
-                      "group-hover:shadow-[-6px_10px_24px_rgba(0,0,0,0.45),_6px_16px_36px_rgba(0,0,0,0.65)]",
-                      "border",
+                      "group relative shrink-0 overflow-hidden cursor-pointer transition-all duration-500 ease-out select-none",
+                      "rounded-l-[4px] rounded-r-md shadow-[-4px_0_12px_rgba(0,0,0,0.6)] border-y border-r border-black/40",
+                      "hover:-translate-y-2 hover:shadow-[-6px_8px_16px_rgba(0,0,0,0.7)]", 
                       theme.bg,
-                      theme.border,
-                      isSelected ? "ring-2 ring-[#c99846]/80 ring-offset-1 ring-offset-[#2a1a14]" : ""
+                      ""
                     )}
+                    style={{ width: isSelected ? '260px' : `${spineWidth}px`, height: `${bookHeight}px` }}
+                    title={`${proj.title} • ${proj.genre || 'Unknown Genre'}`}
                   >
-                    {/* Spine Binding (Distinct book spine with embossed horizontal bands) */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[20px] lg:w-[24px] bg-gradient-to-r from-black/60 via-black/40 to-black/20 border-r border-black/80 rounded-l-[3px] shadow-[inset_-2px_0_4px_rgba(0,0,0,0.6)] flex flex-col justify-between py-5 px-[3px] z-20">
-                      {/* Embossed spine ribs/bands */}
-                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
-                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
-                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
-                      <div className="w-full h-[2.5px] bg-black/50 border-t border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.4)]" />
-                    </div>
-
-                    {/* Right Fore-Edge (Simulating layered book pages inside) */}
-                    <div className="absolute right-0 top-[2px] bottom-[2px] w-[5px] bg-[#e6dfd1] rounded-r-[2px] border-l border-[#baa791] shadow-inner opacity-90 flex flex-col justify-around py-3 pointer-events-none z-10">
-                      <div className="w-full h-[1px] bg-black/15" />
-                      <div className="w-full h-[1px] bg-black/15" />
-                      <div className="w-full h-[1px] bg-black/15" />
-                      <div className="w-full h-[1px] bg-black/15" />
-                    </div>
-
-                    {/* Leather/Cloth Cover Texture */}
+                    {/* Texture */}
                     <div
-                      className="absolute inset-0 opacity-[0.22] mix-blend-overlay pointer-events-none rounded-r-md rounded-l-[3px]"
-                      style={{
-                        backgroundImage:
-                          'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")',
-                      }}
+                      className="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none z-30"
+                      style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}
                     />
 
-                    {/* Selected Archive Bookmark Ribbon */}
-                    {isSelected && (
-                      <div className="absolute -top-1.5 right-4 w-3.5 h-6 bg-[#8c503c] shadow-md flex items-center justify-center rounded-b-xs pointer-events-none z-30">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#fcead0]" />
-                      </div>
-                    )}
+                    {/* Spine Binding */}
+                    <div 
+                      className={cn(
+                        "absolute left-0 top-0 bottom-0 border-r border-black/80 shadow-[inset_-3px_0_8px_rgba(0,0,0,0.8)] flex items-center justify-center z-20 transition-all duration-500",
+                        theme.spine
+                      )}
+                      style={{ width: `${spineWidth}px` }}
+                    >
+                      <div className="absolute left-[1px] top-0 bottom-0 w-[1.5px] bg-white/10 rounded-full" />
+                      
+                      {isRecent && !isSelected && (
+                        <div className="absolute top-0 right-2 w-2.5 h-7 bg-[#b83b3b] shadow-sm flex items-end justify-center rounded-b-sm pointer-events-none z-40">
+                           <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-b-[5px] border-l-transparent border-r-transparent border-b-black/20 opacity-40" />
+                        </div>
+                      )}
 
-                    {/* Integrated Archival Case File Cover Plate */}
-                    <div className="absolute inset-0 ml-[22px] lg:ml-[26px] mr-[8px] my-[8px] h-[calc(100%-16px)] z-10 pointer-events-none flex flex-col">
-                      <div className="h-full bg-[#faf6ed] border border-[#dad1be] shadow-[inset_0_1px_3px_rgba(0,0,0,0.06),_1px_2px_6px_rgba(0,0,0,0.15)] rounded-[2px] p-2.5 sm:p-3 flex flex-col justify-between relative overflow-hidden">
-                        {/* Archival Tape on Top */}
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-12 h-3 bg-white/60 border-t border-b border-black/5 rotate-[-0.5deg] pointer-events-none shadow-[0_1px_2px_rgba(0,0,0,0.06)]" />
-
-                        {/* Top: Case File Header */}
-                        <div>
-                          <div className="flex items-center justify-between border-b border-[#e8ded0] pb-1 mb-1.5">
-                            <span className="block text-[7.5px] lg:text-[8.5px] font-sans font-bold uppercase tracking-[0.2em] text-[#8c503c]">
-                              Case File {index < 9 ? `· No. 0${index + 1}` : `· No. ${index + 1}`}
+                      {/* Style 0 */}
+                      {spineVariant === 0 && (
+                        <>
+                          <div className={cn("absolute top-[32px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
+                          <div className={cn("absolute top-[60px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
+                          <div className={cn("absolute bottom-[32px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className={cn(
+                              "font-serif text-[12px] font-bold tracking-[0.2em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
+                              isSelected ? "opacity-0" : "opacity-100"
+                            )} style={{ width: `${baseHeight - 70}px`, textAlign: 'center' }}>
+                              {proj.title}
                             </span>
                           </div>
+                        </>
+                      )}
 
-                          {/* Large Readable Book Title */}
-                          <h2 className="text-xs sm:text-[13px] lg:text-[14.5px] font-serif font-bold leading-[1.25] text-[#2c1b13] line-clamp-3 text-left tracking-tight">
+                      {/* Style 1 */}
+                      {spineVariant === 1 && (
+                        <>
+                          <div className="absolute top-[28px] bottom-[28px] left-[15%] right-[15%] bg-[#f4ebd8] rounded-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.6)] flex items-center justify-center border border-[#d6c7b0]">
+                            <span className={cn(
+                              "font-serif text-[10px] font-bold tracking-[0.1em] text-[#2c1b13] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300",
+                              isSelected ? "opacity-0" : "opacity-100"
+                            )} style={{ width: `${baseHeight - 64}px`, textAlign: 'center' }}>
+                              {proj.title}
+                            </span>
+                          </div>
+                          {isComplete && (
+                             <div className="absolute bottom-[10px] w-full h-[2px] bg-[#c49a45] border-t border-[#f4db89]" />
+                          )}
+                        </>
+                      )}
+
+                      {/* Style 2 */}
+                      {spineVariant === 2 && (
+                        <>
+                          <div className="absolute top-0 w-full h-[45px] bg-black/40 border-b border-black/80" />
+                          <div className="absolute bottom-0 w-full h-[45px] bg-black/40 border-t border-black/80" />
+                          <div className={cn("absolute top-[45px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
+                          <div className={cn("absolute bottom-[45px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className={cn(
+                              "font-serif text-[12px] font-medium tracking-[0.15em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
+                              isSelected ? "opacity-0" : "opacity-100"
+                            )} style={{ width: `${baseHeight - 100}px`, textAlign: 'center' }}>
+                              {proj.title}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Style 3 */}
+                      {spineVariant === 3 && (
+                        <>
+                          <div className={cn("absolute top-[14px] bottom-[14px] left-[10%] right-[10%] border rounded-[2px]", isComplete ? "border-[#c49a45]" : "border-white/30")} />
+                          <div className={cn("absolute top-[18px] bottom-[18px] left-[20%] right-[20%] border", isComplete ? "border-[#c49a45] opacity-60" : "border-white/20")} />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className={cn(
+                              "font-serif text-[11px] font-bold tracking-[0.2em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              isComplete ? "text-[#e8c678]" : "text-white/80",
+                              isSelected ? "opacity-0" : "opacity-100"
+                            )} style={{ width: `${baseHeight - 50}px`, textAlign: 'center' }}>
+                              {proj.title}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* 1. Cover Plate Content (Trượt ra ngang accordion - Kích thước lớn hơn) */}
+                    <div className={cn(
+                      "absolute top-0 bottom-0 right-0 p-3 sm:p-4 transition-opacity duration-500 z-10 flex items-center justify-end overflow-hidden",
+                      isSelected ? "opacity-100 delay-150" : "opacity-0 pointer-events-none"
+                    )} style={{ width: `calc(100% - ${spineWidth}px)` }}>
+                      <div className="w-full h-full bg-[#faf6ed] border border-[#dad1be] shadow-[inset_0_1px_3px_rgba(0,0,0,0.06),_1px_2px_8px_rgba(0,0,0,0.4)] rounded-[3px] p-4 flex flex-col justify-between relative overflow-hidden min-w-[180px]">
+                        
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-14 h-3.5 bg-white/60 border-t border-b border-black/5 rotate-[-0.5deg] pointer-events-none shadow-[0_1px_2px_rgba(0,0,0,0.06)]" />
+
+                        {isRecent && (
+                          <div className="absolute top-0 right-3 w-3 h-8 bg-[#b83b3b] shadow-sm flex items-end justify-center rounded-b-sm pointer-events-none z-40">
+                             <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-black/20 opacity-30" />
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center justify-between border-b border-[#e8ded0] pb-1.5 mb-2.5 mt-1">
+                            <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#8c503c]">
+                              Case File {index < 9 ? `· 0${index + 1}` : `· ${index + 1}`}
+                            </span>
+                          </div>
+                          <h2 className="text-[16px] sm:text-[18px] font-serif font-bold leading-[1.25] text-[#2c1b13] line-clamp-3 text-left tracking-tight mb-2">
                             {proj.title}
                           </h2>
-
-                          {/* Subtle Divider Line */}
-                          <div className="w-8 h-[1.5px] bg-[#8c503c]/30 my-1.5" />
-
-                          {/* Genre / Subgenre */}
-                          <p className="text-[8.5px] lg:text-[9.5px] font-serif italic text-[#745344] line-clamp-1 text-left">
+                          <div className="w-8 h-[2px] bg-[#8c503c]/40 my-2" />
+                          <p className="text-[11px] font-serif italic text-[#745344] line-clamp-2 text-left leading-snug">
                             {proj.genre || "Fantasy Archive"}
                           </p>
                         </div>
 
-                        {/* Bottom: Word Count & Progress */}
-                        <div className="mt-auto pt-1.5 border-t border-[#ebdcd0]">
-                          <div className="flex items-baseline justify-between mb-1 gap-1">
-                            <span className="text-[7.5px] lg:text-[8.5px] uppercase font-bold tracking-widest text-[#8c503c]/70 shrink-0">
+                        <div className="mt-auto pt-2.5 border-t border-[#ebdcd0]">
+                          <div className="flex items-baseline justify-between mb-1.5 gap-1">
+                            <span className="text-[9px] uppercase font-bold tracking-widest text-[#8c503c]/70 shrink-0">
                               Words
                             </span>
-                            <span className="text-[8.5px] lg:text-[10px] font-serif font-bold text-[#2c1b13] truncate">
-                              {(proj.currentWords || 0).toLocaleString()}
+                            <span className="text-[11px] font-serif font-bold text-[#2c1b13] truncate">
+                              {(proj.currentWords || 0).toLocaleString()} {isComplete && "★"}
                             </span>
                           </div>
                           <div className="w-full bg-[#e7decfa0] h-[3px] rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-[#8c503c] rounded-full transition-all duration-700"
-                              style={{ width: `${Math.min(100, Math.max(5, progress))}%` }}
+                              className={cn("h-full rounded-full transition-all duration-700", isComplete ? "bg-[#c49a45]" : "bg-[#8c503c]")}
+                              style={{ width: `${Math.max(5, progressPercent)}%` }}
                             />
+                          </div>
+                          
+                          {/* Nút hành động */}
+                          <div className="mt-4 flex justify-end">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); navigate(`/project/${proj.id}`); }}
+                              className="text-[9px] font-bold uppercase tracking-widest text-white bg-[#2c1b13] hover:bg-[#8c503c] transition-colors px-3 py-1.5 rounded-sm"
+                            >
+                              Open Archive
+                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+
+              {/* Right Bookend (chặn sách phải) */}
+              {savedProjects.length > 0 && (
+                <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-l border-[#2a1a0f] rounded-t-sm shadow-[-4px_0_8px_rgba(0,0,0,0.4)] ml-1 z-20" />
+              )}
+            </div>
+            
+            
           </div>
+        </div>
         </section>
 
         {/* SECTION 2: STUDIO INTELLIGENCE (Bento Grid) */}
@@ -779,7 +880,7 @@ export default function Dashboard() {
             </div>
 
             {/* Right Column (Stacked on small, flex col on large) */}
-            <div className="lg:col-span-4 flex flex-row lg:flex-col gap-3 lg:gap-4 min-h-[140px] lg:min-h-0 h-full">
+            <div className="lg:col-span-4 flex flex-row lg:flex-col gap-3 lg:gap-4 min-h-0 h-full">
               {/* Quick Jump (Vintage Journal style) */}
               {activeProject ? (
                 <div
