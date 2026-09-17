@@ -108,7 +108,7 @@ export function ProjectLayout() {
           )}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-white/70 hover:text-white transition-colors"
+            className="text-white/70 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
           >
             {isExpanded ? (
               <ChevronLeft className="w-5 h-5" />
@@ -122,18 +122,19 @@ export function ProjectLayout() {
         <button
           onClick={() => navigate("/dashboard")}
           className={cn(
-            "flex items-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors mb-6",
-            isExpanded ? "w-full px-4 h-10 gap-3" : "w-10 h-10 justify-center",
+            "flex items-center rounded-xl transition-colors mb-4 border border-white/20 shadow-sm bg-white/5",
+            isExpanded ? "w-full px-4 h-11 gap-3" : "w-11 h-11 justify-center mx-auto",
+            "text-white/90 hover:text-white hover:bg-white/15 hover:border-white/40"
           )}
           title="All Books"
         >
           <Grid className="w-5 h-5 shrink-0" />
-          {isExpanded && <span className="font-medium text-sm">All Books</span>}
+          {isExpanded && <span className="font-semibold text-sm">All Books</span>}
         </button>
 
-        <nav className="flex-1 w-full flex flex-col gap-2 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <nav className="flex-1 w-full flex flex-col gap-1.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {isExpanded && (
-            <div className="text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
+            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-1">
               Database
             </div>
           )}
@@ -150,13 +151,13 @@ export function ProjectLayout() {
                     ? "w-full px-4 h-10 gap-3"
                     : "w-10 h-10 justify-center mx-auto",
                   isActive
-                    ? "bg-[#8A5252] text-white shadow-inner"
-                    : "text-white/60 hover:text-white hover:bg-white/10",
+                    ? "bg-[#F59E0B] text-[#3E2723] shadow-md font-bold"
+                    : "text-white/70 hover:text-white hover:bg-white/10 font-medium",
                 )}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#3E2723]" : "")} />
                 {isExpanded && (
-                  <span className="font-medium text-sm truncate">
+                  <span className="text-sm truncate">
                     {item.label}
                   </span>
                 )}
@@ -166,13 +167,13 @@ export function ProjectLayout() {
 
           <div
             className={cn(
-              "bg-white/20 my-2",
+              "bg-white/20 my-3",
               isExpanded ? "w-full h-px" : "w-8 h-px mx-auto",
             )}
           />
 
           {isExpanded && (
-            <div className="text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-2">
+            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
               Create
             </div>
           )}
@@ -184,13 +185,13 @@ export function ProjectLayout() {
                 to={item.href}
                 title={!isExpanded ? item.label : undefined}
                 className={cn(
-                  "flex items-center rounded-xl transition-all shadow-md border",
+                  "flex items-center rounded-2xl transition-all shadow-lg border-2",
                   isExpanded
                     ? "w-full px-4 h-12 gap-3"
                     : "w-12 h-12 justify-center mx-auto",
                   isActive
-                    ? "bg-[#D3BFA9] border-white/50 text-[#5A4535]"
-                    : "bg-[#A36262] border-white/20 text-white/90 hover:bg-[#D3BFA9] hover:text-[#5A4535]",
+                    ? "bg-[#F59E0B] border-[#F59E0B] text-[#3E2723]"
+                    : "bg-[#8A5252] border-[#8A5252] text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] hover:text-[#3E2723]",
                 )}
               >
                 <item.icon className="w-5 h-5 shrink-0" />
@@ -205,13 +206,13 @@ export function ProjectLayout() {
 
           <div
             className={cn(
-              "bg-white/20 my-2",
+              "bg-white/20 my-3",
               isExpanded ? "w-full h-px" : "w-8 h-px mx-auto",
             )}
           />
 
           {isExpanded && (
-            <div className="text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-2">
+            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
               Tools & Quality
             </div>
           )}
@@ -223,18 +224,18 @@ export function ProjectLayout() {
                 to={item.href}
                 title={!isExpanded ? item.label : undefined}
                 className={cn(
-                  "flex items-center rounded-xl transition-all shadow-xs border",
+                  "flex items-center rounded-xl transition-all",
                   isExpanded
-                    ? "w-full px-4 h-11 gap-3"
-                    : "w-11 h-11 justify-center mx-auto",
+                    ? "w-full px-4 h-10 gap-3"
+                    : "w-10 h-10 justify-center mx-auto",
                   isActive
-                    ? "bg-[#D3BFA9] border-white/50 text-[#5A4535] font-bold"
-                    : "bg-transparent border-transparent text-white/80 hover:bg-[#A36262]/60 hover:text-white",
+                    ? "bg-[#F59E0B] text-[#3E2723] font-bold shadow-md"
+                    : "bg-transparent text-white/70 hover:bg-white/10 hover:text-white font-medium",
                 )}
               >
-                <item.icon className="w-4 h-4 shrink-0" />
+                <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#3E2723]" : "")} />
                 {isExpanded && (
-                  <span className="font-semibold text-xs truncate">
+                  <span className="text-xs truncate">
                     {item.label}
                   </span>
                 )}
@@ -243,7 +244,14 @@ export function ProjectLayout() {
           })}
         </nav>
 
-        <div className="flex flex-col gap-2 mt-auto shrink-0 pt-2">
+        <div
+          className={cn(
+            "bg-white/20 mb-3 mt-auto shrink-0",
+            isExpanded ? "w-full h-px" : "w-8 h-px mx-auto"
+          )}
+        />
+
+        <div className="flex flex-col gap-2 shrink-0">
           <button
             onClick={() => {
               const projId = location.pathname.split("/")[2] || "1";

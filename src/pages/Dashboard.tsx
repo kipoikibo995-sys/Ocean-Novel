@@ -303,20 +303,8 @@ export default function Dashboard() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#3d261d] flex flex-col relative font-sans selection:bg-[#965A5A] selection:text-white"
+      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans"
     >
-      {/* Immersive Vintage Wallpaper Background */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-40" 
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}
-      />
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
-        <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
-      </div>
-
       <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-4 lg:py-6 h-full relative z-10 flex flex-col gap-4">
         {/* SECTION 1: THE MANUSCRIPTS */}
         <section className="shrink-0 flex flex-col gap-3">
@@ -329,7 +317,7 @@ export default function Dashboard() {
             <div className="absolute -top-1 left-4 right-4 h-2 bg-[#fcfaf5] rounded-t-sm z-0" />
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6 relative z-10">
-              <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#4a3225] tracking-tight leading-none uppercase">
+              <h1 className="text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase">
                 Archive Projects
               </h1>
 
@@ -499,7 +487,6 @@ export default function Dashboard() {
                             <span className="block text-[7.5px] lg:text-[8.5px] font-sans font-bold uppercase tracking-[0.2em] text-[#8c503c]">
                               Case File {index < 9 ? `· No. 0${index + 1}` : `· No. ${index + 1}`}
                             </span>
-                            <span className="text-[#8c503c]/60 text-[8px] font-serif">✦</span>
                           </div>
 
                           {/* Large Readable Book Title */}
@@ -518,11 +505,11 @@ export default function Dashboard() {
 
                         {/* Bottom: Word Count & Progress */}
                         <div className="mt-auto pt-1.5 border-t border-[#ebdcd0]">
-                          <div className="flex items-baseline justify-between mb-1">
-                            <span className="text-[7px] lg:text-[7.5px] uppercase font-bold tracking-widest text-[#8c503c]/70">
+                          <div className="flex items-baseline justify-between mb-1 gap-1">
+                            <span className="text-[7.5px] lg:text-[8.5px] uppercase font-bold tracking-widest text-[#8c503c]/70 shrink-0">
                               Words
                             </span>
-                            <span className="text-[8.5px] lg:text-[9.5px] font-serif font-bold text-[#2c1b13]">
+                            <span className="text-[8.5px] lg:text-[10px] font-serif font-bold text-[#2c1b13] truncate">
                               {(proj.currentWords || 0).toLocaleString()}
                             </span>
                           </div>
@@ -545,16 +532,16 @@ export default function Dashboard() {
         {/* SECTION 2: STUDIO INTELLIGENCE (Bento Grid) */}
         <section className="flex-1 flex flex-col min-h-0 pb-2">
           <div className="mb-2 shrink-0 flex items-center justify-between">
-            <h2 className="text-lg lg:text-xl font-serif font-bold text-[#fcfaf5] tracking-tight uppercase">
+            <h2 className="text-lg lg:text-xl font-sans font-bold text-[#4a3225] tracking-tight uppercase">
               Investigation Board
             </h2>
             {savedProjects.length > 1 && (
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-stone-300 text-[10px] uppercase tracking-wider font-bold">Focus:</span>
+                <span className="text-stone-500 text-[10px] uppercase tracking-wider font-bold">Focus:</span>
                 <select
                   value={selectedProjectId || ""}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="bg-[#2a1a14] text-[#fcfaf5] text-[11px] font-serif border border-[#5d3f32] rounded-sm px-2 py-0.5 focus:outline-none focus:border-[#d49a89]"
+                  className="bg-white text-[#4a3225] text-[11px] font-sans font-bold border border-[#e5e0d5] rounded-sm px-2 py-0.5 focus:outline-none focus:border-[#d49a89]"
                 >
                   {savedProjects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -579,7 +566,7 @@ export default function Dashboard() {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 relative z-10 shrink-0 border-b border-[#e5e0d5] pb-2">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-serif text-base lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
+                  <h3 className="font-sans text-base lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
                     Task Notes
                   </h3>
                   {/* Status filter pills */}
@@ -733,9 +720,9 @@ export default function Dashboard() {
                           }}
                         >
                           {task.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-[#8c503c]" />
+                            <CheckCircle2 className="w-5 h-5 text-[#8c503c]" />
                           ) : (
-                            <div className="w-4 h-4 rounded-sm border-2 border-[#d49a89] hover:border-[#8c503c] transition-colors" />
+                            <div className="w-5 h-5 rounded-full border-2 border-[#d49a89] hover:border-[#8c503c] transition-colors" />
                           )}
                         </button>
 
@@ -823,7 +810,7 @@ export default function Dashboard() {
                       {activeProject.title}
                     </h3>
                     <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-0.5 lg:mt-1 font-serif italic truncate">
-                      {resumeStats.currentSceneTitle} • Updated {resumeStats.timeAgo}
+                      {activeProject.genre} • {resumeStats.currentSceneTitle} • Updated {resumeStats.timeAgo}
                     </p>
                   </div>
                   <div className="relative z-10 mt-2 lg:mt-4 flex items-center justify-between ml-2">
@@ -866,13 +853,10 @@ export default function Dashboard() {
                 onClick={() => setIsRadarExpanded(true)}
                 title="Click to expand full World Radar"
               >
-                {/* Tape decoration */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 rotate-1 opacity-70 shadow-sm pointer-events-none" />
-                
                 <div className="flex justify-between items-start mb-2 lg:mb-3 shrink-0 border-b border-[#e5e0d5] pb-2 mt-1">
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-serif text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide group-hover/card:text-[#8c503c] transition-colors">
+                      <h3 className="font-sans text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide group-hover/card:text-[#8c503c] transition-colors">
                         World Radar
                       </h3>
                       <span className="text-[8px] lg:text-[9px] bg-[#8c503c]/10 text-[#8c503c] font-sans font-bold px-1.5 py-0.5 rounded-sm">
@@ -979,9 +963,9 @@ export default function Dashboard() {
 
                 {/* Card footer prompt */}
                 {worldRadarStats.sortedMentions.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-[#e5e0d5] flex items-center justify-between text-[9px] font-serif text-[#8c503c] shrink-0">
-                    <span className="group-hover/card:underline">Click to view all {worldRadarStats.sortedMentions.length} characters</span>
-                    <Maximize2 className="w-3 h-3 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
+                  <div className="mt-3 pt-3 border-t border-[#e5e0d5] flex items-center justify-between text-[10px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-3 py-2 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
+                    <span>View all {worldRadarStats.sortedMentions.length} characters</span>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
                   </div>
                 )}
               </div>

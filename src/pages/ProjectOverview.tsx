@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 
 import { useProject } from "@/context/ProjectContext";
 import { storage } from "@/lib/storage";
+import { Download } from "lucide-react";
+import { ExportModal } from "@/components/ExportModal";
 
 export default function ProjectOverview() {
   const { id } = useParams();
@@ -27,6 +29,7 @@ export default function ProjectOverview() {
   const savedProject = id ? storage.getProjects().find(p => p.id === id) : null;
   const projectData = id ? storage.getProjectData(id) : null;
 
+  const [showExportModal, setShowExportModal] = useState(false);
   const [coverUrl, setCoverUrl] = useState(
     savedProject?.coverUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
   );
@@ -121,7 +124,7 @@ export default function ProjectOverview() {
             />
           </div>
 
-          <div className="absolute bottom-8 left-8 right-8 z-20">
+          <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-col gap-3">
             <button
               onClick={() =>
                 navigate(`/project/${(id || '1')}/workspace/studio`)
@@ -130,6 +133,13 @@ export default function ProjectOverview() {
             >
               <Edit3 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
               Open Studio
+            </button>
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-xl font-bold tracking-widest transition-all flex items-center justify-center gap-3 uppercase text-xs"
+            >
+              <Download className="w-4 h-4" />
+              Export Manuscript
             </button>
           </div>
         </motion.div>
@@ -142,9 +152,11 @@ export default function ProjectOverview() {
             transition={{ duration: 0.3, delay: 0.1 }}
             className="mb-8 shrink-0 mt-2"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="px-3 py-1 bg-white/60 text-stone-500 text-[9px] font-bold tracking-widest rounded-sm uppercase border border-stone-200">
-                Project Overview
+            <div className="flex items-center gap-2 mb-3">
+              <span className="flex items-center gap-2 text-stone-500 text-[10px] font-bold tracking-widest uppercase">
+                <span className="hover:text-stone-800 transition-colors cursor-pointer" onClick={() => navigate('/dashboard')}>All Books</span>
+                <span className="text-stone-400">/</span>
+                <span className="text-stone-800">{displayTitle}</span>
               </span>
             </div>
             <h1 className="text-4xl lg:text-5xl font-serif font-bold text-stone-800 tracking-tight">
@@ -339,6 +351,11 @@ export default function ProjectOverview() {
           </motion.div>
         </div>
       </div>
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        projectId={id || "1"}
+      />
     </div>
   );
 }
