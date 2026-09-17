@@ -399,15 +399,15 @@ export default function Dashboard() {
           </div>
 
           {/* ARCHIVAL BOOKSHELF */}
-        <div className="relative pt-12 pb-0 px-2 sm:px-4 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar flex justify-start md:justify-center">
-          {/* Container cho kệ sách, ôm sát content */}
-          <div className="relative flex flex-col items-center shrink-0 min-w-min">
+        <div className="relative pt-12 pb-0 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+          {/* Container cho kệ sách trải dài */}
+          <div className="relative flex flex-col shrink-0 min-w-full w-max">
             
             {/* Wooden Shelf Base */}
             <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-[#5c371d] to-[#3a2211] rounded-t-[2px] shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] z-0" />
             <div className="absolute -bottom-1 left-0 right-0 h-2 bg-[#26150a] shadow-xl z-0" />
             
-            <div className="flex items-end h-[280px] gap-[2px] lg:gap-[3px] pb-6 relative z-10 px-4">
+            <div className="flex items-end h-[280px] gap-[2px] lg:gap-[3px] pb-6 relative z-10 px-4 lg:px-8 justify-start">
               
               {/* Left Bookend (chặn sách trái) */}
               <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-r border-[#5c3a21] rounded-t-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] mr-1 z-20" />
@@ -444,6 +444,27 @@ export default function Dashboard() {
                 const bookHeight = isSelected ? baseHeight + 20 : baseHeight;
                 
                 const isComplete = progressRatio >= 1 && (proj.wordGoal || 0) > 0;
+                
+                const calculateFont = (maxW: number, defaultSize: number, charRatio: number = 0.8) => {
+                  // A more aggressive scaling to ensure it fits
+                  // Calculate required font size based on string length and available width.
+                  // Average character width is approx 0.6 of font size for serif bold.
+                  // Add tracking to the character width.
+                  const estimatedCharWidthMultiplier = 0.6;
+                  const estimatedWidth = proj.title.length * (defaultSize * estimatedCharWidthMultiplier);
+                  let finalSize = defaultSize;
+                  let tracking = '0.15em';
+                  
+                  if (estimatedWidth > maxW) {
+                     finalSize = Math.max(7, Math.floor((maxW / proj.title.length) / estimatedCharWidthMultiplier));
+                     tracking = '0.05em';
+                  }
+                  
+                  if (finalSize < 8.5) tracking = '0em';
+
+                  return { fontSize: `${finalSize}px`, letterSpacing: tracking };
+                };
+
                 
                 // Giới hạn ribbon chỉ cho 2 sách cập nhật gần nhất
                 const recentProjectIds = [...savedProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0)).slice(0, 2).map(p => p.id);
@@ -493,10 +514,10 @@ export default function Dashboard() {
                           <div className={cn("absolute bottom-[32px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <span className={cn(
-                              "font-serif text-[12px] font-bold tracking-[0.2em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              "font-serif font-bold uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
                               isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
                               isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 70}px`, textAlign: 'center' }}>
+                            )} style={{ width: `${baseHeight - 70}px`, minWidth: `${baseHeight - 70}px`, textAlign: 'center', ...calculateFont(baseHeight - 70, 12) }}>
                               {proj.title}
                             </span>
                           </div>
@@ -508,9 +529,9 @@ export default function Dashboard() {
                         <>
                           <div className="absolute top-[28px] bottom-[28px] left-[15%] right-[15%] bg-[#f4ebd8] rounded-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.6)] flex items-center justify-center border border-[#d6c7b0]">
                             <span className={cn(
-                              "font-serif text-[10px] font-bold tracking-[0.1em] text-[#2c1b13] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300",
+                              "font-serif font-bold text-[#2c1b13] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300",
                               isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 64}px`, textAlign: 'center' }}>
+                            )} style={{ width: `${baseHeight - 64}px`, minWidth: `${baseHeight - 64}px`, textAlign: 'center', ...calculateFont(baseHeight - 64, 10, 0.75) }}>
                               {proj.title}
                             </span>
                           </div>
@@ -529,10 +550,10 @@ export default function Dashboard() {
                           <div className={cn("absolute bottom-[45px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <span className={cn(
-                              "font-serif text-[12px] font-medium tracking-[0.15em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              "font-serif font-medium uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
                               isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
                               isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 100}px`, textAlign: 'center' }}>
+                            )} style={{ width: `${baseHeight - 100}px`, minWidth: `${baseHeight - 100}px`, textAlign: 'center', ...calculateFont(baseHeight - 100, 12, 0.75) }}>
                               {proj.title}
                             </span>
                           </div>
@@ -546,10 +567,10 @@ export default function Dashboard() {
                           <div className={cn("absolute top-[18px] bottom-[18px] left-[20%] right-[20%] border", isComplete ? "border-[#c49a45] opacity-60" : "border-white/20")} />
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <span className={cn(
-                              "font-serif text-[11px] font-bold tracking-[0.2em] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-hidden text-ellipsis transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
+                              "font-serif font-bold uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
                               isComplete ? "text-[#e8c678]" : "text-white/80",
                               isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 50}px`, textAlign: 'center' }}>
+                            )} style={{ width: `${baseHeight - 50}px`, minWidth: `${baseHeight - 50}px`, textAlign: 'center', ...calculateFont(baseHeight - 50, 11) }}>
                               {proj.title}
                             </span>
                           </div>
