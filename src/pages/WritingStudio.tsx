@@ -1564,7 +1564,13 @@ export default function WritingStudio() {
         activeSceneTitle={currentDoc?.title || 'Current Scene'}
         activeSceneNotes={sceneNotes[activeDocId] || ''}
         activeSceneContent={activeContent}
-        characters={characters}
+        characters={(() => {
+          if (projectId) {
+            const data = storage.getProjectData(projectId);
+            if (data?.characters && data.characters.length > 0) return data.characters;
+          }
+          return characters;
+        })()}
         locations={locations}
       />
 

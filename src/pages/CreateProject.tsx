@@ -12,7 +12,13 @@ import {
   Rocket, 
   Search,
   Hourglass,
-  Layers
+  Layers,
+  HelpCircle,
+  Copy,
+  Check,
+  Info,
+  X,
+  ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -174,6 +180,61 @@ const COLORS = [
     ribbon: "bg-rose-900",
   },
 ];
+
+const NEW_MANUSCRIPT_ARCHITECT_PROMPT = `I want you to help me prepare the information needed to create a new novel project.
+
+First, ask me to provide my NOVEL IDEA. You may also ask me for an Author / Pen Name if I have one. If I do not provide one, leave that field blank.
+
+After I provide my novel idea, analyze it and generate ONLY the following information:
+
+1. Manuscript Title
+Create a suitable and memorable novel title based on my story idea.
+
+2. Author / Pen Name
+Keep exactly the Author / Pen Name I provide. If I do not provide one, leave it blank. Do not invent an author name.
+
+3. Word Count Target
+Recommend a reasonable total word count based on the story concept, genre, and target audience.
+
+4. Logline / Central Premise
+Write a concise 35–70 word premise describing the main story hook, central conflict, and stakes.
+
+5. Primary Genre
+Choose exactly ONE:
+- FANTASY
+- SCI-FI
+- ROMANCE
+- THRILLER
+- MYSTERY
+- HISTORICAL
+- CONTEMPORARY
+
+6. Target Audience
+Choose exactly ONE:
+- Middle Grade
+- Young Adult (YA)
+- New Adult
+- Adult
+
+7. Cover Theme
+Choose exactly ONE:
+- Forest
+- Crimson
+- Emerald
+- Midnight
+- Ivory
+
+Do not generate characters, locations, worldbuilding, chapter outlines, scenes, or additional story content.
+
+After I provide my novel idea, return the result in this format:
+
+Manuscript Title: ...
+Author / Pen Name: ...
+Word Count Target: ...
+Logline / Central Premise: ...
+Primary Genre: ...
+Target Audience: ...
+Cover Theme: ...`;
 
 // Floating Dust & Star Particles Component
 function AmbientParticles({ color }: { color: string }) {
@@ -341,6 +402,26 @@ export default function CreateProject() {
   const [wordCount, setWordCount] = useState<number | string>(80000);
   const [colorStyle, setColorStyle] = useState(COLORS[3]); // Default Midnight
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isPromptCopied, setIsPromptCopied] = useState(false);
+
+  const handleCopyArchitectPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(NEW_MANUSCRIPT_ARCHITECT_PROMPT);
+      setIsPromptCopied(true);
+      setTimeout(() => setIsPromptCopied(false), 2500);
+    } catch {
+      // Fallback
+      const textArea = document.createElement("textarea");
+      textArea.value = NEW_MANUSCRIPT_ARCHITECT_PROMPT;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setIsPromptCopied(true);
+      setTimeout(() => setIsPromptCopied(false), 2500);
+    }
+  };
 
   // Active theme based on selected genre
   const currentTheme = GENRE_THEMES[genre] || GENRE_THEMES.Fantasy;
@@ -474,22 +555,35 @@ export default function CreateProject() {
 
       {/* Top Header Bar */}
       <div className="relative z-20 px-6 py-4 lg:px-12 lg:py-5 flex items-center justify-between shrink-0">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2.5 text-stone-300/80 hover:text-white transition-all group"
-        >
-          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center group-hover:bg-white/20 group-hover:scale-105 transition-all shadow-sm">
-            <ChevronLeft className="w-4 h-4 text-stone-200 group-hover:text-white" />
-          </div>
-          <div className="flex flex-col text-left">
-            <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-400 group-hover:text-stone-200">
-              Back to Archives
-            </span>
-            <span className="text-[10px] text-stone-500 font-serif italic hidden sm:inline">
-              Author Dashboard
-            </span>
-          </div>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2.5 text-stone-300/80 hover:text-white transition-all group"
+          >
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center group-hover:bg-white/20 group-hover:scale-105 transition-all shadow-sm">
+              <ChevronLeft className="w-4 h-4 text-stone-200 group-hover:text-white" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-400 group-hover:text-stone-200">
+                Back to Archives
+              </span>
+              <span className="text-[10px] text-stone-500 font-serif italic hidden sm:inline">
+                Author Dashboard
+              </span>
+            </div>
+          </button>
+
+          {/* Guide / Help Button */}
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className="w-7 h-7 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 hover:border-amber-400/60 text-amber-300 flex items-center justify-center transition-all shadow-sm group hover:scale-105"
+            title="Manuscript Setup Guide & AI Prompt"
+            aria-label="Manuscript Setup Guide & AI Prompt"
+          >
+            <HelpCircle className="w-4 h-4 transition-transform group-hover:rotate-12" />
+          </button>
+        </div>
 
         {/* Case File Metadata Stamp */}
         <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
@@ -647,9 +741,20 @@ export default function CreateProject() {
                     ARCHIVE INITIATION
                   </span>
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
-                  New Manuscript
-                </h1>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+                    New Manuscript
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => setIsHelpOpen(true)}
+                    className="w-5 h-5 rounded-full bg-amber-400/10 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 flex items-center justify-center transition-all hover:scale-110"
+                    title="View Setup Guide & AI Architect Prompt"
+                    aria-label="View Setup Guide & AI Architect Prompt"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-amber-300/80 shrink-0">
@@ -833,6 +938,157 @@ export default function CreateProject() {
           </div>
         </motion.div>
       </div>
+
+      {/* Guide & AI Prompt Modal */}
+      <AnimatePresence>
+        {isHelpOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsHelpOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-2xl bg-[#14121a] border border-amber-500/30 rounded-xl shadow-2xl overflow-hidden z-10 my-8 flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-300">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-serif font-bold text-white flex items-center gap-2">
+                      New Manuscript Setup Guide
+                    </h2>
+                    <p className="text-[11px] text-stone-400 font-sans">
+                      Form requirements, best practices, and AI setup assistance
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen(false)}
+                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-stone-400 hover:text-white flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 overflow-y-auto space-y-6 text-sm text-stone-300">
+                {/* Section 1: Form field descriptions */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    What to fill out on this page?
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                      <span className="font-bold text-stone-200">1. Manuscript Title</span>
+                      <p className="text-stone-400 leading-relaxed">
+                        A memorable, evocative working title (2–7 words). Displayed prominently across your book cover, spines, and studio.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                      <span className="font-bold text-stone-200">2. Author / Pen Name</span>
+                      <p className="text-stone-400 leading-relaxed">
+                        Author byline stamped on the book cover and title page (can be your real name or pen name).
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                      <span className="font-bold text-stone-200">3. Genre & Audience</span>
+                      <p className="text-stone-400 leading-relaxed">
+                        Select the primary genre (Fantasy, Sci-Fi, Romance, Thriller, etc.) and reading maturity target (Middle Grade, YA, Adult).
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                      <span className="font-bold text-stone-200">4. Central Logline & Word Target</span>
+                      <p className="text-stone-400 leading-relaxed">
+                        A concise 1–2 sentence premise hook (35–70 words) and your overall target word count milestone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: AI setup prompt suggestion */}
+                <div className="space-y-3 pt-2 border-t border-white/10">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                        <Feather className="w-3.5 h-3.5" />
+                        Unsure what to write? Copy this AI Architect Prompt
+                      </h3>
+                      <p className="text-[11px] text-stone-400 mt-0.5">
+                        Send this prompt to ChatGPT, Claude, or Gemini along with your raw idea to generate a calibrated setup configuration:
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyArchitectPrompt}
+                      className={cn(
+                        "px-3.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm",
+                        isPromptCopied
+                          ? "bg-emerald-600 text-white shadow-emerald-500/20"
+                          : "bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold"
+                      )}
+                    >
+                      {isPromptCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Prompt Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Prompt to Clipboard</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Prompt Code Block Preview */}
+                  <div className="relative">
+                    <pre className="p-4 rounded-lg bg-black/60 border border-white/10 text-[11px] font-mono leading-relaxed text-stone-300 max-h-60 overflow-y-auto whitespace-pre-wrap select-all selection:bg-amber-500/30">
+{NEW_MANUSCRIPT_ARCHITECT_PROMPT}
+                    </pre>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong>Tip:</strong> Once the AI responds with your details, copy and paste the generated title, logline, genre, and word count target into the form below, then click <em>"Open Studio & Begin Writing"</em> to start composing immediately.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between">
+                <span className="text-[11px] text-stone-500">
+                  Ocean Novel • Project Setup Architect
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen(false)}
+                  className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white font-medium transition-colors"
+                >
+                  Got it, return to form
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

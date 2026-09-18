@@ -56,8 +56,24 @@ export default function AIPromptModal({
   const generatedScenePrompt = useMemo(() => {
     const charsBlock = selectedCharacters.length > 0 
       ? selectedCharacters.map((c, i) => {
-          const traits = Array.isArray(c.traits) ? c.traits.join(', ') : (c.traits || 'None listed');
-          return `${i + 1}. @[${c.name}]:\n   - Role: ${c.role || 'Key Character'}\n   - Traits & Personality: ${traits}\n   - Backstory / Goal: ${c.description || 'Not specified'}`;
+          let traits = 'None listed';
+          if (Array.isArray(c.traits) && c.traits.length > 0) {
+            traits = c.traits.filter(Boolean).join(', ');
+          } else if (typeof c.traits === 'string' && c.traits.trim()) {
+            traits = c.traits.trim();
+          }
+
+          const backstory = c.backstory || c.description || c.shortBio || c.goal || 'Not specified';
+          
+          const extras: string[] = [];
+          if (c.mbti) extras.push(`MBTI: ${c.mbti}`);
+          if (c.archetype) extras.push(`Archetype: ${c.archetype}`);
+          if (c.goal) extras.push(`Goal: ${c.goal}`);
+          if (c.conflict) extras.push(`Conflict: ${c.conflict}`);
+          if (c.trauma) extras.push(`Trauma: ${c.trauma}`);
+          const extrasLine = extras.length > 0 ? `\n   - Psychology & Motivation: ${extras.join(' | ')}` : '';
+
+          return `${i + 1}. @[${c.name}]:\n   - Role: ${c.role || 'Key Character'}\n   - Traits: ${traits}\n   - Backstory: ${backstory}${extrasLine}`;
         }).join('\n\n')
       : '1. @[Main Character]: Protagonist confronting immediate obstacles';
 
@@ -89,7 +105,7 @@ ${customConflict.trim() || '- Establish immediate tension between the characters
 
 [OCEAN NOVEL SPECIFICATIONS]
 1. Show, Don't Tell: Avoid summarizing feelings with dry adjectives; ground emotional stakes in micro-gestures, physical reactions, and environmental details.
-2. Entity Tagging: Enclose character and location names in @[Name] tags when they first appear or make key moves, matching Ocean Novel's entity linker.
+2. Clean Manuscript Prose & Entity Tag Rule: Use entity tags (@[Name]) ONLY in metadata, outlines, summaries, or hidden system context. NEVER use entity tags or brackets (@[Name]) in the reader-facing manuscript prose, dialogue, or story text. Write natural, publication-ready prose using clean names.
 3. Cadence & Prose: Keep dialogue sharp and purposeful. Avoid monotonous sentence structures and nearby repeating words (echoes).`;
   }, [projectMeta, activeSceneTitle, targetWordCount, sceneTone, selectedLocation, selectedCharacters, activeSceneNotes, customConflict]);
 
@@ -104,8 +120,10 @@ I am drafting a novel using Ocean Novel's Story Bible, Relationship Graphs, and 
    - Varied Sentence Cadence: Blend short, staccato sentences during high-tension moments with flowing, rhythmic clauses during reflective beats. Avoid monotonous sentence lengths.
    - No Echoes or Prose Monotony: Do not reuse prominent descriptive words, verbs, or sensory adjectives within any three-sentence window.
 
-2. Ocean Novel Entity Tagging Convention:
-   - Whenever an existing character or location appears for the first time or plays a key role in a paragraph, format their name as @[Character Name] or @[Location Name] (e.g., @[Lord Christopher], @[Sunken Citadel]). This enables seamless linking with Ocean Novel's @mention system.
+2. Entity Tagging & Clean Manuscript Rule:
+   - Use entity tags (@[Name]) ONLY in metadata, system summaries, scene outlines, or hidden system context.
+   - NEVER use entity tags (@[Name] or any bracketed labels) in reader-facing manuscript prose, dialogue, or narrative body.
+   - All written story text and manuscript excerpts must be clean, natural, and publication-ready prose.
 
 3. Project Overview:
    - Title: ${projectMeta?.title || 'Ocean Novel'}
@@ -393,7 +411,7 @@ ${textSnippet}`;
               <div className="bg-amber-50/70 border border-amber-200/80 rounded-sm p-3 flex items-start gap-2.5 text-xs text-amber-900 font-serif">
                 <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <p>
-                  Send this prompt at the very beginning of a new conversation with ChatGPT, Claude, or Gemini. It instructs the AI on Ocean Novel's entity tagging rules (<code className="font-mono bg-amber-100 px-1 rounded-xs">@[Name]</code>) and literary prose standards before generating scenes.
+                  Send this prompt at the very beginning of a new conversation with ChatGPT, Claude, or Gemini. It sets up literary prose standards and instructs the AI to reserve entity tags (<code className="font-mono bg-amber-100 px-1 rounded-xs">@[Name]</code>) exclusively for metadata/context, keeping manuscript prose completely natural and clean.
                 </p>
               </div>
 

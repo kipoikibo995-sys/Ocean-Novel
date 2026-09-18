@@ -248,15 +248,39 @@ export default function Characters() {
       if (data?.characters && data.characters.length > 0) {
         let hasChanges = false;
         const updatedCharacters = data.characters.map((char: any, index: number) => {
-          if (!char.imageUrl || char.imageUrl.includes("unsplash.com") || char.imageUrl.includes(".webp")) {
-            hasChanges = true;
-            const fallbackPreset = FANTASY_PRESET_PORTRAITS[index % FANTASY_PRESET_PORTRAITS.length];
-            return {
-              ...char,
-              imageUrl: fallbackPreset ? fallbackPreset.url : "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg"
-            };
+          let hasModified = false;
+          let backstory = char.backstory;
+          let description = char.description;
+          if (!backstory && description) {
+            backstory = description;
+            hasModified = true;
+          } else if (!description && backstory) {
+            description = backstory;
+            hasModified = true;
           }
-          return char;
+
+          let traits = char.traits;
+          if (!Array.isArray(traits)) {
+            traits = typeof traits === 'string' && traits.trim() ? traits.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+            hasModified = true;
+          }
+
+          let imageUrl = char.imageUrl;
+          if (!imageUrl || imageUrl.includes("unsplash.com") || imageUrl.includes(".webp")) {
+            hasModified = true;
+            const fallbackPreset = FANTASY_PRESET_PORTRAITS[index % FANTASY_PRESET_PORTRAITS.length];
+            imageUrl = fallbackPreset ? fallbackPreset.url : "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg";
+          }
+
+          if (hasModified) hasChanges = true;
+
+          return {
+            ...char,
+            backstory: backstory || "",
+            description: description || backstory || "",
+            traits,
+            imageUrl,
+          };
         });
 
         if (hasChanges) {
@@ -321,7 +345,7 @@ export default function Characters() {
       name: "",
       role: "",
       age: "",
-      status: "",
+      status: "ALIVE",
       aliases: [],
       backstory: "",
       traits: [],
@@ -343,14 +367,22 @@ export default function Characters() {
     setAliasInput("");
     setTraitInput("");
     setShowAttributeDropdown(false);
+
+    let charTraits: string[] = [];
+    if (Array.isArray(char.traits)) {
+      charTraits = char.traits.filter(Boolean);
+    } else if (typeof char.traits === 'string' && char.traits.trim()) {
+      charTraits = char.traits.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+
     setFormData({
       name: char.name || "",
       role: char.role || "",
       age: char.age || "",
-      status: char.status || "",
+      status: char.status || "ALIVE",
       aliases: char.aliases || [],
-      backstory: char.backstory || "",
-      traits: char.traits || [],
+      backstory: char.backstory || char.description || char.shortBio || "",
+      traits: charTraits,
       imageUrl: char.imageUrl || "",
       mbti: char.mbti || "",
       archetype: char.archetype || "",
@@ -366,32 +398,55 @@ export default function Characters() {
   const handleSaveEditor = () => {
     if (!formData.name.trim()) return;
 
+    // Flush any pending trait input that user typed without pressing Enter
+    const currentTraits = [...formData.traits];
+    if (traitInput.trim()) {
+      const splitTraits = traitInput.split(',').map(s => s.trim()).filter(Boolean);
+      for (const t of splitTraits) {
+        if (!currentTraits.includes(t)) {
+          currentTraits.push(t);
+        }
+      }
+      setTraitInput("");
+      setFormData(prev => ({ ...prev, traits: currentTraits }));
+    }
+
+    const backstoryContent = formData.backstory || "";
+
     const newChar = {
       id: editingCharId || Date.now().toString(),
-      name: formData.name || "New Character",
+      name: formData.name.trim() || "New Character",
       role: formData.role || "PROTAGONIST",
-      age: formData.age,
-      status: formData.status,
-      aliases: formData.aliases,
-      backstory: formData.backstory,
-      traits: formData.traits,
+      age: formData.age || "",
+      status: formData.status || "ALIVE",
+      aliases: formData.aliases || [],
+      backstory: backstoryContent,
+      description: backstoryContent, // Synchronize for all AI prompts, search, and overview widgets
+      traits: currentTraits,
       imageUrl: formData.imageUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
-      mbti: formData.mbti,
-      archetype: formData.archetype,
-      conflict: formData.conflict,
-      goal: formData.goal,
-      trauma: formData.trauma,
-      group: formData.group,
-      customAttributes: formData.customAttributes,
+      mbti: formData.mbti || "",
+      archetype: formData.archetype || "",
+      conflict: formData.conflict || "",
+      goal: formData.goal || "",
+      trauma: formData.trauma || "",
+      group: formData.group || "none",
+      customAttributes: formData.customAttributes || [],
     };
 
+    let updatedCharacters: any[];
     if (editingCharId) {
-      setCharacters((prev) => prev.map((c) => (c.id === editingCharId ? newChar : c)));
+      updatedCharacters = characters.map((c) => (c.id === editingCharId ? newChar : c));
     } else {
-      setCharacters((prev) => [...prev, newChar]);
-      setNodes((prev) => [...prev, { id: newChar.id, x: 200, y: 200 }]);
+      updatedCharacters = [...characters, newChar];
+      setNodes((prev: any) => [...prev, { id: newChar.id, x: 200, y: 200 }]);
     }
     
+    setCharacters(updatedCharacters);
+
+    if (id) {
+      storage.saveProjectData(id, { characters: updatedCharacters });
+    }
+
     setSaveSuccess(true);
     setTimeout(() => {
       setSaveSuccess(false);
@@ -405,44 +460,92 @@ export default function Characters() {
 
   const confirmDelete = () => {
     if (characterToDelete) {
-      setCharacters((prev) => prev.filter((c) => c.id !== characterToDelete));
+      const updatedChars = characters.filter((c) => c.id !== characterToDelete);
+      setCharacters(updatedChars);
       setNodes((prev) => prev.filter((n) => n.id !== characterToDelete));
+      if (id) {
+        storage.saveProjectData(id, { characters: updatedChars });
+      }
       setCharacterToDelete(null);
     }
   };
 
   const handleCopyText = (char: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const textContent = `Name: ${char.name}
-Role: ${char.role}
-Age: ${char.age}
-Status: ${char.status}
-${char.mbti ? `MBTI: ${char.mbti}` : ''}
-Traits: ${char.traits.join(', ')}
+
+    let traitsList = "None recorded";
+    if (Array.isArray(char.traits) && char.traits.length > 0) {
+      traitsList = char.traits.filter(Boolean).join(', ');
+    } else if (typeof char.traits === 'string' && char.traits.trim()) {
+      traitsList = char.traits.trim();
+    }
+
+    const backstoryText = char.backstory || char.description || char.shortBio || "No backstory recorded.";
+
+    let textContent = `Name: ${char.name || 'Unknown'}
+Role: ${char.role || 'Unknown'}
+Age: ${char.age || 'Unknown'}
+Status: ${char.status || 'Active'}
+${char.mbti ? `MBTI: ${char.mbti}\n` : ''}${char.archetype ? `Archetype: ${char.archetype}\n` : ''}Traits: ${traitsList}
 
 Backstory:
-${char.backstory}
-`;
+${backstoryText}`;
+
+    const extras: string[] = [];
+    if (char.goal) extras.push(`Goal: ${char.goal}`);
+    if (char.conflict) extras.push(`Conflict: ${char.conflict}`);
+    if (char.trauma) extras.push(`Trauma: ${char.trauma}`);
+    if (extras.length > 0) {
+      textContent += `\n\nPsychology & Drive:\n${extras.join('\n')}`;
+    }
+
+    textContent += '\n';
+
     navigator.clipboard.writeText(textContent).then(() => {
       setCopiedCharId(char.id);
       setTimeout(() => setCopiedCharId(null), 2000);
+    }).catch(err => {
+      console.error("Clipboard copy failed:", err);
     });
   };
 
   const handleCopyEditor = () => {
-    const textContent = `Name: ${formData.name || 'Unknown'}
+    // Flush any pending trait input
+    const currentTraits = [...formData.traits];
+    if (traitInput.trim()) {
+      const split = traitInput.split(',').map(s => s.trim()).filter(Boolean);
+      for (const t of split) {
+        if (!currentTraits.includes(t)) currentTraits.push(t);
+      }
+    }
+
+    const traitsList = currentTraits.length > 0 ? currentTraits.join(', ') : "None recorded";
+    const backstoryText = formData.backstory || "No backstory recorded.";
+
+    let textContent = `Name: ${formData.name || 'Unknown'}
 Role: ${formData.role || 'Unknown'}
 Age: ${formData.age || 'Unknown'}
-Status: ${formData.status || 'Unknown'}
-${formData.mbti ? `MBTI: ${formData.mbti}` : ''}
-Traits: ${formData.traits.join(', ')}
+Status: ${formData.status || 'Active'}
+${formData.mbti ? `MBTI: ${formData.mbti}\n` : ''}${formData.archetype ? `Archetype: ${formData.archetype}\n` : ''}Traits: ${traitsList}
 
 Backstory:
-${formData.backstory}
-`;
+${backstoryText}`;
+
+    const extras: string[] = [];
+    if (formData.goal) extras.push(`Goal: ${formData.goal}`);
+    if (formData.conflict) extras.push(`Conflict: ${formData.conflict}`);
+    if (formData.trauma) extras.push(`Trauma: ${formData.trauma}`);
+    if (extras.length > 0) {
+      textContent += `\n\nPsychology & Drive:\n${extras.join('\n')}`;
+    }
+
+    textContent += '\n';
+
     navigator.clipboard.writeText(textContent).then(() => {
       setCopiedEditor(true);
       setTimeout(() => setCopiedEditor(false), 2000);
+    }).catch(err => {
+      console.error("Clipboard copy failed:", err);
     });
   };
 
@@ -840,13 +943,16 @@ ${formData.backstory}
             </section>
 
             {/* Backstory Section */}
-            <section id="backstory" className="space-y-6 pt-4">
-              <h3 className="text-sm font-bold text-[#a66850] tracking-[0.2em] uppercase">Backstory</h3>
+            <section id="backstory" className="space-y-4 pt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#a66850] tracking-[0.2em] uppercase">Backstory</h3>
+                <span className="text-[10px] text-stone-400 font-serif italic">Included in AI Prompts & Clipboard</span>
+              </div>
               <textarea
                 value={formData.backstory}
                 onChange={(e) => setFormData(prev => ({ ...prev, backstory: e.target.value }))}
-                placeholder="WRITE THE SECTION CONTENT HERE..."
-                className="w-full h-40 bg-transparent text-sm font-serif italic text-stone-400 placeholder-stone-200 outline-none resize-none border-b border-stone-200 border-dotted focus:text-stone-600"
+                placeholder="Write the character's backstory, origins, life history, and formative experiences..."
+                className="w-full h-44 bg-transparent text-sm font-serif leading-relaxed text-[#332218] placeholder-stone-300 outline-none resize-none border-b border-stone-300 border-dotted focus:border-[#8a5b46] transition-colors"
               />
             </section>
 
@@ -861,37 +967,79 @@ ${formData.backstory}
                     value={formData.mbti}
                     onChange={(e) => setFormData(prev => ({ ...prev, mbti: e.target.value }))}
                     placeholder="e.g. INTJ"
-                    className="w-full bg-transparent text-sm font-serif italic text-stone-400 placeholder-stone-200 outline-none focus:text-stone-600" 
+                    className="w-full bg-transparent text-sm font-serif text-[#332218] placeholder-stone-300 outline-none focus:text-stone-800" 
                   />
                 </div>
                 <div className="flex-1 space-y-2 border-b border-stone-200 border-dotted pb-2 flex flex-col justify-end">
-                  <label className="text-[10px] font-bold text-stone-400 tracking-[0.2em] uppercase block mb-1">Traits</label>
-                  <input 
-                    id="trait-input"
-                    type="text" 
-                    value={traitInput}
-                    onChange={(e) => setTraitInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && traitInput.trim()) {
-                        e.preventDefault();
-                        if (!formData.traits.includes(traitInput.trim())) {
-                          setFormData(prev => ({ ...prev, traits: [...prev.traits, traitInput.trim()] }));
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-stone-400 tracking-[0.2em] uppercase block">Traits</label>
+                    <span className="text-[9px] text-stone-400 italic">Press Enter or comma to add</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input 
+                      id="trait-input"
+                      type="text" 
+                      value={traitInput}
+                      onChange={(e) => setTraitInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.key === 'Enter' || e.key === ',') && traitInput.trim()) {
+                          e.preventDefault();
+                          const newTraits = traitInput.split(',').map(s => s.trim()).filter(Boolean);
+                          setFormData(prev => {
+                            const updated = [...prev.traits];
+                            for (const nt of newTraits) {
+                              if (!updated.includes(nt)) updated.push(nt);
+                            }
+                            return { ...prev, traits: updated };
+                          });
+                          setTraitInput("");
                         }
-                        setTraitInput("");
-                      }
-                    }}
-                    placeholder="+ ADD TAG (Press Enter)..." 
-                    className="w-full bg-transparent text-sm font-serif italic text-stone-300 placeholder-stone-200 outline-none focus:text-stone-600 mb-2" 
-                  />
+                      }}
+                      onBlur={() => {
+                        if (traitInput.trim()) {
+                          const newTraits = traitInput.split(',').map(s => s.trim()).filter(Boolean);
+                          setFormData(prev => {
+                            const updated = [...prev.traits];
+                            for (const nt of newTraits) {
+                              if (!updated.includes(nt)) updated.push(nt);
+                            }
+                            return { ...prev, traits: updated };
+                          });
+                          setTraitInput("");
+                        }
+                      }}
+                      placeholder="+ Add trait (e.g. Brave, Loyal)..." 
+                      className="flex-1 bg-transparent text-sm font-serif text-[#332218] placeholder-stone-300 outline-none focus:text-stone-800" 
+                    />
+                    {traitInput.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTraits = traitInput.split(',').map(s => s.trim()).filter(Boolean);
+                          setFormData(prev => {
+                            const updated = [...prev.traits];
+                            for (const nt of newTraits) {
+                              if (!updated.includes(nt)) updated.push(nt);
+                            }
+                            return { ...prev, traits: updated };
+                          });
+                          setTraitInput("");
+                        }}
+                        className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[#8c503c] text-white rounded-xs hover:bg-[#a66850] transition-colors"
+                      >
+                        Add
+                      </button>
+                    )}
+                  </div>
                   {formData.traits.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {formData.traits.map((trait, idx) => (
-                        <span key={idx} className="bg-stone-200 text-stone-600 text-[9px] font-bold px-2 py-1 rounded-sm uppercase tracking-widest flex items-center gap-1 group">
+                        <span key={idx} className="bg-[#ede8dc] text-[#5d3f32] border border-[#e5e0d5] text-[9px] font-bold px-2 py-1 rounded-sm uppercase tracking-widest flex items-center gap-1.5 group">
                           {trait}
                           <button 
                             type="button" 
                             onClick={() => setFormData(prev => ({ ...prev, traits: prev.traits.filter((_, i) => i !== idx) }))}
-                            className="hover:text-red-500 opacity-50 group-hover:opacity-100 transition-opacity"
+                            className="hover:text-red-600 opacity-60 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -1258,7 +1406,7 @@ ${formData.backstory}
                       Backstory:
                     </p>
                     <p className="font-serif text-[12px] leading-relaxed text-[#5d3f32] italic line-clamp-4">
-                      {char.backstory || "No backstory recorded."}
+                      {char.backstory || char.description || char.shortBio || "No backstory recorded."}
                     </p>
                   </div>
 
@@ -1269,14 +1417,22 @@ ${formData.backstory}
                         Traits:
                       </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {char.traits.map((trait, traitIdx) => (
-                          <span
-                            key={`char-trait-${char.id}-${trait}-${traitIdx}`}
-                            className="px-2 py-1 text-[#8c503c] text-[8px] font-bold tracking-widest uppercase bg-[#f4efe6] rounded-sm border border-[#e5e0d5]"
-                          >
-                            {trait}
+                        {Array.isArray(char.traits) && char.traits.length > 0 ? (
+                          char.traits.map((trait: string, traitIdx: number) => (
+                            <span
+                              key={`char-trait-${char.id}-${trait}-${traitIdx}`}
+                              className="px-2 py-1 text-[#8c503c] text-[8px] font-bold tracking-widest uppercase bg-[#f4efe6] rounded-sm border border-[#e5e0d5]"
+                            >
+                              {trait}
+                            </span>
+                          ))
+                        ) : typeof char.traits === 'string' && char.traits.trim() ? (
+                          <span className="px-2 py-1 text-[#8c503c] text-[8px] font-bold tracking-widest uppercase bg-[#f4efe6] rounded-sm border border-[#e5e0d5]">
+                            {char.traits}
                           </span>
-                        ))}
+                        ) : (
+                          <span className="text-[10px] italic text-stone-400 font-serif">No traits added</span>
+                        )}
                       </div>
                     </div>
 
@@ -1640,22 +1796,28 @@ ${formData.backstory}
                               <div className="mb-4">
                                 <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Backstory:</h4>
                                 <p className="font-serif italic text-sm text-[#4a3225] line-clamp-4 leading-relaxed">
-                                  {char.backstory || "No backstory recorded in the archives."}
+                                  {char.backstory || char.description || char.shortBio || "No backstory recorded in the archives."}
                                 </p>
                               </div>
                               
-                              {char.traits && char.traits.length > 0 && (
-                                <div className="mb-4">
-                                  <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Traits:</h4>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {char.traits.map((trait, tIdx) => (
+                              <div className="mb-4">
+                                <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Traits:</h4>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {Array.isArray(char.traits) && char.traits.length > 0 ? (
+                                    char.traits.map((trait: string, tIdx: number) => (
                                       <span key={`char-modal-trait-${char.id}-${trait}-${tIdx}`} className="px-2 py-0.5 bg-[#f4efe6] border border-[#e5e0d5] text-[#8c503c] text-[9px] font-bold uppercase tracking-widest rounded-sm">
                                         {trait}
                                       </span>
-                                    ))}
-                                  </div>
+                                    ))
+                                  ) : typeof char.traits === 'string' && char.traits.trim() ? (
+                                    <span className="px-2 py-0.5 bg-[#f4efe6] border border-[#e5e0d5] text-[#8c503c] text-[9px] font-bold uppercase tracking-widest rounded-sm">
+                                      {char.traits}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] italic text-stone-400 font-serif">None specified</span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                               
                               <div className="mb-4">
                                 <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Relationships:</h4>
@@ -1679,6 +1841,13 @@ ${formData.backstory}
                               </div>
                               
                               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#e5e0d5] mt-2 text-stone-400">
+                                <button 
+                                  className="hover:text-[#8c503c] transition-colors" 
+                                  title="Copy Info (For ChatGPT)"
+                                  onClick={(e) => handleCopyText(char, e)}
+                                >
+                                  {copiedCharId === char.id ? <Check className="w-4 h-4 text-green-600" /> : <FileText className="w-4 h-4" />}
+                                </button>
                                 <button 
                                   className="hover:text-[#8c503c] transition-colors" 
                                   title="Edit Profile"

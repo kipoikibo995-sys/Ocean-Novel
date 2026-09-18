@@ -284,7 +284,7 @@ export default function Dashboard() {
         count: 0,
         entityType: 'character',
         role: c.role || 'Character',
-        description: c.description || c.shortBio || '',
+        description: c.backstory || c.description || c.shortBio || '',
         avatarUrl: c.avatarUrl || '',
         scenesAppeared: [],
       };
