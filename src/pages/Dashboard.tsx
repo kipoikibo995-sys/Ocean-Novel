@@ -28,6 +28,7 @@ import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
+import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
 
 import { runFantasySeed } from "@/lib/seed";
 
@@ -61,6 +62,18 @@ export default function Dashboard() {
   const [miniRadarType, setMiniRadarType] = useState<'all' | 'characters' | 'locations'>('all');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
+
+  // Author Timeline & Stats Configuration Modal
+  const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+  const [timelineSettings, setTimelineSettings] = useState(() => storage.getTimelineSettings());
+
+  useEffect(() => {
+    const handleTimelineUpdate = () => {
+      setTimelineSettings(storage.getTimelineSettings());
+    };
+    window.addEventListener('novelist-timeline-updated', handleTimelineUpdate);
+    return () => window.removeEventListener('novelist-timeline-updated', handleTimelineUpdate);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -266,7 +279,7 @@ export default function Dashboard() {
       if (!name) return;
       const key = `char-${c.id || name}`;
       entityMap[key] = {
-        id: String(c.id || name),
+        id: key,
         name,
         count: 0,
         entityType: 'character',
@@ -290,7 +303,7 @@ export default function Dashboard() {
       if (!name) return;
       const key = `loc-${loc.id || name}`;
       entityMap[key] = {
-        id: String(loc.id || name),
+        id: key,
         name,
         count: 0,
         entityType: 'location',
@@ -487,6 +500,30 @@ export default function Dashboard() {
     return savedProjects.reduce((acc, p) => acc + (p.currentWords || 0), 0);
   }, [savedProjects]);
 
+  // Accurate Timeline Streak & Writing Time
+  const calculatedAutoStreak = useMemo(() => {
+    return storage.calculateTimelineStreak(savedProjects);
+  }, [savedProjects]);
+
+  const displayStreak = useMemo(() => {
+    if (timelineSettings.streakMode === 'custom') {
+      return `${timelineSettings.customStreakDays || calculatedAutoStreak} Days`;
+    }
+    return `${calculatedAutoStreak} Days`;
+  }, [timelineSettings, calculatedAutoStreak]);
+
+  const displayWritingTime = useMemo(() => {
+    if (timelineSettings.timeMode === 'custom') {
+      const h = timelineSettings.customHours ?? 0;
+      const m = timelineSettings.customMinutes ?? 0;
+      return `${h}h ${m}m`;
+    }
+    // Realistic novel drafting velocity: ~900 words per hour
+    const h = Math.floor(totalWordsAcrossAll / 900);
+    const m = Math.round((totalWordsAcrossAll % 900) / 15);
+    return `${Math.max(0, h)}h ${m}m`;
+  }, [timelineSettings, totalWordsAcrossAll]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -511,10 +548,15 @@ export default function Dashboard() {
                 Archive Projects
               </h1>
 
-              {/* AUTHOR STATS STRIP */}
-              <div className="flex items-center gap-3 sm:gap-6 bg-white/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/60 shadow-sm shrink-0 w-max">
+              {/* AUTHOR STATS STRIP - CLICKABLE TO CONFIGURE TIMELINE */}
+              <button
+                type="button"
+                onClick={() => setIsTimelineModalOpen(true)}
+                className="group flex items-center gap-3 sm:gap-6 bg-white/50 hover:bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/60 hover:border-amber-400/80 shadow-xs hover:shadow-md transition-all duration-200 shrink-0 w-max cursor-pointer text-left relative"
+                title="Nhấp để xem & cài đặt lại thông số timeline tác giả"
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
+                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner group-hover:scale-105 transition-transform">
                     <Flame className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
                   </div>
                   <div>
@@ -522,7 +564,7 @@ export default function Dashboard() {
                       Streak
                     </p>
                     <p className="text-[10px] lg:text-xs font-bold text-stone-800 leading-none">
-                      5 Days
+                      {displayStreak}
                     </p>
                   </div>
                 </div>
@@ -530,7 +572,7 @@ export default function Dashboard() {
                 <div className="w-px h-4 lg:h-5 bg-stone-300/50" />
 
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
+                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-105 transition-transform">
                     <Type className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                   </div>
                   <div>
@@ -546,7 +588,7 @@ export default function Dashboard() {
                 <div className="w-px h-4 lg:h-5 bg-stone-300/50" />
 
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#f4efe6] flex items-center justify-center text-[#8c503c] border border-[#e5e0d5]">
+                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#f4efe6] flex items-center justify-center text-[#8c503c] border border-[#e5e0d5] group-hover:scale-105 transition-transform">
                     <Coffee className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                   </div>
                   <div>
@@ -554,11 +596,16 @@ export default function Dashboard() {
                       Writing Time
                     </p>
                     <p className="text-[10px] lg:text-xs font-bold text-[#4a3225] leading-none">
-                      {Math.max(1, Math.round(totalWordsAcrossAll / 450))}h {Math.round((totalWordsAcrossAll % 450) / 10)}m
+                      {displayWritingTime}
                     </p>
                   </div>
                 </div>
-              </div>
+
+                {/* Subtle indicator tag */}
+                <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-amber-800 transition-colors ml-1">
+                  ✎
+                </span>
+              </button>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
@@ -1291,7 +1338,7 @@ export default function Dashboard() {
 
                           return (
                             <div
-                              key={item.id}
+                              key={`radar-mini-${item.id}`}
                               className="relative group shrink-0"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1570,7 +1617,7 @@ export default function Dashboard() {
 
                         return (
                           <div
-                            key={item.id}
+                            key={`radar-modal-${item.id}-${idx}`}
                             className="p-4 rounded-sm border border-[#E5E0D5] bg-white hover:border-[#8C503C] hover:shadow-md transition-all flex flex-col justify-between group"
                           >
                             <div>
@@ -1653,9 +1700,9 @@ export default function Dashboard() {
                                     Appears in {item.scenesAppeared.length} {item.scenesAppeared.length === 1 ? 'scene' : 'scenes'}:
                                   </span>
                                   <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto custom-scrollbar">
-                                    {item.scenesAppeared.map((scene) => (
+                                    {item.scenesAppeared.map((scene, sceneIdx) => (
                                       <span
-                                        key={scene.id}
+                                        key={`scene-badge-${item.id}-${scene.id}-${sceneIdx}`}
                                         className="text-[9px] bg-[#F4EFE6] text-[#4A3225] border border-[#E5E0D5] px-1.5 py-0.5 rounded-xs font-serif flex items-center gap-1"
                                         title={`${scene.count} mention(s) in "${scene.title}"`}
                                       >
@@ -1722,6 +1769,15 @@ export default function Dashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* AUTHOR TIMELINE & STATS CONFIGURATION MODAL */}
+        <TimelineSettingsModal
+          isOpen={isTimelineModalOpen}
+          onClose={() => setIsTimelineModalOpen(false)}
+          savedProjects={savedProjects}
+          totalWords={totalWordsAcrossAll}
+          onUpdated={() => setTimelineSettings(storage.getTimelineSettings())}
+        />
       </div>
     </motion.div>
   );

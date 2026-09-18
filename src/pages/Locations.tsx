@@ -607,9 +607,9 @@ export default function Locations() {
                 </span>
               </div>
 
-              {displayLocations.map((loc) => (
+              {displayLocations.map((loc, idx) => (
                 <div 
-                  key={loc.id} 
+                  key={`loc-card-${loc.id || idx}`} 
                   className="relative group bg-[#F6F0E7] border border-[#d49a89]/40 rounded-sm shadow-[0_4px_12px_rgba(25,10,5,0.15)] hover:shadow-[0_8px_20px_rgba(25,10,5,0.2)] hover:-translate-y-[2px] hover:border-[#b8785e] transition-all duration-300 cursor-pointer flex flex-col overflow-hidden"
                   onClick={() => handleOpenEdit(loc)}
                 >
@@ -940,8 +940,8 @@ export default function Locations() {
                         </h4>
                         <div className="space-y-2">
                           {projectCharacters.filter((c: any) => c.locationId === editingLocId).length > 0 ? (
-                            projectCharacters.filter((c: any) => c.locationId === editingLocId).map((char: any) => (
-                              <div key={char.id} className="bg-white border border-[#e5e0d5] rounded-sm p-2 flex items-center gap-2 shadow-sm">
+                            projectCharacters.filter((c: any) => c.locationId === editingLocId).map((char: any, rIdx: number) => (
+                              <div key={`loc-res-${char.id || rIdx}`} className="bg-white border border-[#e5e0d5] rounded-sm p-2 flex items-center gap-2 shadow-sm">
                                 <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
                                   {char.name.charAt(0)}
                                 </div>

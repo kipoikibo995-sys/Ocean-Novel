@@ -373,11 +373,11 @@ export default function Plot() {
                                   <div className="flex items-center gap-2">
                                     <Users className="w-3.5 h-3.5 text-stone-400" />
                                     <div className="flex -space-x-1.5">
-                                      {event.characters.map((charId) => {
+                                      {event.characters.map((charId, cIdx) => {
                                         const char = (projectData?.characters || []).find(c => c.id === charId);
                                         if (!char) return null;
                                         return (
-                                          <div key={charId} className="w-5 h-5 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[8px] font-bold text-stone-600 shadow-sm" title={char.name}>
+                                          <div key={`ev-char-${event.id}-${charId}-${cIdx}`} className="w-5 h-5 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[8px] font-bold text-stone-600 shadow-sm" title={char.name}>
                                             {char.name.charAt(0)}
                                           </div>
                                         );
@@ -452,8 +452,8 @@ export default function Plot() {
                                   
                                   {event.characters.length > 0 && (
                                     <div className="flex -space-x-1">
-                                      {event.characters.slice(0, 3).map((charId) => (
-                                        <div key={charId} className="w-4 h-4 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[7px] font-bold text-stone-600 shadow-sm">
+                                      {event.characters.slice(0, 3).map((charId, cIdx) => (
+                                        <div key={`arc-char-${event.id}-${charId}-${cIdx}`} className="w-4 h-4 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[7px] font-bold text-stone-600 shadow-sm">
                                           {(projectData?.characters || []).find(c => c.id === charId)?.name.charAt(0)}
                                         </div>
                                       ))}

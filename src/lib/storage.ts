@@ -38,6 +38,28 @@ export interface StoryBibleData {
   aiInstructions?: string;
 }
 
+export interface AuthorTimelineSettings {
+  streakMode: 'auto' | 'custom';
+  customStreakDays: number;
+  timeMode: 'auto' | 'custom';
+  customHours: number;
+  customMinutes: number;
+  activeDates?: string[];
+  totalWritingMinutesTracked?: number;
+}
+
+const TIMELINE_SETTINGS_KEY = 'writing_studio_timeline_settings';
+
+const defaultTimelineSettings: AuthorTimelineSettings = {
+  streakMode: 'auto',
+  customStreakDays: 1,
+  timeMode: 'auto',
+  customHours: 0,
+  customMinutes: 0,
+  activeDates: [],
+  totalWritingMinutesTracked: 0,
+};
+
 export interface UserProfile {
   name: string;
   penName: string;
@@ -391,5 +413,77 @@ export const storage = {
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));
     }
     return updated;
+  },
+
+  getTimelineSettings: (): AuthorTimelineSettings => {
+    try {
+      const stored = localStorage.getItem(TIMELINE_SETTINGS_KEY);
+      return stored ? { ...defaultTimelineSettings, ...JSON.parse(stored) } : defaultTimelineSettings;
+    } catch {
+      return defaultTimelineSettings;
+    }
+  },
+
+  saveTimelineSettings: (settings: Partial<AuthorTimelineSettings>): AuthorTimelineSettings => {
+    const current = storage.getTimelineSettings();
+    const updated = { ...current, ...settings };
+    try {
+      localStorage.setItem(TIMELINE_SETTINGS_KEY, JSON.stringify(updated));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: updated }));
+      }
+    } catch (e) {
+      console.error("Error saving timeline settings", e);
+    }
+    return updated;
+  },
+
+  calculateTimelineStreak: (projects: ProjectMeta[]): number => {
+    const today = new Date().toISOString().slice(0, 10);
+    const dateSet = new Set<string>();
+    dateSet.add(today);
+
+    (projects || []).forEach(p => {
+      if (p.lastModified) {
+        try {
+          const d = new Date(p.lastModified).toISOString().slice(0, 10);
+          dateSet.add(d);
+        } catch { /* ignore */ }
+      }
+    });
+
+    const settings = storage.getTimelineSettings();
+    if (settings.activeDates) {
+      settings.activeDates.forEach(d => dateSet.add(d));
+    }
+
+    const sortedDates = Array.from(dateSet).sort().reverse();
+    if (sortedDates.length === 0) return 1;
+
+    let streak = 0;
+    const checkDate = new Date();
+
+    for (let i = 0; i < 365; i++) {
+      const dateStr = checkDate.toISOString().slice(0, 10);
+      if (dateSet.has(dateStr)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        // If today has no activity yet, check if yesterday was active
+        if (i === 0) {
+          checkDate.setDate(checkDate.getDate() - 1);
+          const yesterdayStr = checkDate.toISOString().slice(0, 10);
+          if (dateSet.has(yesterdayStr)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+            continue;
+          }
+        }
+        break;
+      }
+    }
+
+    return Math.max(1, streak);
   }
 };
+

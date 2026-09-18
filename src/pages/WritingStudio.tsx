@@ -1153,13 +1153,13 @@ export default function WritingStudio() {
                       (c.traits && Array.isArray(c.traits) && c.traits.some((t: string) => t.toLowerCase().includes(query)))
                     );
                   })
-                  .map((char) => {
+                  .map((char, cIdx) => {
                     const isExpanded = expandedEntityId === `char-${char.id}` || selectedEntity?.id === String(char.id);
                     const mentionCount = getEntityMentionCount(char.name);
 
                     return (
                       <div
-                        key={char.id}
+                        key={`studio-char-${char.id || cIdx}`}
                         id={`entity-${char.id}`}
                         className={`border rounded-sm transition-all overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] ${
                           isExpanded ? 'border-[#8C503C] ring-1 ring-[#8C503C]/20' : 'border-[#E5E0D5] hover:border-[#D49A89]'
@@ -1316,13 +1316,13 @@ export default function WritingStudio() {
                       (loc.description && loc.description.toLowerCase().includes(query))
                     );
                   })
-                  .map((loc) => {
+                  .map((loc, lIdx) => {
                     const isExpanded = expandedEntityId === `loc-${loc.id}` || selectedEntity?.id === String(loc.id);
                     const mentionCount = getEntityMentionCount(loc.name);
 
                     return (
                       <div
-                        key={loc.id}
+                        key={`studio-loc-${loc.id || lIdx}`}
                         id={`entity-${loc.id}`}
                         className={`border rounded-sm transition-all overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] ${
                           isExpanded ? 'border-[#8C503C] ring-1 ring-[#8C503C]/20' : 'border-[#E5E0D5] hover:border-[#D49A89]'

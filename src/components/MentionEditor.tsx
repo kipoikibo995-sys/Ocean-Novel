@@ -69,7 +69,7 @@ const MentionList = forwardRef((props: any, ref) => {
               className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-colors ${
                 index === selectedIndex ? 'bg-[#E5E0D5]' : 'hover:bg-[#E5E0D5]/50'
               }`}
-              key={item.id}
+              key={`mention-item-${item.id || item.name || index}-${index}`}
               onClick={() => selectItem(index)}
             >
               <div className="w-6 h-6 rounded-full bg-[#D3BFA9] flex items-center justify-center text-[10px] font-serif text-stone-800">

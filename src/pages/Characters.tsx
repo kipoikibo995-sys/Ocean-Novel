@@ -1245,9 +1245,9 @@ ${formData.backstory}
                         Traits:
                       </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {char.traits.map((trait) => (
+                        {char.traits.map((trait, traitIdx) => (
                           <span
-                            key={trait}
+                            key={`char-trait-${char.id}-${trait}-${traitIdx}`}
                             className="px-2 py-1 text-[#8c503c] text-[8px] font-bold tracking-widest uppercase bg-[#f4efe6] rounded-sm border border-[#e5e0d5]"
                           >
                             {trait}
@@ -1625,8 +1625,8 @@ ${formData.backstory}
                                 <div className="mb-4">
                                   <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Traits:</h4>
                                   <div className="flex flex-wrap gap-1.5">
-                                    {char.traits.map(trait => (
-                                      <span key={trait} className="px-2 py-0.5 bg-[#f4efe6] border border-[#e5e0d5] text-[#8c503c] text-[9px] font-bold uppercase tracking-widest rounded-sm">
+                                    {char.traits.map((trait, tIdx) => (
+                                      <span key={`char-modal-trait-${char.id}-${trait}-${tIdx}`} className="px-2 py-0.5 bg-[#f4efe6] border border-[#e5e0d5] text-[#8c503c] text-[9px] font-bold uppercase tracking-widest rounded-sm">
                                         {trait}
                                       </span>
                                     ))}

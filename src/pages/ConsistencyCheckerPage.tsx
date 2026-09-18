@@ -364,7 +364,7 @@ export default function ConsistencyCheckerPage() {
                 </p>
               </div>
             ) : (
-              filteredIssues.map((issue) => {
+              filteredIssues.map((issue, idx) => {
                 const getSeverityStyle = (s: ContinuityIssue['severity']) => {
                   switch (s) {
                     case 'high':
@@ -394,7 +394,7 @@ export default function ConsistencyCheckerPage() {
 
                 return (
                   <div
-                    key={issue.id}
+                    key={`issue-${issue.id}-${idx}`}
                     className={`p-4 rounded-xl border ${style.border} bg-white shadow-xs transition-all hover:shadow-md space-y-2`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -494,9 +494,9 @@ export default function ConsistencyCheckerPage() {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {analysisResult.echoes.map((echo) => (
+                  {analysisResult.echoes.map((echo, eIdx) => (
                     <div
-                      key={echo.id}
+                      key={`echo-${echo.id}-${eIdx}`}
                       className="p-3.5 bg-white border border-[#E5E0D5] hover:border-[#8C503C]/40 rounded-xl shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="flex-1 min-w-0">

@@ -455,11 +455,11 @@ export default function GlobalSearchComponent({
               <span className="text-[11px] italic">Click a result card to jump directly to it</span>
             </div>
 
-            {filteredResults.map((item) => {
+            {filteredResults.map((item, index) => {
               const isSelected = selectedIds.has(item.id);
               return (
                 <div
-                  key={item.id}
+                  key={`search-res-${item.id}-${index}`}
                   onClick={() => handleResultClick(item)}
                   className={`group p-3.5 bg-white border rounded-xl shadow-xs transition-all cursor-pointer hover:shadow-md ${
                     mode === 'replace' && isSelected
