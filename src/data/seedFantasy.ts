@@ -53,7 +53,7 @@ export const book_proj_fantasy_1 = {
     role: "Protagonist",
     archetype: "The Reluctant Heir",
     description: "A young prince hiding from his destiny.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -62,7 +62,7 @@ export const book_proj_fantasy_1 = {
     role: "Ally",
     archetype: "The Rogue Mage",
     description: "A fiery spellcaster with a dark past.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/01_elven_sorceress_in_a_celestial_library_pbyk5z.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -71,7 +71,7 @@ export const book_proj_fantasy_1 = {
     role: "Antagonist",
     archetype: "The Usurper",
     description: "The ruthless warlord who seized the throne.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/10_skeletal_mage_e6802e.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -80,7 +80,7 @@ export const book_proj_fantasy_1 = {
     role: "Mentor",
     archetype: "The Grizzled Veteran",
     description: "An old knight bound by an ancient oath.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/06_fur_clad_elder_warrior_cm6wxh.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -89,7 +89,7 @@ export const book_proj_fantasy_1 = {
     role: "Neutral",
     archetype: "The Information Broker",
     description: "A cunning spy who sells secrets to the highest bidder.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/09_red_gold_court_lady_kusyp1.jpg",
     tags: ["Fantasy"]
   }
     ],
@@ -148,7 +148,7 @@ export const book_proj_fantasy_2 = {
     role: "Protagonist",
     archetype: "The Inventor",
     description: "A brilliant tinkerer who discovers a dangerous secret.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/07_steampunk_youth_enrgaj.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -157,7 +157,7 @@ export const book_proj_fantasy_2 = {
     role: "Ally",
     archetype: "The Sky Pirate",
     description: "A dashing rogue with a heart of gold and an airship.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/04_rogue_in_the_lantern_lit_alley_xdppun.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -166,7 +166,7 @@ export const book_proj_fantasy_2 = {
     role: "Antagonist",
     archetype: "The Corrupt Industrialist",
     description: "A ruthless magnate exploiting the aether.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/02_gothic_aristocrat_rsdt8q.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -175,7 +175,7 @@ export const book_proj_fantasy_2 = {
     role: "Mentor",
     archetype: "The Exiled Scientist",
     description: "Cora's former teacher, now in hiding.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/03_elderly_wizard_in_a_celestial_study_gxgza0.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -184,7 +184,7 @@ export const book_proj_fantasy_2 = {
     role: "Neutral",
     archetype: "The Clockwork Automaton",
     description: "A highly advanced machine with emerging consciousness.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721907/08_dark_fae_woman_mj0wba.jpg",
     tags: ["Fantasy"]
   }
     ],
@@ -243,7 +243,7 @@ export const book_proj_fantasy_3 = {
     role: "Protagonist",
     archetype: "The Dark Knight",
     description: "A cursed warrior seeking redemption.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -252,7 +252,7 @@ export const book_proj_fantasy_3 = {
     role: "Ally",
     archetype: "The Lightbringer",
     description: "A cleric whose faith is constantly tested.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/08_enchanted_woodland_fairy_portrait_pgsfxw.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -261,7 +261,7 @@ export const book_proj_fantasy_3 = {
     role: "Antagonist",
     archetype: "The Ancient Evil",
     description: "An ancient entity awakening from a long slumber.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/10_skeletal_mage_e6802e.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -270,7 +270,7 @@ export const book_proj_fantasy_3 = {
     role: "Neutral",
     archetype: "The Shadow Weaver",
     description: "A mysterious figure who controls the darkness.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/05_horned_dark_fantasy_woman_bd5vg4.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -279,7 +279,7 @@ export const book_proj_fantasy_3 = {
     role: "Ally",
     archetype: "The Doomed Companion",
     description: "Vaelin's loyal friend, marked for death.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/05_red_haired_forge_warrior_portrait_tpde6u.jpg",
     tags: ["Fantasy"]
   }
     ],
@@ -338,7 +338,7 @@ export const book_proj_fantasy_4 = {
     role: "Protagonist",
     archetype: "The Chosen One",
     description: "A young girl with the rare ability to hear the spirits.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/01_woodland_child_with_rabbit_rzvvgu.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -347,7 +347,7 @@ export const book_proj_fantasy_4 = {
     role: "Ally",
     archetype: "The Loyal Guardian",
     description: "A sworn protector from a rival clan.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/05_red_haired_forge_warrior_portrait_tpde6u.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -356,7 +356,7 @@ export const book_proj_fantasy_4 = {
     role: "Antagonist",
     archetype: "The Spirit Consumer",
     description: "A dark sorcerer seeking to devour the sylphs' power.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/10_skeletal_mage_e6802e.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -365,7 +365,7 @@ export const book_proj_fantasy_4 = {
     role: "Mentor",
     archetype: "The Wise Sage",
     description: "The oldest and wisest of the forest spirits.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/06_regal_orc_shaman_of_the_forest_shrine_da7pn9.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -374,7 +374,7 @@ export const book_proj_fantasy_4 = {
     role: "Neutral",
     archetype: "The Fickle Trickster",
     description: "A mischievous spirit who helps or hinders on a whim.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/08_enchanted_woodland_fairy_portrait_pgsfxw.jpg",
     tags: ["Fantasy"]
   }
     ],
@@ -433,7 +433,7 @@ export const book_proj_fantasy_5 = {
     role: "Protagonist",
     archetype: "The Underdog",
     description: "A farm boy who discovers a hidden dragon egg.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/10_desert_citadel_warrior_at_dusk_djbqqn.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -442,7 +442,7 @@ export const book_proj_fantasy_5 = {
     role: "Ally",
     archetype: "The Dragon",
     description: "A fierce and loyal dragon, the last of its kind.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/07_dragonborn_astromancer_in_a_candlelit_study_vp4n8q.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -451,7 +451,7 @@ export const book_proj_fantasy_5 = {
     role: "Antagonist",
     archetype: "The Tyrant",
     description: "A cruel ruler who wiped out the dragonriders.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/02_gothic_aristocrat_rsdt8q.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -460,7 +460,7 @@ export const book_proj_fantasy_5 = {
     role: "Mentor",
     archetype: "The Hidden Master",
     description: "An old hermit who was once a legendary dragonrider.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/03_elderly_wizard_in_a_celestial_study_gxgza0.jpg",
     tags: ["Fantasy"]
   },
       {
@@ -469,7 +469,7 @@ export const book_proj_fantasy_5 = {
     role: "Ally",
     archetype: "The Rebel Leader",
     description: "A noblewoman secretly funding the resistance.",
-    imageUrl: "https://images.unsplash.com/photo-1544507888-56d73eb6046e?w=800&q=80",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/09_red_gold_court_lady_kusyp1.jpg",
     tags: ["Fantasy"]
   }
     ],

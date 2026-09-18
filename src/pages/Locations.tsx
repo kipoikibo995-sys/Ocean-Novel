@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { storage } from "@/lib/storage";
 import { Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, Pen, Link2, ZoomIn, ZoomOut, Maximize2, Image as ImageIcon } from "lucide-react";
-import { MOCK_LOCATIONS, MOCK_CHARACTERS, MOCK_MANUSCRIPT } from "@/mockData";
+
 import { Users, BookOpen } from "lucide-react";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 
@@ -153,12 +153,21 @@ export default function Locations() {
   const { id } = useParams<{ id: string }>();
 
   const getAssociatedScenes = (locId: string) => {
-    const scenes: { title: string, content: string }[] = [];
+    if (!id || !locId) return [];
+    const scenes: { title: string; content: string }[] = [];
+    const data = storage.getProjectData(id);
+    const manuscript = data?.manuscript || [];
+    const loc = locations.find(l => l.id === locId);
+    const locName = loc?.name?.toLowerCase();
     
     const searchItems = (items: any[]) => {
       for (const item of items) {
         if (item.type === 'scene' && item.content) {
-          if (item.content.includes(`data-id="${locId}" data-type="location"`)) {
+          const contentLower = item.content.toLowerCase();
+          if (
+            item.content.includes(`data-id="${locId}"`) || 
+            (locName && contentLower.includes(locName))
+          ) {
             scenes.push(item);
           }
         }
@@ -168,12 +177,19 @@ export default function Locations() {
       }
     };
     
-    searchItems(MOCK_MANUSCRIPT);
+    searchItems(manuscript);
     return scenes;
   };
 
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  const projectCharacters = React.useMemo(() => {
+    if (!id) return [];
+    const data = storage.getProjectData(id);
+    return data?.characters || [];
+  }, [id]);
+
   // Initialize project-specific locations and map state
   const initialBundle = React.useMemo(() => {
     let locs: any[] = [];
@@ -188,11 +204,7 @@ export default function Locations() {
       }
     }
     if (locs.length === 0) {
-      locs = MOCK_LOCATIONS.map(loc => ({
-        ...loc,
-        atmosphere: (loc as any).atmosphere || "Mysterious",
-        region: (loc as any).region || "Unknown Region"
-      }));
+      locs = [];
     }
     const map = buildDefaultProjectLocationMap(id, locs);
     return { locs, map };
@@ -202,6 +214,19 @@ export default function Locations() {
   const [nodes, setNodes] = useState<LocationNode[]>(initialBundle.map.nodes);
   const [edges, setEdges] = useState<LocationEdge[]>(initialBundle.map.edges);
   const [unmappedLocations, setUnmappedLocations] = useState<any[]>(initialBundle.map.unmapped);
+
+  const availableRegions = React.useMemo(() => {
+    const set = new Set<string>();
+    locations.forEach(loc => {
+      if ((loc as any).region) set.add((loc as any).region);
+    });
+    return Array.from(set);
+  }, [locations]);
+
+  const displayLocations = React.useMemo(() => {
+    if (!selectedRegion) return locations;
+    return locations.filter(l => (l as any).region === selectedRegion);
+  }, [locations, selectedRegion]);
 
   // Synchronize when active project ID changes
   React.useEffect(() => {
@@ -213,11 +238,7 @@ export default function Locations() {
             atmosphere: (loc as any).atmosphere || "Mysterious",
             region: (loc as any).region || "Ancient Realm"
           }))
-        : MOCK_LOCATIONS.map(loc => ({
-            ...loc,
-            atmosphere: (loc as any).atmosphere || "Mysterious",
-            region: (loc as any).region || "Unknown Region"
-          }));
+        : [];
       setLocations(locs);
 
       const map = buildDefaultProjectLocationMap(id, locs);
@@ -505,18 +526,45 @@ export default function Locations() {
             <h3 className="text-[10px] font-bold text-[#a66850] tracking-[0.2em] uppercase">Regions</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
-              <Castle className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
-              Septentrionel
+            <button 
+              onClick={() => setSelectedRegion(null)}
+              className={`w-full text-left px-3 py-2 text-sm font-serif rounded-sm transition-colors flex items-center justify-between group ${
+                selectedRegion === null 
+                  ? 'bg-[#b8785e] text-white' 
+                  : 'text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Compass className="w-4 h-4" />
+                All Regions
+              </div>
+              <span className="text-[10px] font-bold opacity-75">{locations.length}</span>
             </button>
-            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
-              <Compass className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
-              Ventir-Riyad Border
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm font-serif text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50 rounded-sm transition-colors flex items-center gap-3 group">
-              <MapIcon className="w-4 h-4 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
-              Lavern City
-            </button>
+
+            {availableRegions.map(region => (
+              <button 
+                key={region}
+                onClick={() => setSelectedRegion(region === selectedRegion ? null : region)}
+                className={`w-full text-left px-3 py-2 text-sm font-serif rounded-sm transition-colors flex items-center justify-between group ${
+                  selectedRegion === region 
+                    ? 'bg-[#b8785e] text-white' 
+                    : 'text-stone-400 hover:text-[#e5e0d5] hover:bg-[#3d261d]/50'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Castle className="w-4 h-4 shrink-0 text-stone-500 group-hover:text-[#d49a89] transition-colors" />
+                  <span className="truncate">{region}</span>
+                </div>
+                <span className="text-[10px] font-bold opacity-75 shrink-0">
+                  {locations.filter(l => (l as any).region === region).length}
+                </span>
+              </button>
+            ))}
+
+            {availableRegions.length === 0 && (
+              <p className="px-3 py-2 text-xs italic text-stone-500">No regions categorized yet.</p>
+            )}
+
             <div className="pt-4 mt-4 border-t border-[#5d3f32]/50">
               <h4 className="text-[9px] font-bold text-[#8a5b46] tracking-[0.2em] uppercase px-3 mb-2">Unmapped Lands</h4>
               {unmappedLocations.length === 0 ? (
@@ -546,7 +594,20 @@ export default function Locations() {
         {viewMode === "grid" ? (
           <div className="flex-1 overflow-y-auto p-6 lg:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {locations.map((loc) => (
+              {/* Add Location Card */}
+              <div 
+                onClick={handleOpenCreate}
+                className="relative group cursor-pointer min-h-[320px] rounded-sm bg-[#5d3f32]/20 backdrop-blur-sm border-2 border-dashed border-[#8c503c]/40 transition-all flex flex-col items-center justify-center hover:bg-[#5d3f32]/40 hover:border-[#8c503c]/70 hover:-translate-y-1"
+              >
+                <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#d49a89]/40 flex items-center justify-center mb-3 text-[#d49a89]/60 group-hover:text-[#d49a89] group-hover:border-[#d49a89]/60 transition-all duration-300">
+                  <Plus className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <span className="text-[10px] tracking-widest uppercase font-bold text-[#d49a89]/60 group-hover:text-[#d49a89] transition-colors">
+                  Add Location
+                </span>
+              </div>
+
+              {displayLocations.map((loc) => (
                 <div 
                   key={loc.id} 
                   className="relative group bg-[#F6F0E7] border border-[#d49a89]/40 rounded-sm shadow-[0_4px_12px_rgba(25,10,5,0.15)] hover:shadow-[0_8px_20px_rgba(25,10,5,0.2)] hover:-translate-y-[2px] hover:border-[#b8785e] transition-all duration-300 cursor-pointer flex flex-col overflow-hidden"
@@ -878,8 +939,8 @@ export default function Locations() {
                           Residents
                         </h4>
                         <div className="space-y-2">
-                          {MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).length > 0 ? (
-                            MOCK_CHARACTERS.filter((c: any) => c.locationId === editingLocId).map((char: any) => (
+                          {projectCharacters.filter((c: any) => c.locationId === editingLocId).length > 0 ? (
+                            projectCharacters.filter((c: any) => c.locationId === editingLocId).map((char: any) => (
                               <div key={char.id} className="bg-white border border-[#e5e0d5] rounded-sm p-2 flex items-center gap-2 shadow-sm">
                                 <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
                                   {char.name.charAt(0)}

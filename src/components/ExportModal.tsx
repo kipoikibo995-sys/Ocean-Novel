@@ -19,6 +19,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   const [includeTitlePage, setIncludeTitlePage] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const project = storage.getProjects().find((p) => p.id === projectId);
   const projectData = storage.getProjectData(projectId);
@@ -26,6 +27,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   const handleExport = async () => {
     setIsExporting(true);
     setExportComplete(false);
+    setExportError(null);
 
     try {
       const manuscript = projectData?.manuscript || [];
@@ -46,9 +48,9 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
         onClose();
         setTimeout(() => setExportComplete(false), 300);
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Export failed", error);
-      alert("An error occurred during export.");
+      setExportError(error?.message || "An error occurred during export.");
     } finally {
       setIsExporting(false);
     }
@@ -303,6 +305,12 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                   Export includes {extractScenes(projectData?.manuscript || []).length} scenes totaling ~{project?.currentWords?.toLocaleString() || 0} words.
                 </p>
               </div>
+
+              {exportError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
+                  {exportError}
+                </div>
+              )}
             </div>
 
             <div className="p-5 border-t border-[#E5E0D5] bg-white/50 flex gap-3">

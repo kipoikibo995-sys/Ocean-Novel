@@ -11,7 +11,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AppLayout, ProjectLayout } from "./components/layout/layouts";
-import { ProjectProvider } from "./context/ProjectContext";
 import Dashboard from "./pages/Dashboard";
 import CreateProject from "./pages/CreateProject";
 import ProjectOverview from "./pages/ProjectOverview";
@@ -39,6 +38,9 @@ function AnimatedRoutes() {
           <Route element={<ProjectLayout />}>
             <Route path="/project/:id" element={<ProjectOverview />} />
             <Route path="/project/:id/characters" element={<Characters />} />
+            <Route path="/project/:id/bible" element={<StoryBible />} />
+            <Route path="/project/:id/locations" element={<Locations />} />
+            <Route path="/project/:id/plot" element={<Plot />} />
             <Route path="/project/:id/workspace" element={<Navigate to="studio" replace />} />
             <Route path="/project/:id/workspace/bible" element={<StoryBible />} />
             <Route path="/project/:id/workspace/locations" element={<Locations />} />
@@ -63,12 +65,10 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <ProjectProvider>
-      <AuthProvider>
+          <AuthProvider>
         <BrowserRouter>
           <AnimatedRoutes />
         </BrowserRouter>
       </AuthProvider>
-    </ProjectProvider>
-  );
+      );
 }

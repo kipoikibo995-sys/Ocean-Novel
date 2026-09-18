@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { storage } from "@/lib/storage";
 import { Plus, MoreVertical, GripVertical, Clock, LayoutList, CheckCircle2, ChevronRight, Tags, MapPin, Users, Edit3, Trash2, Calendar, Columns, X, Spline, GitBranch, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
-import { MOCK_CHARACTERS, MOCK_LOCATIONS } from "@/mockData";
+
 
 type PlotArc = {
   id: string;
@@ -74,32 +74,62 @@ const DEFAULT_EVENTS: StoryEvent[] = [
 
 export default function Plot() {
   const { id } = useParams();
+  const projectData = useMemo(() => {
+    return id ? storage.getProjectData(id) : null;
+  }, [id]);
+
   const [view, setView] = useState<"list" | "board" | "tree">("tree");
   
-  const [arcs, setArcs] = useState<PlotArc[]>(() => {
-    if (id) {
-      const data = storage.getProjectData(id);
-      if (data?.plotArcs && data.plotArcs.length > 0) return data.plotArcs;
-    }
-    return DEFAULT_ARCS;
-  });
+  const currentProjectIdRef = useRef<string | undefined>(id);
 
-  const [events, setEvents] = useState<StoryEvent[]>(() => {
-    if (id) {
-      const data = storage.getProjectData(id);
-      if (data?.plotEvents && data.plotEvents.length > 0) return data.plotEvents.map((e: any) => ({...e, x: e.x || 500, y: e.y || 100, parentId: e.parentId || null}));
+  const getInitialPlot = (projId: string | undefined) => {
+    if (!projId) return { arcs: DEFAULT_ARCS, events: DEFAULT_EVENTS };
+    const data = storage.getProjectData(projId);
+    const loadedArcs = (data?.plotArcs && data.plotArcs.length > 0) ? data.plotArcs : DEFAULT_ARCS;
+    
+    let loadedEvents: StoryEvent[] = DEFAULT_EVENTS;
+    if (data?.plotEvents && data.plotEvents.length > 0) {
+      loadedEvents = data.plotEvents.map((e: any) => ({
+        ...e,
+        x: e.x || 500,
+        y: e.y || 100,
+        parentId: e.parentId || null
+      }));
+    } else if (data?.characters && data.characters.length > 0) {
+      const c1 = data.characters[0]?.id || "1";
+      const c2 = data.characters[1]?.id || c1;
+      const c3 = data.characters[2]?.id || c1;
+      const l1 = data.locations?.[0]?.id || null;
+      const l2 = data.locations?.[1]?.id || l1;
+      const l3 = data.locations?.[2]?.id || l1;
+      loadedEvents = [
+        { ...DEFAULT_EVENTS[0], characters: [c1, c3], locationId: l1 },
+        { ...DEFAULT_EVENTS[1], characters: [c1, c2], locationId: l2 },
+        { ...DEFAULT_EVENTS[2], characters: [c2, c3], locationId: l3 },
+      ];
     }
-    return DEFAULT_EVENTS;
-  });
+    return { arcs: loadedArcs, events: loadedEvents };
+  };
+
+  const initialPlot = useMemo(() => getInitialPlot(id), [id]);
+  const [arcs, setArcs] = useState<PlotArc[]>(initialPlot.arcs);
+  const [events, setEvents] = useState<StoryEvent[]>(initialPlot.events);
 
   useEffect(() => {
-    if (id && arcs.length > 0) {
+    const { arcs: a, events: e } = getInitialPlot(id);
+    currentProjectIdRef.current = id;
+    setArcs(a);
+    setEvents(e);
+  }, [id]);
+
+  useEffect(() => {
+    if (id && currentProjectIdRef.current === id && arcs.length > 0) {
       storage.saveProjectData(id, { plotArcs: arcs });
     }
   }, [arcs, id]);
 
   useEffect(() => {
-    if (id && events.length > 0) {
+    if (id && currentProjectIdRef.current === id && events.length > 0) {
       storage.saveProjectData(id, { plotEvents: events });
     }
   }, [events, id]);
@@ -335,7 +365,7 @@ export default function Plot() {
                                 {event.locationId && (
                                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C503C]">
                                     <MapPin className="w-3.5 h-3.5" />
-                                    {MOCK_LOCATIONS.find(l => l.id === event.locationId)?.name || 'Unknown Location'}
+                                    {(projectData?.locations || []).find(l => l.id === event.locationId)?.name || 'Unknown Location'}
                                   </div>
                                 )}
                                 
@@ -344,7 +374,7 @@ export default function Plot() {
                                     <Users className="w-3.5 h-3.5 text-stone-400" />
                                     <div className="flex -space-x-1.5">
                                       {event.characters.map((charId) => {
-                                        const char = MOCK_CHARACTERS.find(c => c.id === charId);
+                                        const char = (projectData?.characters || []).find(c => c.id === charId);
                                         if (!char) return null;
                                         return (
                                           <div key={charId} className="w-5 h-5 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[8px] font-bold text-stone-600 shadow-sm" title={char.name}>
@@ -416,7 +446,7 @@ export default function Plot() {
                                   {event.locationId ? (
                                     <span className="text-[10px] text-stone-400 flex items-center gap-1 truncate max-w-[120px]">
                                       <MapPin className="w-3 h-3" />
-                                      {MOCK_LOCATIONS.find(l => l.id === event.locationId)?.name}
+                                      {(projectData?.locations || []).find(l => l.id === event.locationId)?.name}
                                     </span>
                                   ) : <span />}
                                   
@@ -424,7 +454,7 @@ export default function Plot() {
                                     <div className="flex -space-x-1">
                                       {event.characters.slice(0, 3).map((charId) => (
                                         <div key={charId} className="w-4 h-4 rounded-full bg-[#E5E0D5] border border-white flex items-center justify-center text-[7px] font-bold text-stone-600 shadow-sm">
-                                          {MOCK_CHARACTERS.find(c => c.id === charId)?.name.charAt(0)}
+                                          {(projectData?.characters || []).find(c => c.id === charId)?.name.charAt(0)}
                                         </div>
                                       ))}
                                       {event.characters.length > 3 && (
@@ -707,7 +737,7 @@ export default function Plot() {
                   className="w-full bg-white border border-[#E5E0D5] rounded-sm px-3 py-2 text-sm text-[#4A3225] focus:outline-none focus:border-[#D49A89] shadow-inner"
                 >
                   <option value="">-- No specific location --</option>
-                  {MOCK_LOCATIONS.map(loc => (
+                  {(projectData?.locations || []).map(loc => (
                     <option key={loc.id} value={loc.id}>{loc.name}</option>
                   ))}
                 </select>
@@ -717,7 +747,7 @@ export default function Plot() {
               <div>
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Users className="w-3 h-3" /> Involved Characters</label>
                 <div className="bg-white border border-[#E5E0D5] rounded-sm shadow-inner p-2 flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
-                  {MOCK_CHARACTERS.map(char => {
+                  {(projectData?.characters || []).map(char => {
                     const isSelected = editingEvent.characters.includes(char.id);
                     return (
                       <button

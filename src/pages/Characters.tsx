@@ -27,94 +27,22 @@ import {
   ClipboardCopy,
   Check,
   Scissors,
-  Link2
+  Link2,
+  Sparkles
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useProject } from "@/context/ProjectContext";
+
 import { storage } from "@/lib/storage";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 import ImagePickerModal from "@/components/ImagePickerModal";
+import { FANTASY_PRESET_PORTRAITS } from "@/lib/imageUtils";
 
 // Define exact mock characters based on the provided image
-const CATALOG_CHARACTERS = [
-  {
-    id: "1",
-    name: "Hans",
-    role: "PROTAGONIST",
-    status: "IN PROGRESS",
-    age: "25",
-    aliases: ["THE MOON-CURSED"],
-    backstory:
-      "Hans is a talented boy that grew in a traditional family of Lavern. Since a boy, he was trained to join the clan. Very talented. However, everything changed the day he was given a mission to explore the city colindant with Septentrionel...",
-    traits: ["STOIC", "INTELLIGENT", "AMBITIOUS", "RECKLESS"],
-    imageUrl:
-      "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638038/04_noble_sun_knight_portrait_iehl2w.webp",
-  },
-  {
-    id: "2",
-    name: "Folru",
-    role: "SUPPORTING CHARACTER",
-    age: "41",
-    aliases: ["THE LEDGER", "AUNT FOLRU"],
-    backstory:
-      "Folru inherited the Ventiri caravan routes the way most people inherit debt: suddenly, and with no instruction. She was nineteen, the eldest of four, and the Great War had just made every road between Moonlar and Yomen a place where honest cargo...",
-    traits: ["PRAGMATIC", "BLUNT", "PROTECTIVE", "UNSENTIMENTAL"],
-    imageUrl:
-      "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638038/02_enigmatic_woodland_elven_noble_kf6umg.webp",
-  },
-  {
-    id: "3",
-    name: "Tino",
-    role: "ANTAGONIST",
-    age: "19",
-    aliases: ["SPARROW", "THE LOUD ONE"],
-    backstory:
-      "Tino was born on the wrong side of Lavern's beautiful city, fighting for scraps in the underbelly where the sun rarely touches.",
-    traits: ["SURVIVOR", "SCRAPPY", "CYNICAL"],
-    imageUrl:
-      "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638037/05_defiant_young_rogue_portrait_vmydle.webp",
-  },
-  {
-    id: "4",
-    name: "Jurus",
-    role: "SUPPORTING CHARACTER",
-    age: "36",
-    aliases: ["INSPECTOR JURUS", "THE SOUTHERN GATE"],
-    backstory:
-      "Once a respected guard at the Ventir-Riyad border, Jurus lost his post when he uncovered a smuggling ring orchestrated by his own commander.",
-    traits: ["HONORABLE", "TIRED", "OBSERVANT"],
-    imageUrl:
-      "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638037/08_stern_dwarf_warrior_in_braided_armor_bljexb.webp",
-  },
-  {
-    id: "5",
-    name: "Etel",
-    role: "SUPPORTING CHARACTER",
-    age: "123",
-    aliases: ["THE ARCHIVIST", "ETEL OF THE CONDEMNED TOWER"],
-    backstory:
-      "The tower on the North bank has been condemned for thirty-one years, yet Etel remains inside, documenting the slow decay of the world.",
-    traits: ["WISE", "ECCENTRIC", "FORGETFUL"],
-    imageUrl:
-      "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638037/06_elder_druid_of_the_whispering_woods_ki2zso.webp",
-  },
-];
+const CATALOG_CHARACTERS: any[] = [];
 
-const MOCK_NODES = [
-  { id: "1", x: 400, y: 300 }, // Hans
-  { id: "2", x: 700, y: 150 }, // Folru
-  { id: "3", x: 150, y: 500 }, // Tino
-  { id: "4", x: 200, y: 150 }, // Jurus
-  { id: "5", x: 650, y: 500 }, // Etel
-];
+const MOCK_NODES: any[] = [];
 
-const MOCK_EDGES = [
-  { id: "e1", source: "1", target: "3", label: "ENEMY", color: "#e15b64", icon: Swords },
-  { id: "e2", source: "1", target: "4", label: "FAMILY", color: "#6184d8", icon: Shield },
-  { id: "e3", source: "1", target: "2", label: "ALLY", color: "#78c3b4", icon: UserPlus },
-  { id: "e4", source: "1", target: "5", label: "LOVER", color: "#f9a8d4", icon: Heart },
-  { id: "e5", source: "3", target: "4", label: "ENEMY", color: "#e15b64", icon: Swords },
-];
+const MOCK_EDGES: any[] = [];
 
 export const RELATION_OPTIONS = [
   { label: "ALLY", color: "#78c3b4", icon: UserPlus },
@@ -274,7 +202,7 @@ export function buildDefaultProjectGraph(projectId: string | undefined, chars: a
 export default function Characters() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { project } = useProject();
+
 
   const [viewMode, setViewMode] = useState<"registry" | "connections" | "editor">(
     "connections",
@@ -294,8 +222,25 @@ export default function Characters() {
     if (id) {
       const data = storage.getProjectData(id);
       if (data?.characters && data.characters.length > 0) {
-        setCharacters(data.characters);
-        const projectGraphs = buildDefaultProjectGraph(id, data.characters);
+        let hasChanges = false;
+        const updatedCharacters = data.characters.map((char: any, index: number) => {
+          if (!char.imageUrl || char.imageUrl.includes("unsplash.com") || char.imageUrl.includes(".webp")) {
+            hasChanges = true;
+            const fallbackPreset = FANTASY_PRESET_PORTRAITS[index % FANTASY_PRESET_PORTRAITS.length];
+            return {
+              ...char,
+              imageUrl: fallbackPreset ? fallbackPreset.url : "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg"
+            };
+          }
+          return char;
+        });
+
+        if (hasChanges) {
+          storage.saveProjectData(id, { characters: updatedCharacters });
+        }
+
+        setCharacters(updatedCharacters);
+        const projectGraphs = buildDefaultProjectGraph(id, updatedCharacters);
         setGraphs(projectGraphs);
         setActiveGraphId(projectGraphs[0]?.id || "1");
       }
@@ -322,6 +267,7 @@ export default function Characters() {
   const [copiedCharId, setCopiedCharId] = useState<string | null>(null);
   const [copiedEditor, setCopiedEditor] = useState(false);
   const [quickImageChar, setQuickImageChar] = useState<any | null>(null);
+  const [showPortraitGalleryModal, setShowPortraitGalleryModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -331,7 +277,7 @@ export default function Characters() {
     aliases: [] as string[],
     backstory: "",
     traits: [] as string[],
-    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638038/03_elderly_wizard_with_astral_amulet_dvtdh5.webp",
+    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
     mbti: "",
     archetype: "",
     conflict: "",
@@ -355,7 +301,7 @@ export default function Characters() {
       aliases: [],
       backstory: "",
       traits: [],
-      imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638038/03_elderly_wizard_with_astral_amulet_dvtdh5.webp",
+      imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
       mbti: "",
       archetype: "",
       conflict: "",
@@ -405,7 +351,7 @@ export default function Characters() {
       aliases: formData.aliases,
       backstory: formData.backstory,
       traits: formData.traits,
-      imageUrl: formData.imageUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1788638038/03_elderly_wizard_with_astral_amulet_dvtdh5.webp",
+      imageUrl: formData.imageUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
       mbti: formData.mbti,
       archetype: formData.archetype,
       conflict: formData.conflict,
@@ -1089,16 +1035,26 @@ ${formData.backstory}
                 </div>
 
                 <div className="flex items-center bg-white/10 rounded-full p-1 border border-white/5 backdrop-blur-sm ml-4">
-                  <button onClick={() => setRegistryView("grid")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "grid" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`}>
+                  <button onClick={() => setRegistryView("grid")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "grid" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`} title="Grid View">
                     <Grid className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setRegistryView("gallery")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "gallery" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`}>
+                  <button onClick={() => setRegistryView("gallery")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "gallery" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`} title="Gallery View">
                     <LayoutGrid className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setRegistryView("folder")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "folder" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`}>
+                  <button onClick={() => setRegistryView("folder")} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${registryView === "folder" ? "bg-[#b8785e] text-white shadow-sm" : "text-white/50 hover:text-white/80"}`} title="Folder View">
                     <Folder className="w-4 h-4" />
                   </button>
                 </div>
+
+                <button
+                  onClick={() => setShowPortraitGalleryModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5d3f32]/40 hover:bg-[#5d3f32]/70 text-[#d49a89] hover:text-[#fcfaf5] border border-[#8c503c]/50 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all shadow-sm ml-2"
+                  title="Browse Character Portrait Library (25 presets)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#d49a89]" />
+                  <span className="hidden sm:inline">Portrait Library</span>
+                  <span className="bg-[#b8785e] text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">25</span>
+                </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -1912,6 +1868,44 @@ ${formData.backstory}
               storage.saveProjectData(id, { characters: updated });
             }
           }
+        }}
+      />
+
+      {/* Portrait Gallery Modal to browse presets and create/assign */}
+      <ImagePickerModal
+        isOpen={showPortraitGalleryModal}
+        onClose={() => setShowPortraitGalleryModal(false)}
+        type="character"
+        title="Preset Character Portrait Library (25 Portraits)"
+        defaultTab="presets"
+        currentImage=""
+        onSelectImage={(selectedUrl) => {
+          setShowPortraitGalleryModal(false);
+          const found = FANTASY_PRESET_PORTRAITS.find(p => p.url === selectedUrl);
+          
+          setPreviousViewMode(viewMode === "registry" ? "registry" : "connections");
+          setEditingCharId(null);
+          setAliasInput("");
+          setTraitInput("");
+          setShowAttributeDropdown(false);
+          setFormData({
+            name: found ? found.label.split("/")[0].trim() : "New Character",
+            role: "PROTAGONIST",
+            age: "",
+            status: "ALIVE",
+            aliases: [],
+            backstory: found?.description || "",
+            traits: found?.tags?.slice(0, 4) || [],
+            imageUrl: selectedUrl,
+            mbti: "",
+            archetype: found?.category || "",
+            conflict: "",
+            goal: "",
+            trauma: "",
+            group: "none",
+            customAttributes: [],
+          });
+          setViewMode("editor");
         }}
       />
     </div>

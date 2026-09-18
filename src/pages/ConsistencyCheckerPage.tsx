@@ -24,6 +24,7 @@ export default function ConsistencyCheckerPage() {
   const [issueFilter, setIssueFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
 
   // Global Search Modal state
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -74,10 +75,12 @@ export default function ConsistencyCheckerPage() {
       executeBatchReplace(id, findText, replaceText, new Set([targetId]), { wholeWord: true });
       
       setActionSuccessMsg(`Successfully fixed "${findText}" to "${replaceText}".`);
+      setActionErrorMsg(null);
       loadData();
       setTimeout(() => setActionSuccessMsg(null), 4000);
     } catch (e: any) {
-      alert("Unable to automatically correct typo: " + e.message);
+      setActionErrorMsg("Unable to automatically correct typo: " + (e?.message || "Unknown error"));
+      setTimeout(() => setActionErrorMsg(null), 5000);
     }
   };
 
@@ -260,6 +263,19 @@ export default function ConsistencyCheckerPage() {
             <span>{actionSuccessMsg}</span>
           </div>
           <button onClick={() => setActionSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-900">
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* Error alert message */}
+      {actionErrorMsg && (
+        <div className="mx-6 mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center justify-between text-xs font-medium shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <span>{actionErrorMsg}</span>
+          </div>
+          <button onClick={() => setActionErrorMsg(null)} className="text-rose-600 hover:text-rose-900">
             &times;
           </button>
         </div>

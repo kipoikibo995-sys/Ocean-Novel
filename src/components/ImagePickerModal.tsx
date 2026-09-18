@@ -1,12 +1,13 @@
 import React, { useState, useRef } from "react";
 import { 
   X, Upload, Link2, Trash2, Check, Image as ImageIcon, 
-  AlertCircle, RefreshCw 
+  AlertCircle, RefreshCw, Search, Sparkles, User, MapPin
 } from "lucide-react";
 import { 
   fileToOptimizedDataUrl, 
   FANTASY_PRESET_PORTRAITS, 
-  FANTASY_PRESET_LOCATIONS 
+  FANTASY_PRESET_LOCATIONS,
+  PresetImage
 } from "@/lib/imageUtils";
 
 interface ImagePickerModalProps {
@@ -16,6 +17,7 @@ interface ImagePickerModalProps {
   currentImage?: string;
   title?: string;
   type?: "character" | "location";
+  defaultTab?: "upload" | "url" | "presets";
 }
 
 export default function ImagePickerModal({
@@ -25,13 +27,18 @@ export default function ImagePickerModal({
   currentImage = "",
   title = "Select Image",
   type = "character",
+  defaultTab = "upload",
 }: ImagePickerModalProps) {
-  const [activeTab, setActiveTab] = useState<"upload" | "url" | "presets">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "url" | "presets">(defaultTab);
   const [urlInput, setUrlInput] = useState(currentImage.startsWith("data:") ? "" : currentImage);
   const [previewImage, setPreviewImage] = useState<string>(currentImage);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Search & Category Filters for presets
+  const [presetSearch, setPresetSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,12 +48,37 @@ export default function ImagePickerModal({
       setPreviewImage(currentImage);
       setUrlInput(currentImage.startsWith("data:") ? "" : currentImage);
       setErrorMsg(null);
+      if (defaultTab) {
+        setActiveTab(defaultTab);
+      }
     }
-  }, [isOpen, currentImage]);
+  }, [isOpen, currentImage, defaultTab]);
 
   if (!isOpen) return null;
 
   const presets = type === "character" ? FANTASY_PRESET_PORTRAITS : FANTASY_PRESET_LOCATIONS;
+
+  // Extract unique categories
+  const categories = Array.from(
+    new Set(
+      presets
+        .map((p) => ('category' in p ? (p as PresetImage).category : undefined))
+        .filter((c): c is string => Boolean(c))
+    )
+  );
+
+  const filteredPresets = presets.filter((preset) => {
+    const p = preset as PresetImage;
+    if (selectedCategory !== "all" && p.category !== selectedCategory) {
+      return false;
+    }
+    if (!presetSearch.trim()) return true;
+    const q = presetSearch.toLowerCase();
+    const matchesLabel = p.label.toLowerCase().includes(q);
+    const matchesTags = p.tags && Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q));
+    const matchesDesc = p.description && p.description.toLowerCase().includes(q);
+    return matchesLabel || matchesTags || matchesDesc;
+  });
 
   const handleFileProcess = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -183,12 +215,13 @@ export default function ImagePickerModal({
                 : "border-transparent text-stone-500 hover:text-stone-800"
             }`}
           >
-            Sample Library
+            <Sparkles className="w-3.5 h-3.5 text-[#b8785e]" />
+            {type === "character" ? `Portrait Library (${presets.length})` : `Location Library (${presets.length})`}
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
           {errorMsg && (
             <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-sm">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -277,42 +310,126 @@ export default function ImagePickerModal({
 
           {/* TAB 3: FANTASY LIBRARY */}
           {activeTab === "presets" && (
-            <div className="space-y-3">
-              <p className="text-xs text-stone-600 font-serif italic">
-                Choose from high-resolution {type === "character" ? "character portraits" : "landscape illustrations"}:
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {presets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setPreviewImage(preset.url);
-                      setUrlInput(preset.url);
-                      setErrorMsg(null);
-                    }}
-                    className={`group relative rounded-sm overflow-hidden border text-left transition-all p-1 bg-white flex flex-col ${
-                      previewImage === preset.url
-                        ? "border-[#a66850] ring-2 ring-[#a66850]/40 shadow-md"
-                        : "border-[#e5e0d5] hover:border-[#b8785e] hover:shadow-sm"
-                    }`}
-                  >
-                    <div className={`w-full overflow-hidden bg-stone-100 ${type === "character" ? "aspect-[3/4]" : "aspect-[16/10]"}`}>
-                      <img 
-                        src={preset.url} 
-                        alt={preset.label}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                    </div>
-                    <div className="p-1.5 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#4a3225] truncate">{preset.label}</span>
-                      {previewImage === preset.url && (
-                        <Check className="w-3.5 h-3.5 text-[#a66850] shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                ))}
+            <div className="space-y-4">
+              {/* Filter Controls: Search & Category Pills */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#e5e0d5]/80">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="text"
+                    placeholder={`Search ${presets.length} presets (name, class, role)...`}
+                    value={presetSearch}
+                    onChange={(e) => setPresetSearch(e.target.value)}
+                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-[#e5e0d5] rounded-sm text-xs font-serif text-[#4a3225] placeholder:text-stone-400 focus:outline-none focus:border-[#a66850]"
+                  />
+                  {presetSearch && (
+                    <button
+                      onClick={() => setPresetSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+                    <button
+                      onClick={() => setSelectedCategory("all")}
+                      className={`px-2.5 py-1 rounded-sm transition-colors ${
+                        selectedCategory === "all"
+                          ? "bg-[#8c503c] text-white shadow-2xs"
+                          : "bg-white border border-[#e5e0d5] text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      All ({presets.length})
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-2 py-1 rounded-sm transition-colors ${
+                          selectedCategory === cat
+                            ? "bg-[#8c503c] text-white shadow-2xs"
+                            : "bg-white border border-[#e5e0d5] text-stone-600 hover:text-stone-900"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Grid of Presets */}
+              {filteredPresets.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {filteredPresets.map((preset, idx) => {
+                    const p = preset as PresetImage;
+                    const isSelected = previewImage === p.url;
+
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setPreviewImage(p.url);
+                          setUrlInput(p.url);
+                          setErrorMsg(null);
+                        }}
+                        className={`group relative rounded-sm overflow-hidden border text-left transition-all p-1 bg-white flex flex-col ${
+                          isSelected
+                            ? "border-[#8c503c] ring-2 ring-[#8c503c]/40 shadow-md"
+                            : "border-[#e5e0d5] hover:border-[#b8785e] hover:shadow-sm"
+                        }`}
+                      >
+                        <div className={`w-full overflow-hidden bg-stone-100 relative ${type === "character" ? "aspect-[3/4]" : "aspect-[16/10]"}`}>
+                          <img 
+                            src={p.url} 
+                            alt={p.label}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            loading="lazy"
+                          />
+                          {p.category && (
+                            <span className="absolute top-1 left-1 bg-black/60 backdrop-blur-xs text-white text-[8px] font-sans font-semibold px-1.5 py-0.5 rounded-xs tracking-wider uppercase">
+                              {p.category}
+                            </span>
+                          )}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-[#8c503c]/20 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-full bg-[#8c503c] text-white flex items-center justify-center shadow-md">
+                                <Check className="w-4 h-4" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-1.5 flex flex-col gap-0.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold text-[#4a3225] group-hover:text-[#8c503c] transition-colors truncate">
+                              {p.label}
+                            </span>
+                          </div>
+                          {p.description && (
+                            <span className="text-[8px] text-stone-500 font-serif line-clamp-1">
+                              {p.description}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-white rounded-sm border border-[#e5e0d5]">
+                  <ImageIcon className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+                  <p className="font-serif font-bold text-stone-700 text-xs">
+                    No matching portraits found
+                  </p>
+                  <p className="text-[10px] text-stone-500 font-serif mt-0.5">
+                    Try another keyword or select "All" above.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

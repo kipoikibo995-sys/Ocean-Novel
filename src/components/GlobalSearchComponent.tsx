@@ -42,6 +42,7 @@ export default function GlobalSearchComponent({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isReplacing, setIsReplacing] = useState(false);
   const [replaceSuccessMsg, setReplaceSuccessMsg] = useState<string | null>(null);
+  const [replaceErrorMsg, setReplaceErrorMsg] = useState<string | null>(null);
 
   // Load project data
   const loadData = () => {
@@ -114,13 +115,15 @@ export default function GlobalSearchComponent({
       );
       
       setReplaceSuccessMsg(`Successfully replaced ${res.updatedCount} occurrences across the project.`);
+      setReplaceErrorMsg(null);
       setProjectData(res.projectData);
       
       setTimeout(() => {
         setReplaceSuccessMsg(null);
       }, 5000);
     } catch (err: any) {
-      alert("An error occurred during replacement: " + (err?.message || ""));
+      setReplaceErrorMsg("An error occurred during replacement: " + (err?.message || "Unknown error"));
+      setTimeout(() => setReplaceErrorMsg(null), 5000);
     } finally {
       setIsReplacing(false);
     }
@@ -369,6 +372,19 @@ export default function GlobalSearchComponent({
             <span>{replaceSuccessMsg}</span>
           </div>
           <button onClick={() => setReplaceSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {replaceErrorMsg && (
+        <div className="mx-6 mt-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <AlertCircle className="w-4 h-4 text-rose-600" />
+            <span>{replaceErrorMsg}</span>
+          </div>
+          <button onClick={() => setReplaceErrorMsg(null)} className="text-rose-500 hover:text-rose-800">
             <X className="w-4 h-4" />
           </button>
         </div>

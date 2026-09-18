@@ -20,19 +20,15 @@ import {
   Search,
   ArrowUpRight,
   BarChart2,
+  MapPin,
+  RefreshCw,
+  BookOpen,
 } from "lucide-react";
-import {
-  MOCK_PROJECT,
-  MOCK_PROJECTS,
-  MOCK_MANUSCRIPT,
-  MOCK_CHARACTERS,
-  MOCK_LOCATIONS,
-  ManuscriptItem,
-} from "@/mockData";
+import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
-import { useProject } from "@/context/ProjectContext";
+
 import { runFantasySeed } from "@/lib/seed";
 
 export default function Dashboard() {
@@ -44,7 +40,7 @@ export default function Dashboard() {
   }, []);
 
   const navigate = useNavigate();
-  const { project } = useProject();
+
 
   const [savedProjects, setSavedProjects] = useState<ProjectMeta[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -61,6 +57,10 @@ export default function Dashboard() {
   const [isRadarExpanded, setIsRadarExpanded] = useState(false);
   const [radarSearch, setRadarSearch] = useState("");
   const [radarFilter, setRadarFilter] = useState<'all' | 'active' | 'silent'>('all');
+  const [radarEntityType, setRadarEntityType] = useState<'all' | 'characters' | 'locations'>('all');
+  const [miniRadarType, setMiniRadarType] = useState<'all' | 'characters' | 'locations'>('all');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -71,6 +71,33 @@ export default function Dashboard() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isRadarExpanded]);
+
+  // Real-time synchronization when manuscript updates or tab gains focus
+  useEffect(() => {
+    const handleSync = () => {
+      const updated = storage.getProjects().sort((a, b) => b.lastModified - a.lastModified);
+      setSavedProjects(updated);
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('novelist-storage-updated', handleSync);
+    return () => {
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('novelist-storage-updated', handleSync);
+    };
+  }, []);
+
+  const handleManualScan = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsScanning(true);
+    const updated = storage.getProjects().sort((a, b) => b.lastModified - a.lastModified);
+    setSavedProjects(updated);
+    setRefreshTrigger(prev => prev + 1);
+    setTimeout(() => setIsScanning(false), 500);
+  };
 
   useEffect(() => {
     // Ensure all 5 fantasy sample books exist with complete manuscripts and characters
@@ -136,7 +163,7 @@ export default function Dashboard() {
   const activeProjectData = useMemo(() => {
     if (!activeProject) return null;
     return storage.getProjectData(activeProject.id);
-  }, [activeProject?.id, activeProject?.lastModified]);
+  }, [activeProject?.id, activeProject?.lastModified, refreshTrigger]);
 
   // Real Resume Drafting Stats
   const resumeStats = useMemo(() => {
@@ -188,80 +215,221 @@ export default function Dashboard() {
     };
   }, [activeProject, activeProjectData]);
 
-  // Real World Radar Stats computed from the actual project manuscript & character roster
+  // Real World Radar Stats computed dynamically from the actual project manuscript, characters & locations
   const worldRadarStats = useMemo(() => {
-    if (!activeProject) return { totalMentions: 0, sortedMentions: [] };
+    if (!activeProject) {
+      return {
+        totalMentions: 0,
+        sortedMentions: [] as Array<{
+          id: string;
+          name: string;
+          count: number;
+          entityType: 'character' | 'location';
+          role: string;
+          description?: string;
+          avatarUrl?: string;
+          imageUrl?: string;
+          scenesAppeared: Array<{ id: string; title: string; count: number }>;
+        }>,
+        characterCount: 0,
+        locationCount: 0,
+        scenesScanned: 0,
+      };
+    }
 
     const manuscript = activeProjectData?.manuscript || [];
-    const rawCharacters = activeProjectData?.characters && Array.isArray(activeProjectData.characters) && activeProjectData.characters.length > 0
+    const rawCharacters = activeProjectData?.characters && Array.isArray(activeProjectData.characters)
       ? activeProjectData.characters
-      : MOCK_CHARACTERS;
+      : [];
+    const rawLocations = activeProjectData?.locations && Array.isArray(activeProjectData.locations)
+      ? activeProjectData.locations
+      : [];
 
-    const charMap: Record<string, { id: string; name: string; count: number; role: string; description?: string }> = {};
+    const entityMap: Record<string, {
+      id: string;
+      name: string;
+      count: number;
+      entityType: 'character' | 'location';
+      role: string;
+      description?: string;
+      avatarUrl?: string;
+      imageUrl?: string;
+      scenesAppeared: Array<{ id: string; title: string; count: number }>;
+    }> = {};
 
-    // Register known characters
-    (rawCharacters || []).forEach((c: any) => {
-      const name = c.name?.trim() || "";
-      if (name) {
-        charMap[name.toLowerCase()] = {
-          id: c.id || name,
-          name: name,
-          count: 0,
-          role: c.role || "Character",
-          description: c.description || c.shortBio || "",
-        };
+    const nameToKey: Record<string, string> = {};
+    const idToKey: Record<string, string> = {};
+
+    // 1. Register all characters from project roster
+    rawCharacters.forEach((c: any) => {
+      const name = c.name?.trim();
+      if (!name) return;
+      const key = `char-${c.id || name}`;
+      entityMap[key] = {
+        id: String(c.id || name),
+        name,
+        count: 0,
+        entityType: 'character',
+        role: c.role || 'Character',
+        description: c.description || c.shortBio || '',
+        avatarUrl: c.avatarUrl || '',
+        scenesAppeared: [],
+      };
+      nameToKey[name.toLowerCase()] = key;
+      if (c.id) idToKey[String(c.id).toLowerCase()] = key;
+      if (Array.isArray(c.aliases)) {
+        c.aliases.forEach((alias: string) => {
+          if (alias?.trim()) nameToKey[alias.trim().toLowerCase()] = key;
+        });
+      }
+    });
+
+    // 2. Register all locations from project atlas
+    rawLocations.forEach((loc: any) => {
+      const name = loc.name?.trim();
+      if (!name) return;
+      const key = `loc-${loc.id || name}`;
+      entityMap[key] = {
+        id: String(loc.id || name),
+        name,
+        count: 0,
+        entityType: 'location',
+        role: loc.type || 'Location',
+        description: loc.description || '',
+        imageUrl: loc.imageUrl || '',
+        scenesAppeared: [],
+      };
+      nameToKey[name.toLowerCase()] = key;
+      if (loc.id) idToKey[String(loc.id).toLowerCase()] = key;
+      if (Array.isArray(loc.aliases)) {
+        loc.aliases.forEach((alias: string) => {
+          if (alias?.trim()) nameToKey[alias.trim().toLowerCase()] = key;
+        });
       }
     });
 
     let totalMentions = 0;
     let scenesScanned = 0;
 
+    // 3. Deep-scan manuscript content across every scene
     const scanForMentions = (items: ManuscriptItem[]) => {
       for (const item of items) {
-        if (item.type === "scene") {
+        if (item.type === 'scene') {
           scenesScanned++;
-          if (item.content) {
-            const content = item.content;
-            const plain = content.replace(/<[^>]*>?/gm, " ");
+          const content = item.content || '';
+          if (!content.trim()) {
+            if (item.children) scanForMentions(item.children);
+            continue;
+          }
 
-            // 1. TipTap Mention tags: data-label="..."
-            const labelRegex = /data-label="([^"]+)"/gi;
-            let labelMatch;
-            while ((labelMatch = labelRegex.exec(content)) !== null) {
-              const label = labelMatch[1].trim();
-              const lower = label.toLowerCase();
-              if (!charMap[lower]) {
-                charMap[lower] = { id: label, name: label, count: 0, role: "Character" };
-              }
-              charMap[lower].count++;
-              totalMentions++;
+          const sceneOccurrences: Record<string, number> = {};
+
+          // A. TipTap mention tag extraction (from @ mentions inserted via MentionEditor)
+          const tagRegex = /<span[^>]*data-type="mention"[^>]*>([\s\S]*?)<\/span>/gi;
+          let tagMatch;
+          while ((tagMatch = tagRegex.exec(content)) !== null) {
+            const tagHtml = tagMatch[0];
+            const innerText = tagMatch[1]?.replace(/<[^>]*>/g, '').replace(/^@/, '').trim();
+            const labelMatch = /data-label="([^"]+)"/i.exec(tagHtml);
+            const idMatch = /data-id="([^"]+)"/i.exec(tagHtml);
+
+            const label = labelMatch ? labelMatch[1].trim() : innerText;
+            const entityId = idMatch ? idMatch[1].trim() : '';
+
+            let matchedKey: string | null = null;
+            if (entityId && idToKey[entityId.toLowerCase()]) {
+              matchedKey = idToKey[entityId.toLowerCase()];
+            } else if (label && nameToKey[label.toLowerCase()]) {
+              matchedKey = nameToKey[label.toLowerCase()];
+            } else if (innerText && nameToKey[innerText.toLowerCase()]) {
+              matchedKey = nameToKey[innerText.toLowerCase()];
             }
 
-            // 2. Also check @Name pattern in plain text
-            const atRegex = /@([A-Z][a-zA-Z0-9_]+(?:\s+[A-Z][a-zA-Z0-9_]+)?)/g;
-            let atMatch;
-            while ((atMatch = atRegex.exec(plain)) !== null) {
-              const name = atMatch[1].trim();
-              const lower = name.toLowerCase();
-              if (charMap[lower] && charMap[lower].count === 0) {
-                charMap[lower].count++;
-                totalMentions++;
+            if (matchedKey) {
+              sceneOccurrences[matchedKey] = (sceneOccurrences[matchedKey] || 0) + 1;
+            } else if (label || innerText) {
+              const fallbackName = label || innerText;
+              const fallbackKey = `dyn-${fallbackName.toLowerCase()}`;
+              if (!entityMap[fallbackKey]) {
+                entityMap[fallbackKey] = {
+                  id: fallbackKey,
+                  name: fallbackName,
+                  count: 0,
+                  entityType: 'character',
+                  role: 'Mentioned Entity',
+                  scenesAppeared: [],
+                };
+                nameToKey[fallbackName.toLowerCase()] = fallbackKey;
               }
+              sceneOccurrences[fallbackKey] = (sceneOccurrences[fallbackKey] || 0) + 1;
+            }
+          }
+
+          // Strip mention spans before narrative scanning to prevent double counting
+          const proseWithoutMentions = content
+            .replace(/<span[^>]*data-type="mention"[^>]*>[\s\S]*?<\/span>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ');
+
+          // B. Scan plain text @Name patterns (if typed manually without autocomplete)
+          const atRegex = /@([a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+(?:\s+[a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+)?)/g;
+          let atMatch;
+          while ((atMatch = atRegex.exec(proseWithoutMentions)) !== null) {
+            const rawName = atMatch[1].trim();
+            const rawKey = nameToKey[rawName.toLowerCase()];
+            if (rawKey) {
+              sceneOccurrences[rawKey] = (sceneOccurrences[rawKey] || 0) + 1;
+            }
+          }
+
+          // C. Real text scanning: Find occurrences of character and location names in natural prose
+          Object.entries(entityMap).forEach(([key, entity]) => {
+            const searchNames = [entity.name];
+            // If multi-word name (e.g. "Elena Vance" or "Castle Greyhaven"), also search first distinctive part
+            const parts = entity.name.split(/\s+/);
+            if (parts.length > 1 && parts[0].length >= 4 && !['the', 'lord', 'lady', 'king', 'queen', 'sir'].includes(parts[0].toLowerCase())) {
+              searchNames.push(parts[0]);
             }
 
-            // 3. Check direct character name references in narrative
-            Object.values(charMap).forEach((char) => {
-              if (char.name && char.name.length >= 3) {
-                const escaped = char.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const regex = new RegExp(`\\b${escaped}\\b`, "gi");
-                const occurrences = (plain.match(regex) || []).length;
-                if (occurrences > char.count) {
-                  totalMentions += occurrences - char.count;
-                  char.count = occurrences;
+            let entityProseMatches = 0;
+            searchNames.forEach(targetName => {
+              if (targetName && targetName.length >= 3) {
+                try {
+                  const escaped = targetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  // Unicode-safe word boundaries
+                  const regex = new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'gui');
+                  const matches = proseWithoutMentions.match(regex);
+                  if (matches) {
+                    entityProseMatches += matches.length;
+                  }
+                } catch {
+                  // Fallback for environments without Unicode property escapes
+                  const escaped = targetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+                  const matches = proseWithoutMentions.match(regex);
+                  if (matches) {
+                    entityProseMatches += matches.length;
+                  }
                 }
               }
             });
-          }
+
+            if (entityProseMatches > 0) {
+              sceneOccurrences[key] = (sceneOccurrences[key] || 0) + entityProseMatches;
+            }
+          });
+
+          // Aggregate scene occurrences into entityMap
+          Object.entries(sceneOccurrences).forEach(([key, count]) => {
+            if (entityMap[key] && count > 0) {
+              entityMap[key].count += count;
+              totalMentions += count;
+              entityMap[key].scenesAppeared.push({
+                id: item.id,
+                title: item.title,
+                count,
+              });
+            }
+          });
         }
         if (item.children) scanForMentions(item.children);
       }
@@ -269,25 +437,39 @@ export default function Dashboard() {
 
     scanForMentions(manuscript);
 
-    const sortedMentions = Object.values(charMap)
+    const sortedMentions = Object.values(entityMap)
       .sort((a, b) => b.count - a.count);
 
-    return { totalMentions, sortedMentions, scenesScanned };
+    const characterCount = sortedMentions.filter(m => m.entityType === 'character').length;
+    const locationCount = sortedMentions.filter(m => m.entityType === 'location').length;
+
+    return {
+      totalMentions,
+      sortedMentions,
+      characterCount,
+      locationCount,
+      scenesScanned,
+    };
   }, [activeProject, activeProjectData]);
 
   // Filtered mentions for expanded World Radar modal
   const filteredRadarMentions = useMemo(() => {
     return worldRadarStats.sortedMentions.filter((item) => {
+      // Filter by entity type (All / Characters / Locations)
+      if (radarEntityType === 'characters' && item.entityType !== 'character') return false;
+      if (radarEntityType === 'locations' && item.entityType !== 'location') return false;
+
       const matchesSearch = item.name.toLowerCase().includes(radarSearch.toLowerCase()) ||
         (item.role && item.role.toLowerCase().includes(radarSearch.toLowerCase())) ||
-        (item.description && item.description.toLowerCase().includes(radarSearch.toLowerCase()));
+        (item.description && item.description.toLowerCase().includes(radarSearch.toLowerCase())) ||
+        item.scenesAppeared.some(s => s.title.toLowerCase().includes(radarSearch.toLowerCase()));
       if (!matchesSearch) return false;
 
       if (radarFilter === 'active') return item.count > 0;
       if (radarFilter === 'silent') return item.count === 0;
       return true;
     });
-  }, [worldRadarStats.sortedMentions, radarSearch, radarFilter]);
+  }, [worldRadarStats.sortedMentions, radarSearch, radarFilter, radarEntityType]);
 
   // Filtered Tasks
   const filteredTasks = useMemo(() => {
@@ -1010,84 +1192,164 @@ export default function Dashboard() {
                       </p>
                     ) : null}
                   </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleManualScan}
+                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors"
+                      title="Re-scan manuscript text now"
+                    >
+                      <RefreshCw className={cn("w-3.5 h-3.5", isScanning && "animate-spin text-[#8c503c]")} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsRadarExpanded(true);
+                      }}
+                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider"
+                      title="Expand World Radar to full screen"
+                    >
+                      <span className="hidden sm:inline">Expand</span>
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Entity Type Tabs in Mini Card */}
+                <div 
+                  className="flex items-center gap-1 mb-2 pb-1 text-[9px] font-bold uppercase tracking-wider border-b border-[#e5e0d5]/60"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsRadarExpanded(true);
-                    }}
-                    className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider"
-                    title="Expand World Radar to full screen"
+                    onClick={() => setMiniRadarType('all')}
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-xs transition-colors",
+                      miniRadarType === 'all'
+                        ? "bg-[#8c503c] text-white"
+                        : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
+                    )}
                   >
-                    <span className="hidden sm:inline">Expand</span>
-                    <Maximize2 className="w-3.5 h-3.5" />
+                    All ({worldRadarStats.sortedMentions.length})
+                  </button>
+                  <button
+                    onClick={() => setMiniRadarType('characters')}
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5",
+                      miniRadarType === 'characters'
+                        ? "bg-[#8c503c] text-white"
+                        : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
+                    )}
+                  >
+                    <Users className="w-2.5 h-2.5" />
+                    Chars ({worldRadarStats.characterCount})
+                  </button>
+                  <button
+                    onClick={() => setMiniRadarType('locations')}
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5",
+                      miniRadarType === 'locations'
+                        ? "bg-[#8c503c] text-white"
+                        : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
+                    )}
+                  >
+                    <MapPin className="w-2.5 h-2.5" />
+                    Locs ({worldRadarStats.locationCount})
                   </button>
                 </div>
 
-                {worldRadarStats.sortedMentions.length > 0 ? (
-                  <div className="flex-1 overflow-y-auto pr-1 lg:pr-2 custom-scrollbar min-h-0">
-                    <div className="flex flex-col justify-start space-y-2 lg:space-y-3">
-                      {worldRadarStats.sortedMentions.map((item) => {
-                        const topCount = Math.max(1, worldRadarStats.sortedMentions[0].count);
-                        const percentage = item.count > 0 
-                          ? Math.max(12, Math.round((item.count / topCount) * 100))
-                          : 0;
+                {(() => {
+                  const miniItems = worldRadarStats.sortedMentions.filter(item => {
+                    if (miniRadarType === 'characters') return item.entityType === 'character';
+                    if (miniRadarType === 'locations') return item.entityType === 'location';
+                    return true;
+                  });
 
-                        return (
-                          <div
-                            key={item.id}
-                            className="relative group shrink-0"
-                            onClick={(e) => {
-                              // Clicking row directly also opens expanded view or character dossier
-                              e.stopPropagation();
-                              setIsRadarExpanded(true);
-                            }}
-                          >
-                            <div className="flex justify-between items-end mb-1">
-                              <span className="text-[10px] lg:text-xs font-serif font-bold text-[#4a3225] group-hover:text-[#8c503c] transition-colors truncate pr-2">
-                                {item.name}
-                              </span>
-                              <span className="text-[#8c503c] font-sans text-[8px] lg:text-[10px] font-bold shrink-0">
-                                {item.count} {item.count === 1 ? 'mention' : 'mentions'}
-                              </span>
-                            </div>
-                            <div className="h-1 lg:h-1.5 w-full bg-[#e5e0d5] rounded-sm overflow-hidden border border-[#d49a89]/20">
-                              <div
-                                className={cn(
-                                  "h-full rounded-sm transition-all duration-700 relative",
-                                  item.count > 0
-                                    ? "bg-gradient-to-r from-[#d49a89] to-[#8c503c]"
-                                    : "bg-stone-300"
-                                )}
-                                style={{ width: `${Math.max(percentage, item.count > 0 ? 8 : 0)}%` }}
-                              >
-                                {item.count > 0 && (
-                                  <div className="absolute top-0 right-0 bottom-0 w-4 bg-white/20 blur-[2px]" />
-                                )}
+                  if (miniItems.length === 0) {
+                    return (
+                      <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                        <Users className="w-6 h-6 text-stone-300 mb-1 stroke-[1.5]" />
+                        <p className="text-[8px] lg:text-[9px] font-bold uppercase tracking-widest text-stone-400">
+                          No Entities Tracked
+                        </p>
+                        <p className="text-[9px] text-stone-400 mt-0.5">
+                          Type character or location names in Writing Studio to see live frequency.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const topCount = Math.max(1, miniItems[0]?.count || 1);
+
+                  return (
+                    <div className="flex-1 overflow-y-auto pr-1 lg:pr-2 custom-scrollbar min-h-0">
+                      <div className="flex flex-col justify-start space-y-2 lg:space-y-2.5">
+                        {miniItems.map((item) => {
+                          const percentage = item.count > 0 
+                            ? Math.max(12, Math.round((item.count / topCount) * 100))
+                            : 0;
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="relative group shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRadarExpanded(true);
+                              }}
+                            >
+                              <div className="flex justify-between items-end mb-1">
+                                <div className="flex items-center gap-1 min-w-0 pr-2">
+                                  {item.entityType === 'character' ? (
+                                    <Users className="w-2.5 h-2.5 text-[#8c503c] shrink-0" />
+                                  ) : (
+                                    <MapPin className="w-2.5 h-2.5 text-amber-700 shrink-0" />
+                                  )}
+                                  <span className="text-[10px] lg:text-xs font-serif font-bold text-[#4a3225] group-hover:text-[#8c503c] transition-colors truncate">
+                                    {item.name}
+                                  </span>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="text-[#8c503c] font-sans text-[8px] lg:text-[9px] font-bold">
+                                    {item.count} {item.count === 1 ? 'mention' : 'mentions'}
+                                  </span>
+                                  {item.scenesAppeared.length > 0 && (
+                                    <span className="text-stone-400 font-serif text-[7px] lg:text-[8px] ml-1">
+                                      ({item.scenesAppeared.length} {item.scenesAppeared.length === 1 ? 'scene' : 'scenes'})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="h-1 lg:h-1.5 w-full bg-[#e5e0d5] rounded-sm overflow-hidden border border-[#d49a89]/20">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-sm transition-all duration-700 relative",
+                                    item.count > 0
+                                      ? item.entityType === 'character'
+                                        ? "bg-gradient-to-r from-[#d49a89] to-[#8c503c]"
+                                        : "bg-gradient-to-r from-amber-300 to-amber-600"
+                                      : "bg-stone-300"
+                                  )}
+                                  style={{ width: `${Math.max(percentage, item.count > 0 ? 8 : 0)}%` }}
+                                >
+                                  {item.count > 0 && (
+                                    <div className="absolute top-0 right-0 bottom-0 w-4 bg-white/20 blur-[2px]" />
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-2 text-center">
-                    <Users className="w-6 h-6 text-stone-300 mb-1 stroke-[1.5]" />
-                    <p className="text-[8px] lg:text-[9px] font-bold uppercase tracking-widest text-stone-400">
-                      No Characters Tracked
-                    </p>
-                    <p className="text-[9px] text-stone-400 mt-0.5">
-                      Type @ in Writing Studio or add characters to track frequency.
-                    </p>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Card footer prompt */}
                 {worldRadarStats.sortedMentions.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-[#e5e0d5] flex items-center justify-between text-[10px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-3 py-2 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
-                    <span>View all {worldRadarStats.sortedMentions.length} characters</span>
-                    <Maximize2 className="w-3.5 h-3.5 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
+                  <div className="mt-2.5 pt-2.5 border-t border-[#e5e0d5] flex items-center justify-between text-[9px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-2.5 py-1.5 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
+                    <span>View all {worldRadarStats.sortedMentions.length} entities</span>
+                    <Maximize2 className="w-3 h-3 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
                   </div>
                 )}
               </div>
@@ -1143,14 +1405,22 @@ export default function Dashboard() {
                       ) : null}
                     </div>
                     <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#4A3225]">
-                      Character Frequency & Narrative Density
+                      Narrative Frequency & World Density
                     </h2>
                     <p className="text-xs text-stone-600 font-serif mt-0.5">
-                      Analyzed from {worldRadarStats.scenesScanned} scenes in "{activeProject?.title}". Real-time breakdown of character mentions and relative presence.
+                      Dynamically scanned in real-time across {worldRadarStats.scenesScanned} manuscript scenes in "{activeProject?.title}".
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={handleManualScan}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider bg-white border border-[#E5E0D5] text-[#4A3225] hover:border-[#8C503C] hover:text-[#8C503C] transition-colors shadow-2xs"
+                      title="Re-scan manuscript content"
+                    >
+                      <RefreshCw className={cn("w-3.5 h-3.5", isScanning && "animate-spin text-[#8C503C]")} />
+                      <span>{isScanning ? "Scanning..." : "Re-scan"}</span>
+                    </button>
                     {activeProject && (
                       <button
                         onClick={() => {
@@ -1176,7 +1446,7 @@ export default function Dashboard() {
 
                 {/* Stats Summary & Search / Filter Controls */}
                 <div className="px-4 sm:px-6 py-3 bg-[#FCFAF5] border-b border-[#E5E0D5] flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs">
+                  <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 text-xs">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
                       <BarChart2 className="w-3.5 h-3.5 text-[#8C503C]" />
                       <span className="font-bold text-[#4A3225]">{worldRadarStats.totalMentions}</span>
@@ -1184,17 +1454,27 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
                       <Users className="w-3.5 h-3.5 text-[#8C503C]" />
-                      <span className="font-bold text-[#4A3225]">{worldRadarStats.sortedMentions.length}</span>
-                      <span className="text-stone-500">Characters Tracked</span>
+                      <span className="font-bold text-[#4A3225]">{worldRadarStats.characterCount}</span>
+                      <span className="text-stone-500">Characters</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
+                      <MapPin className="w-3.5 h-3.5 text-amber-700" />
+                      <span className="font-bold text-[#4A3225]">{worldRadarStats.locationCount}</span>
+                      <span className="text-stone-500">Locations</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E5E0D5] rounded-sm shadow-2xs">
+                      <BookOpen className="w-3.5 h-3.5 text-stone-600" />
+                      <span className="font-bold text-[#4A3225]">{worldRadarStats.scenesScanned}</span>
+                      <span className="text-stone-500">Scenes Scanned</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
-                    <div className="relative w-full sm:w-52">
+                  <div className="flex items-center flex-wrap gap-2 flex-1 sm:flex-initial justify-end">
+                    <div className="relative w-full sm:w-48">
                       <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
                       <input
                         type="text"
-                        placeholder="Search name, role, details..."
+                        placeholder="Search name, role, scene..."
                         value={radarSearch}
                         onChange={(e) => setRadarSearch(e.target.value)}
                         className="w-full pl-8 pr-6 py-1 bg-white border border-[#E5E0D5] rounded-sm text-xs font-serif focus:outline-none focus:ring-1 focus:ring-[#8C503C]"
@@ -1209,6 +1489,40 @@ export default function Dashboard() {
                       )}
                     </div>
 
+                    {/* Entity Type Filter Tabs */}
+                    <div className="flex items-center bg-[#E5E0D5]/70 p-0.5 rounded-sm border border-[#E5E0D5] text-[10px] font-bold uppercase tracking-wider">
+                      <button
+                        onClick={() => setRadarEntityType('all')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all",
+                          radarEntityType === 'all' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setRadarEntityType('characters')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all flex items-center gap-1",
+                          radarEntityType === 'characters' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        <Users className="w-3 h-3" />
+                        Chars ({worldRadarStats.characterCount})
+                      </button>
+                      <button
+                        onClick={() => setRadarEntityType('locations')}
+                        className={cn(
+                          "px-2 py-1 rounded-sm transition-all flex items-center gap-1",
+                          radarEntityType === 'locations' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                        )}
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Locs ({worldRadarStats.locationCount})
+                      </button>
+                    </div>
+
+                    {/* Activity Status Filter Tabs */}
                     <div className="flex items-center bg-[#E5E0D5]/70 p-0.5 rounded-sm border border-[#E5E0D5] text-[10px] font-bold uppercase tracking-wider">
                       <button
                         onClick={() => setRadarFilter('all')}
@@ -1217,7 +1531,7 @@ export default function Dashboard() {
                           radarFilter === 'all' ? "bg-white text-[#4A3225] shadow-2xs" : "text-stone-600 hover:text-stone-900"
                         )}
                       >
-                        All ({worldRadarStats.sortedMentions.length})
+                        All
                       </button>
                       <button
                         onClick={() => setRadarFilter('active')}
@@ -1241,7 +1555,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Modal Body: Full grid showing all characters without vertical scroll crunch */}
+                {/* Modal Body: Full grid showing all scanned entities with scene breakdowns */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-3">
                   {filteredRadarMentions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -1261,7 +1575,7 @@ export default function Dashboard() {
                           >
                             <div>
                               <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex items-start gap-2.5">
+                                <div className="flex items-start gap-2.5 min-w-0">
                                   <span className={cn(
                                     "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5",
                                     idx === 0 && item.count > 0 ? "bg-[#8C503C] text-white shadow-xs" :
@@ -1270,12 +1584,22 @@ export default function Dashboard() {
                                   )}>
                                     #{idx + 1}
                                   </span>
-                                  <div>
-                                    <h4 className="font-serif font-bold text-base text-[#4A3225] group-hover:text-[#8C503C] transition-colors leading-tight">
-                                      {item.name}
-                                    </h4>
-                                    <span className="text-[10px] font-bold text-[#8C503C] tracking-widest uppercase inline-block mt-0.5">
-                                      {item.role || "Character"}
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <h4 className="font-serif font-bold text-base text-[#4A3225] group-hover:text-[#8C503C] transition-colors leading-tight truncate">
+                                        {item.name}
+                                      </h4>
+                                      <span className={cn(
+                                        "text-[8px] font-bold px-1.5 py-0.5 rounded-xs uppercase tracking-wider shrink-0 border",
+                                        item.entityType === 'character'
+                                          ? "bg-rose-50 text-rose-800 border-rose-200"
+                                          : "bg-amber-50 text-amber-800 border-amber-200"
+                                      )}>
+                                        {item.entityType === 'character' ? 'Character' : 'Location'}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-[#8C503C] tracking-widest uppercase inline-block mt-0.5 truncate">
+                                      {item.role || (item.entityType === 'character' ? "Character" : "Location")}
                                     </span>
                                   </div>
                                 </div>
@@ -1302,7 +1626,7 @@ export default function Dashboard() {
                               )}
                             </div>
 
-                            {/* Relative Frequency Bar */}
+                            {/* Relative Frequency Bar & Scenes breakdown */}
                             <div className="mt-2 pt-2 border-t border-stone-100">
                               <div className="flex justify-between text-[9px] text-stone-500 mb-1 font-sans">
                                 <span>Manuscript Density</span>
@@ -1313,27 +1637,56 @@ export default function Dashboard() {
                                   className={cn(
                                     "h-full rounded-xs transition-all duration-700",
                                     item.count > 0
-                                      ? "bg-gradient-to-r from-[#D49A89] via-[#B8785E] to-[#8C503C]"
+                                      ? item.entityType === 'character'
+                                        ? "bg-gradient-to-r from-[#D49A89] via-[#B8785E] to-[#8C503C]"
+                                        : "bg-gradient-to-r from-amber-300 via-amber-500 to-amber-700"
                                       : "bg-stone-200"
                                   )}
                                   style={{ width: `${Math.max(percentage, item.count > 0 ? 6 : 0)}%` }}
                                 />
                               </div>
 
+                              {/* Scene Appearance Pills */}
+                              {item.scenesAppeared.length > 0 && (
+                                <div className="mt-2.5 pt-2 border-t border-stone-100">
+                                  <span className="text-[9px] font-bold text-stone-500 font-serif uppercase tracking-wider block mb-1">
+                                    Appears in {item.scenesAppeared.length} {item.scenesAppeared.length === 1 ? 'scene' : 'scenes'}:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto custom-scrollbar">
+                                    {item.scenesAppeared.map((scene) => (
+                                      <span
+                                        key={scene.id}
+                                        className="text-[9px] bg-[#F4EFE6] text-[#4A3225] border border-[#E5E0D5] px-1.5 py-0.5 rounded-xs font-serif flex items-center gap-1"
+                                        title={`${scene.count} mention(s) in "${scene.title}"`}
+                                      >
+                                        <span className="truncate max-w-[120px]">{scene.title}</span>
+                                        <span className="font-bold text-[#8C503C]">×{scene.count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="mt-3 flex items-center justify-between">
                                 <span className="text-[10px] text-stone-400 font-serif">
-                                  {item.count > 0 ? 'Active in scenes' : 'Not mentioned yet'}
+                                  {item.count > 0
+                                    ? `Found in ${item.scenesAppeared.length} scene${item.scenesAppeared.length === 1 ? '' : 's'}`
+                                    : 'Not mentioned yet in manuscript'}
                                 </span>
                                 <button
                                   onClick={() => {
                                     setIsRadarExpanded(false);
                                     if (activeProject) {
-                                      navigate(`/project/${activeProject.id}/characters`);
+                                      if (item.entityType === 'character') {
+                                        navigate(`/project/${activeProject.id}/characters`);
+                                      } else {
+                                        navigate(`/project/${activeProject.id}/workspace/locations`);
+                                      }
                                     }
                                   }}
                                   className="text-[10px] font-bold uppercase tracking-wider text-[#8C503C] hover:text-[#4A3225] flex items-center gap-1 group-hover:underline"
                                 >
-                                  <span>View Dossier</span>
+                                  <span>{item.entityType === 'character' ? 'View Dossier' : 'View Location'}</span>
                                   <ArrowUpRight className="w-3 h-3" />
                                 </button>
                               </div>
@@ -1346,10 +1699,10 @@ export default function Dashboard() {
                     <div className="p-8 text-center bg-white rounded-sm border border-[#E5E0D5]">
                       <Users className="w-8 h-8 text-stone-400 mx-auto mb-2" />
                       <p className="font-serif font-bold text-stone-700 text-sm">
-                        No characters found matching filter
+                        No entities found matching filter
                       </p>
                       <p className="text-xs text-stone-500 font-serif mt-1">
-                        Try changing your search term or select "All" characters above.
+                        Try changing your search term or select "All" above.
                       </p>
                     </div>
                   )}
@@ -1357,7 +1710,7 @@ export default function Dashboard() {
 
                 {/* Modal Footer */}
                 <div className="p-3 sm:p-4 bg-[#F4EFE6] border-t border-[#E5E0D5] flex items-center justify-between text-xs text-stone-600 font-serif">
-                  <span>Tip: In Writing Studio, type <strong className="text-[#8C503C]">@</strong> to quickly mention any character in your text.</span>
+                  <span>Tip: In Writing Studio, type character names directly or use <strong className="text-[#8C503C]">@</strong> to tag them into your narrative.</span>
                   <button
                     onClick={() => setIsRadarExpanded(false)}
                     className="px-4 py-1.5 bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors shadow-2xs"

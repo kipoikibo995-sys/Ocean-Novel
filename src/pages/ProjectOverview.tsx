@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "motion/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft,
   PenTool,
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { useProject } from "@/context/ProjectContext";
 import { storage } from "@/lib/storage";
 import { Download } from "lucide-react";
 import { ExportModal } from "@/components/ExportModal";
@@ -34,6 +33,12 @@ export default function ProjectOverview() {
     savedProject?.coverUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
   );
 
+  useEffect(() => {
+    if (savedProject?.coverUrl) {
+      setCoverUrl(savedProject.coverUrl);
+    }
+  }, [savedProject?.coverUrl]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && id) {
@@ -47,13 +52,50 @@ export default function ProjectOverview() {
     }
   };
 
+  // Real chapter and live word count calculation
+  const countChapters = (items: any[] = []): number => {
+    let count = 0;
+    for (const item of items) {
+      if (item.type === 'chapter') count++;
+      if (item.children) count += countChapters(item.children);
+    }
+    return count;
+  };
+
+  const countWords = (items: any[] = []): number => {
+    let words = 0;
+    for (const item of items) {
+      if (item.type === 'scene' && item.content) {
+        const text = item.content.replace(/<[^>]*>/g, ' ').trim();
+        if (text) {
+          words += text.split(/\s+/).filter(Boolean).length;
+        }
+      }
+      if (item.children) words += countWords(item.children);
+    }
+    return words;
+  };
+
+  const actualChaptersCount = countChapters(projectData?.manuscript || []);
+  const liveWords = projectData?.manuscript ? countWords(projectData.manuscript) : (savedProject?.currentWords || 0);
+  const totalWords = Math.max(liveWords, savedProject?.currentWords || 0);
+  const targetWords = savedProject?.wordGoal || 50000;
+
   const projectStats = {
-    totalWords: savedProject?.currentWords || 0,
-    targetWords: savedProject?.wordGoal || 50000,
+    totalWords,
+    targetWords,
   };
   
   const displayTitle = savedProject?.title || "Untitled";
   const displayGenre = savedProject?.genre || "Fiction";
+
+  // Plot events count
+  const plotEvents = projectData?.plotEvents || [];
+  const plannedEventsCount = plotEvents.length;
+  const completedEventsCount = plotEvents.filter((e: any) => e.completed || e.status === 'completed').length;
+  const plotProgressPct = plannedEventsCount > 0 
+    ? Math.min(100, Math.round((completedEventsCount / plannedEventsCount) * 100)) 
+    : Math.min(100, Math.round((totalWords / targetWords) * 100));
 
   // Build real activities list based on actual project state
   const activities = [
@@ -68,13 +110,13 @@ export default function ProjectOverview() {
     {
       id: "act-2",
       action: "Manuscript Progress Tracked",
-      details: `${(savedProject?.currentWords || 0).toLocaleString()} words written towards ${savedProject?.wordGoal ? (savedProject.wordGoal / 1000).toFixed(0) + 'k' : '50k'} target`,
+      details: `${totalWords.toLocaleString()} words written towards ${(targetWords / 1000).toFixed(0)}k target`,
       time: "Updated today",
     },
     {
       id: "act-3",
       action: "World Lore & Cast Established",
-      details: `${projectData?.characters?.length || 4} characters and ${projectData?.locations?.length || 3} key story locations documented`,
+      details: `${projectData?.characters?.length ?? 0} characters and ${projectData?.locations?.length ?? 0} key story locations documented`,
       time: "Active in Bible",
     },
   ];
@@ -179,10 +221,10 @@ export default function ProjectOverview() {
                 <PenTool className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {projectStats.totalWords.toLocaleString()}
+                {totalWords.toLocaleString()}
               </div>
               <div className="text-xs text-[#965A5A] mt-1 font-medium">
-                +2,100 this week
+                {targetWords > 0 ? `${Math.round((totalWords / targetWords) * 100)}% of target` : "In progress"}
               </div>
             </div>
 
@@ -194,13 +236,13 @@ export default function ProjectOverview() {
                 <Target className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {projectStats.targetWords.toLocaleString()}
+                {targetWords.toLocaleString()}
               </div>
               <div className="h-1.5 w-full bg-[#E5E0D5] mt-3 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#965A5A]"
                   style={{
-                    width: `${Math.round((projectStats.totalWords / projectStats.targetWords) * 100)}%`,
+                    width: `${Math.min(100, Math.round((totalWords / targetWords) * 100))}%`,
                   }}
                 />
               </div>
@@ -214,10 +256,10 @@ export default function ProjectOverview() {
                 <LayoutDashboard className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {((savedProject?.currentWords || 0) > 1000 ? Math.ceil((savedProject?.currentWords || 0) / 2500) : 1)}
+                {actualChaptersCount}
               </div>
               <div className="text-xs text-stone-500 mt-1">
-                {1} in draft
+                {actualChaptersCount > 0 ? `${actualChaptersCount} in manuscript` : "No chapters yet"}
               </div>
             </div>
 
@@ -229,9 +271,9 @@ export default function ProjectOverview() {
                 <Clock className="w-4 h-4 text-stone-400" />
               </div>
               <div className="text-2xl font-serif font-bold text-stone-800">
-                {Math.ceil((savedProject?.currentWords || 0) / 500)}h
+                {totalWords > 0 ? `${Math.max(1, Math.round(totalWords / 250))}h` : "0h"}
               </div>
-              <div className="text-xs text-stone-500 mt-1">Active writing</div>
+              <div className="text-xs text-stone-500 mt-1">Estimated drafting</div>
             </div>
           </motion.div>
 
@@ -291,13 +333,13 @@ export default function ProjectOverview() {
                       fill="transparent"
                       strokeDasharray="251.2"
                       strokeDashoffset={
-                        251.2 * (1 - Math.min(100, Math.ceil((projectStats.totalWords / projectStats.targetWords) * 100)) / 100)
+                        251.2 * (1 - plotProgressPct / 100)
                       }
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="font-serif text-xl font-bold text-stone-800">
-                      {Math.min(100, Math.ceil((projectStats.totalWords / projectStats.targetWords) * 100))}%
+                      {plotProgressPct}%
                     </span>
                   </div>
                 </div>
@@ -306,9 +348,9 @@ export default function ProjectOverview() {
                     Plot Coverage
                   </h3>
                   <p className="text-sm text-stone-600">
-                    {Math.ceil((projectStats.totalWords / projectStats.targetWords) * 20)} out of{" "}
-                    {20} planned events have been
-                    written.
+                    {plannedEventsCount > 0 
+                      ? `${completedEventsCount} of ${plannedEventsCount} planned plot events reached.`
+                      : "No plot events structured yet. Open Timeline to begin."}
                   </p>
                 </div>
               </div>

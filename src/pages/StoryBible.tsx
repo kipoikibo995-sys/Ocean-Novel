@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { storage, StoryBibleData } from "@/lib/storage";
-import { MOCK_PROJECT } from "@/mockData";
+
 import { Check, BookOpen, ArrowLeft } from "lucide-react";
 
 export default function StoryBible() {
@@ -15,33 +15,40 @@ export default function StoryBible() {
   const [activeTab, setActiveTab] = useState("details");
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Initialize data from storage or default
-  const [form, setForm] = useState<StoryBibleData>(() => {
-    const project = storage.getProjects().find((p) => p.id === id);
-    const data = storage.getProjectData(id);
+  const getInitialBible = (projId: string): StoryBibleData => {
+    const project = storage.getProjects().find((p) => p.id === projId);
+    const data = storage.getProjectData(projId);
     const bible = data?.storyBible;
 
     return {
-      title: bible?.title ?? (project?.title || MOCK_PROJECT.title),
-      genre: bible?.genre ?? (project?.genre || MOCK_PROJECT.genre),
-      subgenre: bible?.subgenre ?? "Mystery / Suspense",
+      title: bible?.title ?? (project?.title || 'Untitled Project'),
+      genre: bible?.genre ?? (project?.genre || 'Fantasy'),
+      subgenre: bible?.subgenre ?? "High Fantasy / Epic",
       targetAudience: bible?.targetAudience ?? (project?.audience || "Adult"),
-      pov: bible?.pov ?? "First Person",
-      tone: bible?.tone ?? "Dark, Suspenseful",
-      premise: bible?.premise ?? (project?.logline || MOCK_PROJECT.premise),
-      mainConflict: bible?.mainConflict ?? "Sarah must uncover the truth about her sister's disappearance while navigating the hostility of her estranged family and a town that wants its secrets buried.",
-      storyGoal: bible?.storyGoal ?? "Discover what happened to Emily Cole.",
-      themes: bible?.themes ?? "Grief, memory, isolation, family secrets.",
-      timePeriod: bible?.timePeriod ?? "Present Day",
-      primarySetting: bible?.primarySetting ?? "Greyhaven (Fictional coastal town, Maine)",
-      worldDescription: bible?.worldDescription ?? "An isolated, fading fishing town characterized by dense fog, jagged cliffs, and a close-knit, secretive community.",
-      importantRules: bible?.importantRules ?? "The town operates on its own unspoken social rules; outsiders are not trusted. The local police force is small and often turns a blind eye to influential families.",
-      narrativeStyle: bible?.narrativeStyle ?? "Introspective, slightly unreliable narrator. Focus on sensory details related to cold, dampness, and isolation.",
-      dialogueStyle: bible?.dialogueStyle ?? "Clipped, evasive. Characters rarely say exactly what they mean.",
-      pacing: bible?.pacing ?? "Slow burn building to a fast-paced climax.",
-      aiInstructions: bible?.aiInstructions ?? "When assisting with writing, favor shorter, punchier sentences during suspenseful moments. Avoid melodrama. Emphasize the harsh environment.",
+      pov: bible?.pov ?? "Third Person Limited",
+      tone: bible?.tone ?? "Epic, Immersive",
+      premise: bible?.premise ?? (project?.logline || 'An epic journey unfolds.'),
+      mainConflict: bible?.mainConflict ?? (project?.logline || "The realm faces a looming catastrophe that threatens the fragile peace."),
+      storyGoal: bible?.storyGoal ?? "Protect the realm and restore balance.",
+      themes: bible?.themes ?? "Honor, sacrifice, destiny, legacy.",
+      timePeriod: bible?.timePeriod ?? "Age of Wonders",
+      primarySetting: bible?.primarySetting ?? "The Realm Capital",
+      worldDescription: bible?.worldDescription ?? "A sweeping world of ancient sanctuaries, towering peaks, and hidden kingdoms.",
+      importantRules: bible?.importantRules ?? "Ancient oaths bind the realm; forbidden magics exact a heavy toll on their wielders.",
+      narrativeStyle: bible?.narrativeStyle ?? "Atmospheric, evocative narrative pacing with rich sensory imagery.",
+      dialogueStyle: bible?.dialogueStyle ?? "Nuanced, character-driven with subtle subtext.",
+      pacing: bible?.pacing ?? "Measured build-up leading to high-stakes climaxes.",
+      aiInstructions: bible?.aiInstructions ?? "Maintain consistent world lore, character motivations, and thematic resonance.",
     };
-  });
+  };
+
+  // Initialize data from storage or default
+  const [form, setForm] = useState<StoryBibleData>(() => getInitialBible(id));
+
+  // Keep form in sync when project ID in URL changes
+  useEffect(() => {
+    setForm(getInitialBible(id));
+  }, [id]);
 
   const handleChange = (field: keyof StoryBibleData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

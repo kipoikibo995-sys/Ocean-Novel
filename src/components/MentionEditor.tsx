@@ -8,7 +8,6 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import tippy from 'tippy.js';
-import { MOCK_CHARACTERS } from '@/mockData';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, 
   Heading1, Heading2, Heading3, List, ListOrdered, Quote, 
@@ -92,9 +91,12 @@ const MentionList = forwardRef((props: any, ref) => {
 MentionList.displayName = 'MentionList';
 
 // Suggestion configuration
+
+let currentMentionItems: any[] = [];
+
 const suggestion = {
   items: ({ query }: { query: string }) => {
-    return MOCK_CHARACTERS.filter(item => item.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+    return currentMentionItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
   },
   render: () => {
     let component: ReactRenderer;
@@ -174,9 +176,15 @@ interface MentionEditorProps {
   onEntityClick: (entityId: string, entityType: 'character' | 'location') => void;
   onChange?: (value: string) => void;
   className?: string;
+  mentionItems?: any[];
 }
 
-export default function MentionEditor({ initialValue, onEntityClick, onChange, className = '' }: MentionEditorProps) {
+export default function MentionEditor({ initialValue, onEntityClick, onChange, className = '', mentionItems = [] }: MentionEditorProps) {
+  useEffect(() => {
+    currentMentionItems = mentionItems;
+  }, [mentionItems]);
+  currentMentionItems = mentionItems;
+
   const editor = useEditor({
     extensions: [
       StarterKit,

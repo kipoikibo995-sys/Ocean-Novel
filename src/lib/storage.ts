@@ -286,6 +286,9 @@ export const storage = {
     }
     
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: project.id } }));
+    }
     if (currentUserId) {
       project.userId = currentUserId;
       setDoc(doc(db, `users/${currentUserId}/projects/${project.id}`), project)
@@ -339,6 +342,9 @@ export const storage = {
     const newData = { ...existing, ...data, id };
     cachedProjectData[id] = newData;
     localStorage.setItem(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: id } }));
+    }
     
     const project = cachedProjects.find(p => p.id === id);
     if (project) {

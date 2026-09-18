@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   Search,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,11 @@ export function ProjectLayout() {
       label: "Overview",
       icon: LayoutDashboard,
       href: `/project/${location.pathname.split("/")[2] || "1"}`,
+    },
+    {
+      label: "Story Bible",
+      icon: BookOpen,
+      href: `/project/${location.pathname.split("/")[2] || "1"}/workspace/bible`,
     },
     {
       label: "Characters",

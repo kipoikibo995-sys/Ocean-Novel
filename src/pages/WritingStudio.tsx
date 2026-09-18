@@ -1,8 +1,9 @@
 import React, { ReactNode, useState, useEffect, useRef, useMemo } from "react";
-import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag } from "lucide-react";
+import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag, AlertTriangle, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MOCK_CHARACTERS, MOCK_LOCATIONS, MOCK_MANUSCRIPT, ManuscriptItem } from "@/mockData";
+import { ManuscriptItem } from "@/mockData";
 import MentionEditor from "@/components/MentionEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { storage, ProjectData } from "@/lib/storage";
@@ -82,7 +83,7 @@ export default function WritingStudio() {
       const data = storage.getProjectData(projectId);
       if (data?.characters && data.characters.length > 0) return data.characters;
     }
-    return MOCK_CHARACTERS;
+    return [];
   });
 
   const [locations, setLocations] = useState<any[]>(() => {
@@ -90,7 +91,7 @@ export default function WritingStudio() {
       const data = storage.getProjectData(projectId);
       if (data?.locations && data.locations.length > 0) return data.locations;
     }
-    return MOCK_LOCATIONS;
+    return [];
   });
 
   const [sceneNotes, setSceneNotes] = useState<Record<string, string>>(() => {
@@ -115,7 +116,7 @@ export default function WritingStudio() {
         return data.manuscript;
       }
     }
-    return MOCK_MANUSCRIPT;
+    return [];
   });
 
   // Active scene and content initialized with support for sceneParam or lastActiveSceneId
@@ -123,7 +124,7 @@ export default function WritingStudio() {
     const data = projectId ? storage.getProjectData(projectId) : null;
     const initManuscript = data?.manuscript && data.manuscript.length > 0 
       ? data.manuscript 
-      : MOCK_MANUSCRIPT;
+      : [];
     
     if (sceneParam && findNodeById(initManuscript, sceneParam)) {
       return sceneParam;
@@ -138,7 +139,7 @@ export default function WritingStudio() {
     const data = projectId ? storage.getProjectData(projectId) : null;
     const initManuscript = data?.manuscript && data.manuscript.length > 0 
       ? data.manuscript 
-      : MOCK_MANUSCRIPT;
+      : [];
     
     let targetId = findFirstSceneId(initManuscript);
     if (sceneParam && findNodeById(initManuscript, sceneParam)) {
@@ -154,7 +155,7 @@ export default function WritingStudio() {
     if (projectId) {
       const data = storage.getProjectData(projectId);
       if (data) {
-        const loadedManuscript = data.manuscript && data.manuscript.length > 0 ? data.manuscript : MOCK_MANUSCRIPT;
+        const loadedManuscript = data.manuscript && data.manuscript.length > 0 ? data.manuscript : [];
         setManuscript(loadedManuscript);
         
         let target = activeDocId;
@@ -169,8 +170,8 @@ export default function WritingStudio() {
         setActiveDocId(target);
         setActiveContent(findSceneContent(loadedManuscript, target));
 
-        setCharacters(data.characters && data.characters.length > 0 ? data.characters : MOCK_CHARACTERS);
-        setLocations(data.locations && data.locations.length > 0 ? data.locations : MOCK_LOCATIONS);
+        setCharacters(data.characters && data.characters.length > 0 ? data.characters : []);
+        setLocations(data.locations && data.locations.length > 0 ? data.locations : []);
         setSceneNotes(data.notes || {});
       }
     }
@@ -240,14 +241,50 @@ export default function WritingStudio() {
   const targetWords = currentProjectMeta?.wordGoal || 50000;
   const progressPercent = Math.min(100, Math.round((totalProjectWords / targetWords) * 100));
 
-  // Save timeout ref
+  // Save timeout and pending content refs for instant persistence
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingContentRef = useRef<{ docId: string; content: string } | null>(null);
+
+  const flushSave = () => {
+    if (!pendingContentRef.current || !projectId) return;
+    const { docId, content } = pendingContentRef.current;
+    pendingContentRef.current = null;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setManuscript(prev => {
+      const updateNode = (items: ManuscriptItem[]): ManuscriptItem[] => {
+        return items.map(item => {
+          if (item.id === docId) {
+            return { ...item, content };
+          }
+          if (item.children) {
+            return { ...item, children: updateNode(item.children) };
+          }
+          return item;
+        });
+      };
+      const updated = updateNode(prev);
+      storage.saveProjectData(projectId, { manuscript: updated });
+      return updated;
+    });
+    setIsSaving(false);
+  };
 
   useEffect(() => {
-    // Load content when switching active scene
+    // Flush any pending unsaved text before loading new scene
+    flushSave();
     const content = findSceneContent(manuscript, activeDocId);
     setActiveContent(content);
   }, [activeDocId]);
+
+  // Flush on unmount (e.g., navigating to Dashboard or other tabs)
+  useEffect(() => {
+    return () => {
+      flushSave();
+    };
+  }, [projectId]);
 
   const handleEntityClick = (entityId: string, entityType: 'character' | 'location') => {
     setSelectedEntity({ id: entityId, type: entityType });
@@ -295,30 +332,15 @@ export default function WritingStudio() {
   const handleContentChange = (newHtml: string) => {
     setActiveContent(newHtml);
     setIsSaving(true);
+    pendingContentRef.current = { docId: activeDocId, content: newHtml };
     
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
     saveTimeoutRef.current = setTimeout(() => {
-      setManuscript(prev => {
-        const updateNode = (items: ManuscriptItem[]): ManuscriptItem[] => {
-          return items.map(item => {
-            if (item.id === activeDocId) {
-              return { ...item, content: newHtml };
-            }
-            if (item.children) {
-              return { ...item, children: updateNode(item.children) };
-            }
-            return item;
-          });
-        };
-        const updated = updateNode(prev);
-        if (projectId) storage.saveProjectData(projectId, { manuscript: updated });
-        return updated;
-      });
-      setIsSaving(false);
-    }, 1000);
+      flushSave();
+    }, 800);
   };
 
 
@@ -416,16 +438,9 @@ export default function WritingStudio() {
     }
 
     if (action === 'delete') {
-       if (confirm('Are you sure you want to delete this item?')) {
-          const parentArr = findParentArray(newManuscript, item.id);
-          if (parentArr) {
-             const idx = parentArr.findIndex(x => x.id === item.id);
-             if (idx > -1) parentArr.splice(idx, 1);
-             setManuscript(newManuscript); if (projectId) storage.saveProjectData(projectId, { manuscript: newManuscript });
-             if (activeDocId === item.id) setActiveDocId('scene-1');
-          }
-       }
-       return;
+      setContextMenuOpenId(null);
+      setItemToDelete(item);
+      return;
     }
 
     if (action === 'duplicate' || action === 'add_scene_below') {
@@ -470,54 +485,192 @@ export default function WritingStudio() {
     setEditingNodeId(null);
   };
 
-  const handleAddNew = (type: 'part' | 'chapter' | 'scene') => {
+  // State for Create Item Modal
+  const [createModal, setCreateModal] = useState<{
+    isOpen: boolean;
+    type: 'part' | 'chapter' | 'scene';
+    parentId?: string;
+  } | null>(null);
+  const [createTitle, setCreateTitle] = useState('');
+  const [createParentId, setCreateParentId] = useState<string>('');
+
+  // State for Delete Confirmation Modal
+  const [itemToDelete, setItemToDelete] = useState<ManuscriptItem | null>(null);
+
+  // Helper to extract parts
+  const availableParts = useMemo(() => {
+    return manuscript.filter(m => m.type === 'part').map(p => ({ id: p.id, title: p.title }));
+  }, [manuscript]);
+
+  // Helper to extract chapters
+  const availableChapters = useMemo(() => {
+    const list: { id: string; title: string; partTitle?: string }[] = [];
+    for (const item of manuscript) {
+      if (item.type === 'chapter') {
+        list.push({ id: item.id, title: item.title });
+      } else if (item.type === 'part' && item.children) {
+        for (const child of item.children) {
+          if (child.type === 'chapter') {
+            list.push({ id: child.id, title: child.title, partTitle: item.title });
+          }
+        }
+      }
+    }
+    return list;
+  }, [manuscript]);
+
+  const openCreateModal = (type: 'part' | 'chapter' | 'scene', parentId?: string) => {
     setAddMenuOpen(false);
-    const newManuscript = JSON.parse(JSON.stringify(manuscript));
-    const newId = type + '-' + Date.now();
-    const newItem: ManuscriptItem = { 
-       id: newId, 
-       type, 
-       title: 'New ' + type.charAt(0).toUpperCase() + type.slice(1), 
-       ...(type !== 'scene' ? { children: [] } : { content: '' }) 
+    let initialParent = parentId || '';
+    if (!initialParent) {
+      if (type === 'chapter' && availableParts.length > 0) {
+        initialParent = availableParts[0].id;
+      } else if (type === 'scene' && availableChapters.length > 0) {
+        const currentChapter = availableChapters.find(c => {
+          const chapNode = findNodeById(manuscript, c.id);
+          return chapNode?.children?.some(s => s.id === activeDocId);
+        });
+        initialParent = currentChapter ? currentChapter.id : availableChapters[0].id;
+      }
+    }
+    setCreateParentId(initialParent);
+    setCreateTitle('');
+    setCreateModal({ isOpen: true, type, parentId: initialParent });
+  };
+
+  const handleConfirmCreate = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!createModal) return;
+
+    const { type } = createModal;
+    const newManuscript: ManuscriptItem[] = JSON.parse(JSON.stringify(manuscript));
+    const newId = `${type}-${Date.now()}`;
+    const defaultTitle = type === 'part'
+      ? `Part ${availableParts.length + 1}`
+      : type === 'chapter'
+      ? `Chapter ${availableChapters.length + 1}`
+      : `Scene ${Date.now().toString().slice(-4)}`;
+    const title = createTitle.trim() || defaultTitle;
+
+    const newItem: ManuscriptItem = {
+      id: newId,
+      type,
+      title,
+      ...(type !== 'scene' ? { children: [] } : { content: '<p></p>' })
     };
 
     if (type === 'part') {
-       newManuscript.push(newItem);
-    } else {
-       // Find a place to put it
-       const findInsertPlace = (items: ManuscriptItem[]): boolean => {
-         for (let i = 0; i < items.length; i++) {
-           if (items[i].id === activeDocId) {
-              if (type === 'chapter' && items[i].type === 'part') {
-                 if (!items[i].children) items[i].children = [];
-                 items[i].children!.push(newItem);
-                 setExpandedNodes(prev => new Set(prev).add(items[i].id));
-                 return true;
-              }
-              // Just insert after current if possible, or push to root if not handled nicely
-           }
-           if (items[i].children && findInsertPlace(items[i].children!)) return true;
-         }
-         return false;
-       };
-       
-       if (!findInsertPlace(newManuscript)) {
-          // If failed to find a smart place, just dump it in the first part/chapter
-          if (type === 'chapter' && newManuscript.length > 0) {
-             if (!newManuscript[0].children) newManuscript[0].children = [];
-             newManuscript[0].children.push(newItem);
-             setExpandedNodes(prev => new Set(prev).add(newManuscript[0].id));
-          } else {
-             // Fallback
-             newManuscript.push(newItem);
+      newManuscript.push(newItem);
+      setExpandedNodes(prev => new Set(prev).add(newId));
+    } else if (type === 'chapter') {
+      if (createParentId) {
+        const parentPart = newManuscript.find(m => m.id === createParentId);
+        if (parentPart) {
+          if (!parentPart.children) parentPart.children = [];
+          parentPart.children.push(newItem);
+          setExpandedNodes(prev => new Set(prev).add(createParentId).add(newId));
+        } else {
+          newManuscript.push(newItem);
+          setExpandedNodes(prev => new Set(prev).add(newId));
+        }
+      } else {
+        newManuscript.push(newItem);
+        setExpandedNodes(prev => new Set(prev).add(newId));
+      }
+    } else if (type === 'scene') {
+      let inserted = false;
+      if (createParentId) {
+        const insertIntoChapter = (items: ManuscriptItem[]): boolean => {
+          for (const item of items) {
+            if (item.id === createParentId) {
+              if (!item.children) item.children = [];
+              item.children.push(newItem);
+              setExpandedNodes(prev => new Set(prev).add(item.id));
+              return true;
+            }
+            if (item.children && insertIntoChapter(item.children)) return true;
           }
-       }
+          return false;
+        };
+        inserted = insertIntoChapter(newManuscript);
+      }
+
+      if (!inserted) {
+        if (newManuscript.length > 0) {
+          const first = newManuscript[0];
+          if (first.type === 'chapter') {
+            if (!first.children) first.children = [];
+            first.children.push(newItem);
+          } else if (first.type === 'part' && first.children && first.children.length > 0) {
+            if (!first.children[0].children) first.children[0].children = [];
+            first.children[0].children.push(newItem);
+          } else {
+            newManuscript.push(newItem);
+          }
+        } else {
+          const chapterId = `chapter-${Date.now()}`;
+          newManuscript.push({
+            id: chapterId,
+            type: 'chapter',
+            title: 'Chapter 1',
+            children: [newItem]
+          });
+          setExpandedNodes(prev => new Set(prev).add(chapterId));
+        }
+      }
+      setActiveDocId(newId);
     }
 
-    setManuscript(newManuscript); if (projectId) storage.saveProjectData(projectId, { manuscript: newManuscript });
-    if (type === 'scene') setActiveDocId(newId);
-    setEditingNodeId(newId);
-    setEditingTitle(newItem.title);
+    setManuscript(newManuscript);
+    if (projectId) {
+      storage.saveProjectData(projectId, { manuscript: newManuscript });
+    }
+
+    setCreateModal(null);
+    setCreateTitle('');
+  };
+
+  const handleConfirmDelete = () => {
+    if (!itemToDelete) return;
+
+    const newManuscript: ManuscriptItem[] = JSON.parse(JSON.stringify(manuscript));
+    const findParentArray = (items: ManuscriptItem[], id: string): ManuscriptItem[] | null => {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].id === id) return items;
+        if (items[i].children) {
+          const res = findParentArray(items[i].children!, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+
+    const parentArr = findParentArray(newManuscript, itemToDelete.id);
+    if (parentArr) {
+      const idx = parentArr.findIndex(x => x.id === itemToDelete.id);
+      if (idx > -1) {
+        parentArr.splice(idx, 1);
+      }
+      setManuscript(newManuscript);
+      if (projectId) {
+        storage.saveProjectData(projectId, { manuscript: newManuscript });
+      }
+
+      const isDescendantOrSelf = (node: ManuscriptItem, targetId: string): boolean => {
+        if (node.id === targetId) return true;
+        if (node.children) {
+          return node.children.some(child => isDescendantOrSelf(child, targetId));
+        }
+        return false;
+      };
+
+      if (isDescendantOrSelf(itemToDelete, activeDocId)) {
+        const nextScene = findFirstSceneId(newManuscript);
+        setActiveDocId(nextScene || '');
+      }
+    }
+
+    setItemToDelete(null);
   };
 
 
@@ -611,12 +764,57 @@ export default function WritingStudio() {
                 
                 {/* Dropdown */}
                 {contextMenuOpenId === item.id && (
-                  <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-[#E5E0D5] rounded-sm shadow-lg py-1 z-50 text-stone-700">
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-[#E5E0D5] rounded-sm shadow-lg py-1 z-50 text-stone-700">
                     <button onClick={(e) => handleAction('rename', item, e)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] transition-colors">Rename</button>
+                    {item.type === 'part' && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenuOpenId(null);
+                          openCreateModal('chapter', item.id);
+                        }} 
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] text-[#8C503C] font-semibold transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3 h-3" /> Add Chapter Inside
+                      </button>
+                    )}
+                    {item.type === 'chapter' && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenuOpenId(null);
+                          openCreateModal('scene', item.id);
+                        }} 
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] text-[#8C503C] font-semibold transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3 h-3" /> Add Scene Inside
+                      </button>
+                    )}
                     <button onClick={(e) => handleAction('duplicate', item, e)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] transition-colors">Duplicate</button>
-                    {!isFolder && <button onClick={(e) => handleAction('add_scene_below', item, e)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] transition-colors">Add Scene Below</button>}
+                    {!isFolder && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenuOpenId(null);
+                          // find parent chapter for this scene
+                          const currentChapter = availableChapters.find(c => {
+                            const chapNode = findNodeById(manuscript, c.id);
+                            return chapNode?.children?.some(s => s.id === item.id);
+                          });
+                          openCreateModal('scene', currentChapter?.id);
+                        }} 
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] transition-colors"
+                      >
+                        Add Scene Below
+                      </button>
+                    )}
                     <div className="h-px bg-[#E5E0D5] my-1" />
-                    <button onClick={(e) => handleAction('delete', item, e)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] text-red-600 transition-colors">Delete</button>
+                    <button 
+                      onClick={(e) => handleAction('delete', item, e)} 
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F4F1EA] text-red-600 font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
                   </div>
                 )}
               </div>
@@ -659,7 +857,19 @@ export default function WritingStudio() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-            {renderManuscriptTree(manuscript)}
+            {manuscript.length === 0 ? (
+              <div className="py-8 px-3 text-center">
+                <p className="text-xs text-stone-400 mb-3">No chapters or scenes yet</p>
+                <button
+                  onClick={() => openCreateModal('chapter')}
+                  className="px-3 py-1.5 bg-[#8C503C] hover:bg-[#733F2E] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm inline-flex items-center gap-1.5 shadow-sm transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> Add First Chapter
+                </button>
+              </div>
+            ) : (
+              renderManuscriptTree(manuscript)
+            )}
           </div>
           <div className="p-3 border-t border-[#E5E0D5] bg-[#F9F6ED] shrink-0 relative">
             <button 
@@ -670,9 +880,9 @@ export default function WritingStudio() {
             
             {addMenuOpen && (
                <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-[#E5E0D5] rounded-sm shadow-lg py-1 z-50 text-stone-700">
-                  <button onClick={() => handleAddNew('scene')} className="w-full text-left px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><FileText className="w-3 h-3" /> New Scene</button>
-                  <button onClick={() => handleAddNew('chapter')} className="w-full text-left px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><BookOpen className="w-3 h-3" /> New Chapter</button>
-                  <button onClick={() => handleAddNew('part')} className="w-full text-left px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><ListTree className="w-3 h-3" /> New Part</button>
+                  <button onClick={() => openCreateModal('scene')} className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-[#8C503C]" /> New Scene</button>
+                  <button onClick={() => openCreateModal('chapter')} className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><BookOpen className="w-3.5 h-3.5 text-[#8C503C]" /> New Chapter</button>
+                  <button onClick={() => openCreateModal('part')} className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-widest hover:bg-[#F4F1EA] transition-colors flex items-center gap-2"><ListTree className="w-3.5 h-3.5 text-[#8C503C]" /> New Part</button>
                </div>
             )}
           </div>
@@ -791,15 +1001,41 @@ export default function WritingStudio() {
         {/* Editor Area */}
         <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar relative z-0">
           <div className="max-w-[800px] mx-auto h-full flex flex-col px-8">
-            <div className={`flex-1 py-16 ${isFocusMode ? 'pb-48' : 'pb-32'}`}>
-              <MentionEditor 
-                key={activeDocId}
-                initialValue={activeContent}
-                onEntityClick={handleEntityClick}
-                onChange={handleContentChange}
-                className={`${fontFamily} ${fontSize} leading-[1.8] text-[#332218]`}
-              />
-            </div>
+            {manuscript.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-full bg-[#EDE8DC] flex items-center justify-center text-[#8C503C] mb-4">
+                  <BookOpen className="w-8 h-8" />
+                </div>
+                <h3 className="font-serif text-2xl font-bold text-[#332218] mb-2">Manuscript Empty</h3>
+                <p className="text-sm text-stone-500 max-w-sm mb-6">
+                  Start drafting by creating your first chapter and scene in the binder.
+                </p>
+                <button
+                  onClick={() => {
+                    setCreateModal({ isOpen: true, type: 'scene', parentId: undefined });
+                    setCreateTitle('Scene 1');
+                  }}
+                  className="px-5 py-2.5 bg-[#8C503C] hover:bg-[#703F2F] text-white text-xs font-bold tracking-wider uppercase rounded-sm shadow-md transition-all flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Create First Scene
+                </button>
+              </div>
+            ) : !activeDocId ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-sm text-stone-500 font-serif italic">Select a scene from the left binder to begin editing.</p>
+              </div>
+            ) : (
+              <div className={`flex-1 py-16 ${isFocusMode ? 'pb-48' : 'pb-32'}`}>
+                <MentionEditor 
+                  key={activeDocId}
+                  initialValue={activeContent}
+                  mentionItems={[...characters, ...locations]}
+                  onEntityClick={handleEntityClick}
+                  onChange={handleContentChange}
+                  className={`${fontFamily} ${fontSize} leading-[1.8] text-[#332218]`}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1289,6 +1525,185 @@ export default function WritingStudio() {
           setActiveDocId(sceneId);
         }}
       />
+
+      {/* Create Item Modal */}
+      <AnimatePresence>
+        {createModal?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+              onClick={() => setCreateModal(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md bg-[#FCFAF5] rounded-xl shadow-2xl border border-[#E5E0D5] overflow-hidden flex flex-col z-10"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-[#E5E0D5] bg-white/60">
+                <h2 className="text-base font-serif font-bold text-stone-800 flex items-center gap-2">
+                  {createModal.type === 'part' && <ListTree className="w-5 h-5 text-[#8C503C]" />}
+                  {createModal.type === 'chapter' && <BookOpen className="w-5 h-5 text-[#8C503C]" />}
+                  {createModal.type === 'scene' && <FileText className="w-5 h-5 text-[#8C503C]" />}
+                  Add New {createModal.type.charAt(0).toUpperCase() + createModal.type.slice(1)}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setCreateModal(null)}
+                  className="p-1 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-200 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmCreate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={createTitle}
+                    onChange={(e) => setCreateTitle(e.target.value)}
+                    placeholder={
+                      createModal.type === 'part'
+                        ? "e.g. Part I: The Silent Twilight"
+                        : createModal.type === 'chapter'
+                        ? "e.g. Chapter 1: Whispers in the Dark"
+                        : "e.g. Scene 1: An Unexpected Encounter"
+                    }
+                    className="w-full bg-white border border-[#E5E0D5] rounded-sm px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#8C503C] transition-colors"
+                  />
+                </div>
+
+                {createModal.type === 'chapter' && availableParts.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">
+                      Place Inside Part (Optional)
+                    </label>
+                    <select
+                      value={createParentId}
+                      onChange={(e) => setCreateParentId(e.target.value)}
+                      className="w-full bg-white border border-[#E5E0D5] rounded-sm px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#8C503C] transition-colors"
+                    >
+                      <option value="">(Root Level - No Part)</option>
+                      {availableParts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {createModal.type === 'scene' && availableChapters.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">
+                      Belongs to Chapter
+                    </label>
+                    <select
+                      value={createParentId}
+                      onChange={(e) => setCreateParentId(e.target.value)}
+                      className="w-full bg-white border border-[#E5E0D5] rounded-sm px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#8C503C] transition-colors"
+                    >
+                      {availableChapters.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.partTitle ? `${c.partTitle} ➔ ${c.title}` : c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="pt-3 flex items-center justify-end gap-3 border-t border-[#E5E0D5]">
+                  <button
+                    type="button"
+                    onClick={() => setCreateModal(null)}
+                    className="px-4 py-2 border border-[#E5E0D5] bg-white hover:bg-[#F4F1EA] text-stone-600 rounded-sm text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-[#8C503C] hover:bg-[#733F2E] text-white rounded-sm text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Create {createModal.type}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Item Confirmation Modal */}
+      <AnimatePresence>
+        {itemToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+              onClick={() => setItemToDelete(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md bg-[#FCFAF5] rounded-xl shadow-2xl border border-[#E5E0D5] overflow-hidden flex flex-col z-10 p-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-serif font-bold text-stone-800">
+                    Delete {itemToDelete.type.charAt(0).toUpperCase() + itemToDelete.type.slice(1)}
+                  </h3>
+                  <p className="text-sm text-stone-600 mt-1">
+                    Are you sure you want to delete <span className="font-semibold text-stone-800">"{itemToDelete.title}"</span>?
+                  </p>
+
+                  {itemToDelete.children && itemToDelete.children.length > 0 && (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-800 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        This {itemToDelete.type} contains {itemToDelete.children.length} sub-item(s). All child chapters and scenes will also be permanently deleted.
+                      </span>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-stone-400 mt-2">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-[#E5E0D5] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setItemToDelete(null)}
+                  className="px-4 py-2 border border-[#E5E0D5] bg-white hover:bg-[#F4F1EA] text-stone-600 rounded-sm text-xs font-bold uppercase tracking-wider transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-sm text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
