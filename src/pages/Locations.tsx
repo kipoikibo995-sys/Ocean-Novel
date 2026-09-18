@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { storage } from "@/lib/storage";
-import { Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, Pen, Link2, ZoomIn, ZoomOut, Maximize2, Image as ImageIcon } from "lucide-react";
-
-import { Users, BookOpen } from "lucide-react";
+import { 
+  Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, 
+  TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, 
+  Pen, Link2, ZoomIn, ZoomOut, Maximize2, Image as ImageIcon,
+  Users, BookOpen, HelpCircle, Check, ClipboardCopy, Feather, Info 
+} from "lucide-react";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 
 export interface LocationNode {
@@ -149,6 +152,92 @@ export function buildDefaultProjectLocationMap(projectId: string | undefined, lo
   return { nodes: [], edges: [], unmapped: [] };
 }
 
+export const LOCATION_CREATION_AI_PROMPT = `I want you to help me create a new location for my novel project.
+
+First, ask me to provide:
+
+1. NOVEL / STORY CONTEXT
+A short description of my novel, premise, genre, or current story world.
+
+2. LOCATION IDEA
+What kind of location I want to create.
+This can be very simple, such as:
+- capital city
+- ancient forest
+- hidden temple
+- abandoned library
+- mountain fortress
+- magical tower
+- small village
+
+3. LOCATION NAME
+Optional. If I already have a name, preserve it exactly.
+If I do not provide one, create a suitable name.
+
+After I provide this information, generate ONLY the following information for my Ocean Novel New Location form:
+
+1. Location Name
+Create a suitable and memorable location name only if I did not provide one.
+
+2. Type
+Choose a concise location type, such as:
+- City
+- Village
+- Kingdom
+- Forest
+- Castle
+- Fortress
+- Temple
+- Library
+- Landmark
+- Ruins
+- Mountain
+- Island
+- Underground Location
+- Magical Realm
+
+Use the most appropriate type for the location.
+
+3. Short Description
+Write a concise 25–60 word description explaining what the location is and why it matters to the story.
+
+4. Atmosphere / Mood
+Provide 3–5 concise words describing the location's atmosphere.
+Examples:
+Mysterious, ancient, dangerous
+Cold, isolated, imposing
+Warm, peaceful, rustic
+
+5. Region / Parent
+State the larger region, kingdom, city, forest, territory, or parent location this place belongs to.
+If no parent location is established, create a simple suitable region that fits the story.
+If none is needed, write:
+None
+
+IMPORTANT RULES:
+- Keep the location consistent with the novel context I provide.
+- Preserve any location facts or names I already provide.
+- Do not create characters, chapters, scenes, dialogue, plot outlines, or unrelated worldbuilding.
+- Do not add excessive lore.
+- Keep every field concise and easy to copy into a form.
+
+After I provide the information, return ONLY this format:
+
+Location Name:
+...
+
+Type:
+...
+
+Short Description:
+...
+
+Atmosphere / Mood:
+...
+
+Region / Parent:
+...`;
+
 export default function Locations() {
   const { id } = useParams<{ id: string }>();
 
@@ -275,6 +364,26 @@ export default function Locations() {
   const [mapMode, setMapMode] = useState<"pan" | "draw">("pan");
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [edgeToDelete, setEdgeToDelete] = useState<string | null>(null);
+
+  const [showLocationGuideModal, setShowLocationGuideModal] = useState(false);
+  const [isLocationPromptCopied, setIsLocationPromptCopied] = useState(false);
+
+  const handleCopyLocationPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(LOCATION_CREATION_AI_PROMPT);
+      setIsLocationPromptCopied(true);
+      setTimeout(() => setIsLocationPromptCopied(false), 2500);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = LOCATION_CREATION_AI_PROMPT;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setIsLocationPromptCopied(true);
+      setTimeout(() => setIsLocationPromptCopied(false), 2500);
+    }
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -479,7 +588,18 @@ export default function Locations() {
 
       <div className="p-4 lg:p-6 border-b border-[#5d3f32] bg-[#2a1a14]/80 backdrop-blur-md flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
         <div>
-          <h1 className="font-serif text-3xl text-[#e5e0d5] font-bold">World Atlas</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-3xl text-[#e5e0d5] font-bold">World Atlas</h1>
+            <button
+              type="button"
+              onClick={() => setShowLocationGuideModal(true)}
+              className="w-7 h-7 rounded-full bg-[#5d3f32]/50 hover:bg-[#5d3f32]/80 border border-[#8c503c]/50 hover:border-[#8c503c]/90 text-[#d49a89] hover:text-[#fcfaf5] flex items-center justify-center transition-all shadow-sm group hover:scale-105"
+              title="World Atlas & Location Guide & AI Prompt"
+              aria-label="Location Guide & AI Prompt"
+            >
+              <HelpCircle className="w-4 h-4 transition-transform group-hover:rotate-12" />
+            </button>
+          </div>
           <p className="text-[#a66850] text-[11px] font-bold uppercase tracking-widest mt-1">Chart the regions and landmarks</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -1140,6 +1260,156 @@ export default function Locations() {
                 className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all"
               >
                 Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* World Atlas & Location Workflow Guide Modal */}
+      {showLocationGuideModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setShowLocationGuideModal(false)}
+        >
+          <div 
+            className="bg-[#fcfaf5] border border-[#e5e0d5] rounded-sm shadow-[8px_24px_64px_rgba(0,0,0,0.5)] max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden text-stone-800 relative my-auto animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#e5e0d5] flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-sm bg-[#f4efe6] border border-[#e5e0d5] flex items-center justify-center text-[#8a5b46] shrink-0">
+                  <Compass className="w-5 h-5 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-serif font-bold text-[#4a3225] uppercase tracking-wide">
+                    World Atlas & Location Guide
+                  </h2>
+                  <p className="text-xs font-serif text-stone-500">
+                    Step-by-step workflow for realm building, geographic cartography, and AI ideation
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLocationGuideModal(false)}
+                className="w-8 h-8 rounded-sm text-stone-400 hover:text-[#b8785e] hover:bg-[#f4efe6] flex items-center justify-center transition-colors"
+                aria-label="Close guide modal"
+              >
+                <X className="w-5 h-5 stroke-[1.5]" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-stone-700 custom-scrollbar bg-[#fcfaf5]">
+              {/* Section 1: Workflow Steps */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-serif font-bold uppercase tracking-widest text-[#8a5b46] flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  What steps do you take in World Atlas?
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">1</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Catalogue Realms & Sites</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Click <strong className="text-[#4a3225] font-semibold">Add Location</strong> in the Atlas toolbar to record name, category (City, Castle, Forest, Temple, etc.), parent region, atmosphere, and description.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">2</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Attach Setting Artworks</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Upload atmospheric scenery illustrations, concept landscapes, or choose curated environment presets to give each location distinct visual presence.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">3</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Cartographic Map View</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Switch to <strong className="text-[#4a3225] font-semibold">Map</strong> view to arrange locations across an interactive canvas, pan, zoom, and organize territorial borders.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">4</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Connect Routes & Trails</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Link settlements and landmarks with custom travel routes, caravan highways, perilous sea channels, and mountain passes labeled with travel duration.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: AI Location Architect Prompt */}
+              <div className="space-y-3 pt-4 border-t border-[#e5e0d5]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-xs font-serif font-bold uppercase tracking-widest text-[#8a5b46] flex items-center gap-2">
+                      <Feather className="w-4 h-4" />
+                      Unsure what to write? Copy this AI Location Prompt
+                    </h3>
+                    <p className="text-xs font-serif text-stone-500 mt-0.5">
+                      Send this prompt to ChatGPT, Claude, or Gemini alongside your novel premise to generate an authentic location profile:
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyLocationPrompt}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
+                      isLocationPromptCopied
+                        ? "bg-emerald-700 text-white"
+                        : "bg-[#b8785e] hover:bg-[#a66850] text-white"
+                    }`}
+                  >
+                    {isLocationPromptCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Prompt Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCopy className="w-3.5 h-3.5" />
+                        <span>Copy Prompt to Clipboard</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Prompt Code Block Preview */}
+                <div className="relative">
+                  <pre className="p-4 rounded-sm bg-white border border-[#e5e0d5] text-xs font-mono leading-relaxed text-stone-700 max-h-56 overflow-y-auto whitespace-pre-wrap select-all selection:bg-[#c17a7a]/20 custom-scrollbar shadow-xs">
+{LOCATION_CREATION_AI_PROMPT}
+                  </pre>
+                </div>
+
+                <div className="p-3.5 rounded-sm bg-[#f4efe6] border border-[#e5e0d5] text-xs text-[#5c4033] flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-[#8a5b46] shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <strong className="font-semibold text-[#4a3225]">Tip:</strong> Once the AI returns your location details, click <em className="font-serif">"+ Add Location"</em> in the World Atlas and paste the generated name, type, atmosphere, and description directly into the form.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-white border-t border-[#e5e0d5] flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLocationGuideModal(false)}
+                className="px-5 py-2 rounded-sm bg-[#f4efe6] hover:bg-[#eae3d5] text-[#4a3225] border border-[#e5e0d5] text-xs font-bold uppercase tracking-widest transition-colors shadow-xs"
+              >
+                Got it, return to Atlas
               </button>
             </div>
           </div>

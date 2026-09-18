@@ -21,14 +21,16 @@ import {
   Bookmark,
   Clock,
   Image as ImageIcon,
-  Star,
   LayoutGrid,
   FileText,
   ClipboardCopy,
   Check,
   Scissors,
   Link2,
-  Sparkles
+  BookOpen,
+  HelpCircle,
+  Info,
+  Feather
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -52,6 +54,137 @@ export const RELATION_OPTIONS = [
   { label: "FRIEND", color: "#fca311", icon: Users },
   { label: "RIVAL", color: "#9c27b0", icon: Swords },
 ];
+
+export const STANDARD_CHARACTER_GROUPS = [
+  { value: "none", label: "None (Ungrouped)" },
+  { value: "Divinities", label: "Divinities & Celestials" },
+  { value: "Allies", label: "Protagonists & Allies" },
+  { value: "Antagonists", label: "Antagonists & Villains" },
+  { value: "Royal Court", label: "Royal Court & Nobility" },
+  { value: "Guilds & Factions", label: "Guilds & Factions" },
+  { value: "Military & Knights", label: "Military & Knights" },
+  { value: "Secret Societies", label: "Secret Societies & Cults" },
+  { value: "Family & Clan", label: "Family & Clan" },
+  { value: "Mentors & Scholars", label: "Mentors & Scholars" },
+  { value: "Outlaws & Rogues", label: "Outlaws & Rogues" },
+  { value: "Supernatural", label: "Supernatural & Mythical" },
+  { value: "Civilians & Townsfolk", label: "Civilians & Townsfolk" },
+];
+
+export const CHARACTER_CREATION_AI_PROMPT = `I want you to help me create a character for my novel project.
+
+First, ask me to provide:
+
+1. NOVEL / STORY CONTEXT
+A short description of my novel, premise, or current story idea.
+
+2. CHARACTER IDEA
+Who I want this character to be.
+This can be very simple, such as:
+- main female protagonist
+- mysterious villain
+- protagonist's mother
+- young warrior
+- old mentor
+- romantic interest
+
+3. CHARACTER NAME
+Optional. If I already have a name, preserve it exactly.
+If I do not provide one, create a suitable name.
+
+After I provide this information, create ONLY the following character information for my Ocean Novel Character form:
+
+1. Character Name
+Create a suitable name only if I did not provide one.
+
+2. Age
+Choose an appropriate age based on the character's role and story.
+
+3. Status
+Choose a concise status such as:
+- Alive
+- Dead
+- Missing
+- Unknown
+- Presumed Dead
+
+4. Group
+State the faction, organization, family, kingdom, team, or group the character belongs to.
+If none is appropriate, use:
+None
+
+5. Role
+Choose the character's primary narrative role, such as:
+- Protagonist
+- Antagonist
+- Deuteragonist
+- Supporting Character
+- Mentor
+- Ally
+- Rival
+- Love Interest
+
+Choose only ONE primary role.
+
+6. Aliases
+Provide 0–3 useful aliases, titles, nicknames, or identities.
+If none are needed, write:
+None
+
+7. Backstory
+Write a concise character backstory of approximately 50–100 words.
+Include only the most important past events, motivation, and connection to the main story.
+
+8. MBTI
+Choose exactly ONE MBTI personality type that best fits the character.
+
+9. Traits
+Provide 5–8 concise personality traits.
+
+10. Physical Appearance
+Write a concise 35–70 word physical description including the character's general appearance, hair, eyes, build, clothing style, and any distinctive feature that matters.
+
+IMPORTANT RULES:
+- Keep the character consistent with the novel context I provide.
+- Do not create chapters, scenes, dialogue, locations, or plot outlines.
+- Do not rewrite my entire story.
+- Do not add unnecessary lore.
+- Do not create relationships unless they are necessary to explain the backstory.
+- Keep all fields concise and easy to copy into a form.
+- If I provide existing story facts, preserve them and do not contradict them.
+
+After I provide the information, return ONLY this format:
+
+Character Name:
+...
+
+Age:
+...
+
+Status:
+...
+
+Group:
+...
+
+Role:
+...
+
+Aliases:
+...
+
+Backstory:
+...
+
+MBTI:
+...
+
+Traits:
+...
+
+Physical Appearance:
+...`;
+
 
 export function getEdgeIconComponent(edge: any) {
   // If edge.icon is an actual function or valid React component
@@ -316,6 +449,12 @@ export default function Characters() {
   const [copiedEditor, setCopiedEditor] = useState(false);
   const [quickImageChar, setQuickImageChar] = useState<any | null>(null);
   const [showPortraitGalleryModal, setShowPortraitGalleryModal] = useState(false);
+  const [showCharacterGuideModal, setShowCharacterGuideModal] = useState(false);
+  const [isCharacterPromptCopied, setIsCharacterPromptCopied] = useState(false);
+
+  // Group Management State (Standard + Custom)
+  const [isCustomGroupMode, setIsCustomGroupMode] = useState(false);
+  const [customGroupInput, setCustomGroupInput] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -335,12 +474,48 @@ export default function Characters() {
     customAttributes: [] as { key: string, value: string }[],
   });
 
+  // Collect any custom groups that characters in the story already belong to
+  const existingCustomGroups = React.useMemo(() => {
+    const standardSet = new Set([
+      "none",
+      ...STANDARD_CHARACTER_GROUPS.map((g) => g.value.toLowerCase()),
+      "divinities",
+    ]);
+    const set = new Set<string>();
+    characters.forEach((c: any) => {
+      const g = (c.group || "").trim();
+      if (g && !standardSet.has(g.toLowerCase())) {
+        set.add(g);
+      }
+    });
+    return Array.from(set).sort();
+  }, [characters]);
+
+  const handleCopyCharacterPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(CHARACTER_CREATION_AI_PROMPT);
+      setIsCharacterPromptCopied(true);
+      setTimeout(() => setIsCharacterPromptCopied(false), 2500);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = CHARACTER_CREATION_AI_PROMPT;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setIsCharacterPromptCopied(true);
+      setTimeout(() => setIsCharacterPromptCopied(false), 2500);
+    }
+  };
+
   const handleOpenEditorNew = () => {
     setPreviousViewMode(viewMode === "editor" ? previousViewMode : viewMode);
     setEditingCharId(null);
     setAliasInput("");
     setTraitInput("");
     setShowAttributeDropdown(false);
+    setIsCustomGroupMode(false);
+    setCustomGroupInput("");
     setFormData({
       name: "",
       role: "",
@@ -375,6 +550,19 @@ export default function Characters() {
       charTraits = char.traits.split(',').map((s: string) => s.trim()).filter(Boolean);
     }
 
+    const rawGroup = (char.group || "none").trim();
+    const isStandard = STANDARD_CHARACTER_GROUPS.some(
+      (g) => g.value.toLowerCase() === rawGroup.toLowerCase()
+    ) || rawGroup.toLowerCase() === "divinities";
+
+    if (rawGroup !== "none" && !isStandard) {
+      setCustomGroupInput(rawGroup);
+      setIsCustomGroupMode(true);
+    } else {
+      setIsCustomGroupMode(false);
+      setCustomGroupInput("");
+    }
+
     setFormData({
       name: char.name || "",
       role: char.role || "",
@@ -389,7 +577,7 @@ export default function Characters() {
       conflict: char.conflict || "",
       goal: char.goal || "",
       trauma: char.trauma || "",
-      group: char.group || "none",
+      group: rawGroup.toLowerCase() === "divinities" ? "Divinities" : rawGroup,
       customAttributes: char.customAttributes || [],
     });
     setViewMode("editor");
@@ -412,6 +600,7 @@ export default function Characters() {
     }
 
     const backstoryContent = formData.backstory || "";
+    const cleanGroup = (formData.group && formData.group.trim()) ? formData.group.trim() : "none";
 
     const newChar = {
       id: editingCharId || Date.now().toString(),
@@ -429,7 +618,7 @@ export default function Characters() {
       conflict: formData.conflict || "",
       goal: formData.goal || "",
       trauma: formData.trauma || "",
-      group: formData.group || "none",
+      group: cleanGroup,
       customAttributes: formData.customAttributes || [],
     };
 
@@ -759,6 +948,7 @@ ${backstoryText}`;
       result = result.filter(c => 
         c.name.toLowerCase().includes(q) || 
         (c.role && c.role.toLowerCase().includes(q)) || 
+        (c.group && c.group.toLowerCase().includes(q)) || 
         (c.aliases && c.aliases.some((a: string) => a.toLowerCase().includes(q))) ||
         (c.traits && c.traits.some((t: string) => t.toLowerCase().includes(q)))
       );
@@ -877,15 +1067,88 @@ ${backstoryText}`;
 
               <div className="flex flex-col sm:flex-row gap-8 lg:gap-16">
                 <div className="space-y-2 flex-1">
-                  <label className="text-[10px] font-bold text-stone-400 tracking-[0.2em] uppercase block">Group</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-stone-400 tracking-[0.2em] uppercase block">Group</label>
+                    {isCustomGroupMode && (
+                      <span className="text-[9px] font-bold text-[#b8785e] tracking-wider uppercase">Custom Mode</span>
+                    )}
+                  </div>
                   <select 
-                    value={formData.group}
-                    onChange={(e) => setFormData(prev => ({ ...prev, group: e.target.value }))}
-                    className="w-full bg-transparent border-b border-stone-200 border-dotted pb-2 text-xs font-bold text-stone-400 uppercase tracking-widest outline-none focus:border-[#8a5b46] transition-colors appearance-none cursor-pointer"
+                    value={
+                      isCustomGroupMode 
+                        ? "__custom__" 
+                        : (formData.group?.toLowerCase() === "divinities" 
+                            ? "Divinities" 
+                            : (formData.group || "none"))
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "__custom__") {
+                        setIsCustomGroupMode(true);
+                        setFormData(prev => ({ ...prev, group: customGroupInput.trim() }));
+                      } else {
+                        setIsCustomGroupMode(false);
+                        setFormData(prev => ({ ...prev, group: val }));
+                      }
+                    }}
+                    className="w-full bg-transparent border-b border-stone-200 border-dotted pb-2 text-xs font-bold text-[#8a5b46] uppercase tracking-widest outline-none focus:border-[#8a5b46] transition-colors appearance-none cursor-pointer"
                   >
-                    <option value="none">None</option>
-                    <option value="divinities">Divinities</option>
+                    <optgroup label="Standard Groups" className="bg-[#fcfaf5] text-stone-700 font-sans font-medium normal-case">
+                      {STANDARD_CHARACTER_GROUPS.map((grp) => (
+                        <option key={grp.value} value={grp.value}>
+                          {grp.label}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    {existingCustomGroups.length > 0 && (
+                      <optgroup label="Story Groups" className="bg-[#fcfaf5] text-stone-700 font-sans font-medium normal-case">
+                        {existingCustomGroups.map((grp) => (
+                          <option key={grp} value={grp}>
+                            {grp}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    <optgroup label="Custom Option" className="bg-[#fcfaf5] text-[#8a5b46] font-sans font-bold normal-case">
+                      <option value="__custom__">+ Custom Group (Type your own)...</option>
+                    </optgroup>
                   </select>
+
+                  {isCustomGroupMode && (
+                    <div className="pt-2">
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="text"
+                          value={customGroupInput}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomGroupInput(val);
+                            setFormData(prev => ({ ...prev, group: val }));
+                          }}
+                          placeholder="Enter custom group (e.g. Shadow Syndicate)..."
+                          className="flex-1 bg-white/80 border border-stone-300 rounded px-2.5 py-1.5 text-xs text-stone-800 placeholder-stone-400 outline-none focus:border-[#8a5b46] focus:bg-white transition-colors"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomGroupMode(false);
+                            setCustomGroupInput("");
+                            setFormData(prev => ({ ...prev, group: "none" }));
+                          }}
+                          className="text-[10px] text-stone-500 hover:text-stone-800 px-2 py-1.5 rounded bg-stone-200/70 hover:bg-stone-200 uppercase font-bold tracking-wider transition-colors shrink-0"
+                          title="Reset to None"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-stone-400 mt-1 italic">
+                        Type a custom faction, clan, or organization. It will create its own folder in Archives.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2 flex-1">
                   <label className="text-[10px] font-bold text-stone-400 tracking-[0.2em] uppercase block">Role</label>
@@ -1223,7 +1486,7 @@ ${backstoryText}`;
                   className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5d3f32]/40 hover:bg-[#5d3f32]/70 text-[#d49a89] hover:text-[#fcfaf5] border border-[#8c503c]/50 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all shadow-sm ml-2"
                   title="Browse Character Portrait Library (25 presets)"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#d49a89]" />
+                  <ImageIcon className="w-3.5 h-3.5 text-[#d49a89]" />
                   <span className="hidden sm:inline">Portrait Library</span>
                   <span className="bg-[#b8785e] text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">25</span>
                 </button>
@@ -1247,21 +1510,42 @@ ${backstoryText}`;
                 >
                   <Plus className="w-3.5 h-3.5" /> NEW GRAPH
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCharacterGuideModal(true)}
+                  className="w-7 h-7 rounded-full bg-[#5d3f32]/50 hover:bg-[#5d3f32]/80 border border-[#8c503c]/50 hover:border-[#8c503c]/90 text-[#d49a89] hover:text-[#fcfaf5] flex items-center justify-center transition-all shadow-sm group hover:scale-105 ml-1 shrink-0"
+                  title="Character & Relationship Guide & AI Prompt"
+                  aria-label="Character Guide & AI Prompt"
+                >
+                  <HelpCircle className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                </button>
               </div>
             )}
 
-            <div className="flex bg-black/20 rounded-full p-1 border border-white/5 backdrop-blur-sm w-fit">
+            <div className="flex items-center gap-2">
+              <div className="flex bg-black/20 rounded-full p-1 border border-white/5 backdrop-blur-sm w-fit">
+                <button
+                  onClick={() => setViewMode("registry")}
+                  className={`px-6 py-1.5 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm ${viewMode === "registry" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}`}
+                >
+                  Registry
+                </button>
+                <button
+                  onClick={() => setViewMode("connections")}
+                  className={`px-6 py-1.5 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm ${viewMode === "connections" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}`}
+                >
+                  Connections
+                </button>
+              </div>
+
               <button
-                onClick={() => setViewMode("registry")}
-                className={`px-6 py-1.5 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm ${viewMode === "registry" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}`}
+                type="button"
+                onClick={() => setShowCharacterGuideModal(true)}
+                className="w-7 h-7 rounded-full bg-[#5d3f32]/50 hover:bg-[#5d3f32]/80 border border-[#8c503c]/50 hover:border-[#8c503c]/90 text-[#d49a89] hover:text-[#fcfaf5] flex items-center justify-center transition-all shadow-sm group hover:scale-105"
+                title="Character Guide & AI Prompt"
+                aria-label="Character Guide & AI Prompt"
               >
-                Registry
-              </button>
-              <button
-                onClick={() => setViewMode("connections")}
-                className={`px-6 py-1.5 text-[10px] font-bold tracking-widest rounded-full uppercase transition-all shadow-sm ${viewMode === "connections" ? "bg-[#b8785e] text-white" : "text-white/50 hover:text-white/80"}`}
-              >
-                Connections
+                <HelpCircle className="w-4 h-4 transition-transform group-hover:rotate-12" />
               </button>
             </div>
           </div>
@@ -1391,9 +1675,16 @@ ${backstoryText}`;
                       <h3 className="font-serif text-2xl font-bold text-[#4a3225] uppercase tracking-widest truncate drop-shadow-sm">
                         {char.name}
                       </h3>
-                      <p className="text-[10px] font-bold text-[#b8785e] tracking-widest uppercase mt-1.5 mb-0.5">
-                        {char.role}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1.5 mb-0.5">
+                        <p className="text-[10px] font-bold text-[#b8785e] tracking-widest uppercase">
+                          {char.role}
+                        </p>
+                        {char.group && char.group !== "none" && (
+                          <span className="text-[9px] font-semibold text-stone-600 bg-[#f4efe6] px-1.5 py-0.5 rounded border border-[#e5e0d5] tracking-wider uppercase">
+                            {char.group}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] font-serif italic text-stone-500 mb-2 uppercase">
                         Age: {char.age}
                       </p>
@@ -2098,6 +2389,157 @@ ${backstoryText}`;
           setViewMode("editor");
         }}
       />
+
+      {/* Character & Graph Workflow Guide Modal */}
+      {showCharacterGuideModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setShowCharacterGuideModal(false)}
+        >
+          <div 
+            className="bg-[#fcfaf5] border border-[#e5e0d5] rounded-sm shadow-[8px_24px_64px_rgba(0,0,0,0.5)] max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden text-stone-800 relative my-auto animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#e5e0d5] flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-sm bg-[#f4efe6] border border-[#e5e0d5] flex items-center justify-center text-[#8a5b46] shrink-0">
+                  <HelpCircle className="w-5 h-5 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-serif font-bold text-[#4a3225] uppercase tracking-wide">
+                    Character Studio & Relationship Guide
+                  </h2>
+                  <p className="text-xs font-serif text-stone-500">
+                    Step-by-step workflow for character dossiers, relationship webs, and AI ideation
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCharacterGuideModal(false)}
+                className="w-8 h-8 rounded-sm text-stone-400 hover:text-[#b8785e] hover:bg-[#f4efe6] flex items-center justify-center transition-colors"
+                aria-label="Close guide modal"
+              >
+                <X className="w-5 h-5 stroke-[1.5]" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-stone-700 custom-scrollbar bg-[#fcfaf5]">
+              {/* Section 1: Workflow Steps */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-serif font-bold uppercase tracking-widest text-[#8a5b46] flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  What steps do you take in Character Studio?
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">1</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Build Character Dossiers</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Click <strong className="text-[#4a3225] font-semibold">+ New Character</strong> in Registry to record identity, role, aliases, status, age, MBTI, personality traits, physical appearance, and backstory.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">2</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Portrait Studio & Visuals</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Click <strong className="text-[#4a3225] font-semibold">Portrait Library</strong> to browse 25 high-resolution genre presets or upload/drop your own custom concept art and reference portraits.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">3</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Factions & Folder Archives</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Assign characters to standard groups (Divinities, Royal Court, Guilds) or type custom factions. Switch to <strong className="text-[#4a3225] font-semibold">Folder View</strong> to review cast organized by faction.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-sm bg-white border border-[#e5e0d5] shadow-xs space-y-1.5 hover:border-[#b8785e]/60 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#f4efe6] text-[#8a5b46] border border-[#e5e0d5] text-[10px] font-bold flex items-center justify-center font-serif shrink-0">4</span>
+                      <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#4a3225]">Relational Webs & Graphs</span>
+                    </div>
+                    <p className="text-stone-600 leading-relaxed font-sans pl-7">
+                      Switch to <strong className="text-[#4a3225] font-semibold">Connections</strong> and click <strong className="text-[#4a3225] font-semibold">+ NEW GRAPH</strong> to map character relationship networks with color-coded bonds (Ally, Enemy, Family, Rival, Mentor, Romance).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: AI Character Architect Prompt */}
+              <div className="space-y-3 pt-4 border-t border-[#e5e0d5]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-xs font-serif font-bold uppercase tracking-widest text-[#8a5b46] flex items-center gap-2">
+                      <Feather className="w-4 h-4" />
+                      Unsure what to write? Copy this AI Character Prompt
+                    </h3>
+                    <p className="text-xs font-serif text-stone-500 mt-0.5">
+                      Send this prompt to ChatGPT, Claude, or Gemini alongside your novel premise to generate a complete character dossier:
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyCharacterPrompt}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
+                      isCharacterPromptCopied
+                        ? "bg-emerald-700 text-white"
+                        : "bg-[#b8785e] hover:bg-[#a66850] text-white"
+                    }`}
+                  >
+                    {isCharacterPromptCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Prompt Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCopy className="w-3.5 h-3.5" />
+                        <span>Copy Prompt to Clipboard</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Prompt Code Block Preview */}
+                <div className="relative">
+                  <pre className="p-4 rounded-sm bg-white border border-[#e5e0d5] text-xs font-mono leading-relaxed text-stone-700 max-h-56 overflow-y-auto whitespace-pre-wrap select-all selection:bg-[#c17a7a]/20 custom-scrollbar shadow-xs">
+{CHARACTER_CREATION_AI_PROMPT}
+                  </pre>
+                </div>
+
+                <div className="p-3.5 rounded-sm bg-[#f4efe6] border border-[#e5e0d5] text-xs text-[#5c4033] flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-[#8a5b46] shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <strong className="font-semibold text-[#4a3225]">Tip:</strong> Once the AI returns your character details, click <em className="font-serif">"+ New Character"</em> in the Registry and paste the generated name, role, traits, and backstory directly into the form.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-white border-t border-[#e5e0d5] flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCharacterGuideModal(false)}
+                className="px-5 py-2 rounded-sm bg-[#f4efe6] hover:bg-[#eae3d5] text-[#4a3225] border border-[#e5e0d5] text-xs font-bold uppercase tracking-widest transition-colors shadow-xs"
+              >
+                Got it, return to Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

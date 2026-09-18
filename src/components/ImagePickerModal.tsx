@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { 
   X, Upload, Link2, Trash2, Check, Image as ImageIcon, 
-  AlertCircle, RefreshCw, Search, Sparkles, User, MapPin
+  AlertCircle, RefreshCw, Search, User, MapPin
 } from "lucide-react";
 import { 
   fileToOptimizedDataUrl, 
@@ -215,7 +215,7 @@ export default function ImagePickerModal({
                 : "border-transparent text-stone-500 hover:text-stone-800"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#b8785e]" />
+            <ImageIcon className="w-3.5 h-3.5 text-[#b8785e]" />
             {type === "character" ? `Portrait Library (${presets.length})` : `Location Library (${presets.length})`}
           </button>
         </div>
