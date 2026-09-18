@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { storage } from "@/lib/storage";
 import { Download } from "lucide-react";
 import { ExportModal } from "@/components/ExportModal";
+import { fileToOptimizedDataUrl } from "@/lib/imageUtils";
 
 export default function ProjectOverview() {
   const { id } = useParams();
@@ -39,16 +40,17 @@ export default function ProjectOverview() {
     }
   }, [savedProject?.coverUrl]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && id) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setCoverUrl(base64String);
-        storage.updateProject(id, { coverUrl: base64String });
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Optimize cover image to max 480x720, 75% JPEG quality to save localStorage quota
+        const optimizedUrl = await fileToOptimizedDataUrl(file, 480, 720, 0.75);
+        setCoverUrl(optimizedUrl);
+        storage.updateProject(id, { coverUrl: optimizedUrl });
+      } catch (err) {
+        console.error("Failed to process cover image:", err);
+      }
     }
   };
 

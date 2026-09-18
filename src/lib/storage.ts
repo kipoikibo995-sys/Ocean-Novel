@@ -148,6 +148,84 @@ const PROJECT_DATA_PREFIX = 'writing_studio_data_';
 const TASKS_KEY = 'writing_studio_tasks';
 const PROFILE_KEY = 'writing_studio_profile';
 
+/**
+ * Safe wrapper for localStorage.setItem with automatic QuotaExceededError recovery.
+ * Protects against 5MB browser localStorage overflow.
+ */
+export function safeLocalStorageSet(key: string, value: string): boolean {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error: any) {
+    const isQuota =
+      error instanceof DOMException &&
+      (error.name === 'QuotaExceededError' ||
+        error.code === 22 ||
+        error.code === 1014 ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+
+    if (isQuota) {
+      console.warn(`[Ocean Novel Storage] QuotaExceededError writing "${key}". Initiating auto-recovery...`);
+      try {
+        // 1. Sanitize heavy base64 cover images in cachedProjects
+        if (Array.isArray(cachedProjects)) {
+          cachedProjects.forEach(p => {
+            if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 50000) {
+              p.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
+            }
+          });
+        }
+
+        // 2. Remove any exceptionally large or stale entries in localStorage
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k !== key && k !== PROJECTS_KEY && k !== PROFILE_KEY) {
+            const itemVal = localStorage.getItem(k);
+            if (itemVal && itemVal.length > 250000) {
+              keysToRemove.push(k);
+            }
+          }
+        }
+        keysToRemove.forEach(k => {
+          try { localStorage.removeItem(k); } catch {}
+        });
+
+        // 3. If writing PROJECTS_KEY, strip heavy data from the value being written
+        let retryVal = value;
+        if (key === PROJECTS_KEY) {
+          try {
+            const list = JSON.parse(value);
+            if (Array.isArray(list)) {
+              const stripped = list.map((p: any) => {
+                if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 30000) {
+                  return { ...p, coverUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png" };
+                }
+                return p;
+              });
+              retryVal = JSON.stringify(stripped);
+            }
+          } catch {}
+        }
+
+        localStorage.setItem(key, retryVal);
+        console.info(`[Ocean Novel Storage] Successfully recovered and saved "${key}".`);
+        return true;
+      } catch {
+        console.warn(`[Ocean Novel Storage] Storage quota exhausted for "${key}". In-memory state and cloud sync are safely preserved.`);
+        return false;
+      }
+    } else {
+      console.error(`[Ocean Novel Storage] Error writing "${key}":`, error);
+      return false;
+    }
+  }
+}
+
 const DEFAULT_TASKS: StudioTask[] = [
   {
     id: 'task-1',
@@ -175,7 +253,29 @@ const defaultProfile: UserProfile = {
 
 // In-Memory Cache initialized from LocalStorage (Fallback if not logged in)
 let cachedProjects: ProjectMeta[] = (() => {
-  try { return JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]'); } catch { return []; }
+  try {
+    const raw = localStorage.getItem(PROJECTS_KEY);
+    if (!raw) return [];
+    const list: ProjectMeta[] = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    let cleaned = false;
+    const sanitized = list.map(p => {
+      if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 50000) {
+        cleaned = true;
+        return {
+          ...p,
+          coverUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
+        };
+      }
+      return p;
+    });
+    if (cleaned) {
+      try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(sanitized)); } catch {}
+    }
+    return sanitized;
+  } catch {
+    return [];
+  }
 })();
 let cachedProjectData: Record<string, ProjectData> = {};
 let cachedTasks: StudioTask[] = (() => {
@@ -216,7 +316,7 @@ export const storage = {
         const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
         if (profileDoc.exists()) {
           cachedProfile = profileDoc.data() as UserProfile;
-          localStorage.setItem(PROFILE_KEY, JSON.stringify(cachedProfile));
+          safeLocalStorageSet(PROFILE_KEY, JSON.stringify(cachedProfile));
         } else {
           cachedProfile = cachedProfile || defaultProfile;
           await setDoc(doc(db, `users/${userId}/profile/default`), cachedProfile);
@@ -227,14 +327,14 @@ export const storage = {
       try {
         const projSnapshot = await getDocs(collection(db, `users/${userId}/projects`));
         cachedProjects = projSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMeta));
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+        safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`); }
 
       // Load Tasks
       try {
         const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
         cachedTasks = taskSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as StudioTask));
-        localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+        safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
 
       // Load all Project Data
@@ -243,7 +343,7 @@ export const storage = {
         pdSnapshot.docs.forEach(d => {
           const pData = d.data() as ProjectData;
           cachedProjectData[d.id] = pData;
-          localStorage.setItem(PROJECT_DATA_PREFIX + d.id, JSON.stringify(pData));
+          safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(pData));
         });
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projectData`); }
 
@@ -268,7 +368,7 @@ export const storage = {
       cachedTasks.unshift(task);
     }
     
-    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
     if (currentUserId) {
       setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
@@ -277,7 +377,7 @@ export const storage = {
 
   deleteTask: (taskId: string) => {
     cachedTasks = cachedTasks.filter((t) => t.id !== taskId);
-    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
     if (currentUserId) {
       deleteDoc(doc(db, `users/${currentUserId}/tasks/${taskId}`))
         .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/tasks/${taskId}`));
@@ -286,7 +386,7 @@ export const storage = {
 
   saveAllTasks: (tasks: StudioTask[]) => {
     cachedTasks = tasks;
-    localStorage.setItem(TASKS_KEY, JSON.stringify(cachedTasks));
+    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
     if (currentUserId) {
       tasks.forEach(task => {
         setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
@@ -300,29 +400,39 @@ export const storage = {
   },
 
   saveProject: (project: ProjectMeta) => {
-    const existingIndex = cachedProjects.findIndex(p => p.id === project.id);
+    // Sanitize any large base64 cover to protect quota
+    const sanitizedProject = { ...project };
+    if (sanitizedProject.coverUrl && sanitizedProject.coverUrl.startsWith('data:') && sanitizedProject.coverUrl.length > 80000) {
+      sanitizedProject.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
+    }
+
+    const existingIndex = cachedProjects.findIndex(p => p.id === sanitizedProject.id);
     if (existingIndex >= 0) {
-      cachedProjects[existingIndex] = project;
+      cachedProjects[existingIndex] = sanitizedProject;
     } else {
-      cachedProjects.push(project);
+      cachedProjects.push(sanitizedProject);
     }
     
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: project.id } }));
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: sanitizedProject.id } }));
     }
     if (currentUserId) {
-      project.userId = currentUserId;
-      setDoc(doc(db, `users/${currentUserId}/projects/${project.id}`), project)
-        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${project.id}`));
+      sanitizedProject.userId = currentUserId;
+      setDoc(doc(db, `users/${currentUserId}/projects/${sanitizedProject.id}`), sanitizedProject)
+        .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${sanitizedProject.id}`));
     }
   },
 
   updateProject: (id: string, updates: Partial<ProjectMeta>) => {
     const existingIndex = cachedProjects.findIndex(p => p.id === id);
     if (existingIndex >= 0) {
-      cachedProjects[existingIndex] = { ...cachedProjects[existingIndex], ...updates };
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
+      const sanitizedUpdates = { ...updates };
+      if (sanitizedUpdates.coverUrl && sanitizedUpdates.coverUrl.startsWith('data:') && sanitizedUpdates.coverUrl.length > 80000) {
+        sanitizedUpdates.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
+      }
+      cachedProjects[existingIndex] = { ...cachedProjects[existingIndex], ...sanitizedUpdates };
+      safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
       if (currentUserId) {
         setDoc(doc(db, `users/${currentUserId}/projects/${id}`), cachedProjects[existingIndex], { merge: true })
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${id}`));
@@ -333,8 +443,10 @@ export const storage = {
   deleteProject: (id: string) => {
     cachedProjects = cachedProjects.filter(p => p.id !== id);
     delete cachedProjectData[id];
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(cachedProjects));
-    localStorage.removeItem(PROJECT_DATA_PREFIX + id);
+    safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    try {
+      localStorage.removeItem(PROJECT_DATA_PREFIX + id);
+    } catch {}
     if (currentUserId) {
       deleteDoc(doc(db, `users/${currentUserId}/projects/${id}`))
         .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/projects/${id}`));
@@ -363,7 +475,7 @@ export const storage = {
     const existing = storage.getProjectData(id) || { manuscript: [], characters: [], locations: [] };
     const newData = { ...existing, ...data, id };
     cachedProjectData[id] = newData;
-    localStorage.setItem(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
+    safeLocalStorageSet(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: id } }));
     }
@@ -407,7 +519,7 @@ export const storage = {
     const current = cachedProfile || defaultProfile;
     const updated = { ...current, ...profile };
     cachedProfile = updated;
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+    safeLocalStorageSet(PROFILE_KEY, JSON.stringify(updated));
     if (currentUserId) {
       setDoc(doc(db, `users/${currentUserId}/profile/default`), updated)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));
@@ -428,7 +540,7 @@ export const storage = {
     const current = storage.getTimelineSettings();
     const updated = { ...current, ...settings };
     try {
-      localStorage.setItem(TIMELINE_SETTINGS_KEY, JSON.stringify(updated));
+      safeLocalStorageSet(TIMELINE_SETTINGS_KEY, JSON.stringify(updated));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: updated }));
       }

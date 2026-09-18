@@ -30,7 +30,11 @@ export const runFantasySeed = (): boolean => {
       }
     });
 
-    localStorage.setItem("FANTASY_CHAR_PORTRAITS_SEEDED_V5", "true");
+    try {
+      localStorage.setItem("FANTASY_CHAR_PORTRAITS_SEEDED_V5", "true");
+    } catch {
+      // quota or local storage restriction
+    }
     return false;
   }
 

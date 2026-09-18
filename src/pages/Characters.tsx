@@ -53,6 +53,30 @@ export const RELATION_OPTIONS = [
   { label: "RIVAL", color: "#9c27b0", icon: Swords },
 ];
 
+export function getEdgeIconComponent(edge: any) {
+  // If edge.icon is an actual function or valid React component
+  if (typeof edge?.icon === "function") {
+    return edge.icon;
+  }
+  if (
+    edge?.icon &&
+    typeof edge.icon === "object" &&
+    (typeof edge.icon.render === "function" ||
+      ("$$typeof" in edge.icon && typeof (edge.icon as any).$$typeof === "symbol"))
+  ) {
+    return edge.icon;
+  }
+  // Lookup from RELATION_OPTIONS by label
+  if (edge?.label) {
+    const found = RELATION_OPTIONS.find(
+      (r) => r.label.toUpperCase() === String(edge.label).toUpperCase()
+    );
+    if (found?.icon) return found.icon;
+  }
+  if (edge?.label === "CUSTOM") return Bookmark;
+  return Swords;
+}
+
 export function buildDefaultProjectGraph(projectId: string | undefined, chars: any[]) {
   // If stored in project data, validate and return
   if (projectId) {
@@ -460,24 +484,24 @@ ${formData.backstory}
     }
   }, [id, characters]);
 
-  const activeGraph = graphs.find(g => g.id === activeGraphId) || graphs[0];
+  const activeGraph = graphs.find(g => g.id === activeGraphId) || graphs[0] || { id: "1", name: "Main Plot", nodes: [], edges: [] };
 
-  const nodes = activeGraph.nodes;
+  const nodes = activeGraph.nodes || [];
   const setNodes = (action: any) => {
     setGraphs(prev => prev.map(g => {
       if (g.id === activeGraphId) {
-        const nextNodes = typeof action === 'function' ? action(g.nodes) : action;
+        const nextNodes = typeof action === 'function' ? action(g.nodes || []) : action;
         return { ...g, nodes: nextNodes };
       }
       return g;
     }));
   };
 
-  const edges = activeGraph.edges;
+  const edges = activeGraph.edges || [];
   const setEdges = (action: any) => {
     setGraphs(prev => prev.map(g => {
       if (g.id === activeGraphId) {
-        const nextEdges = typeof action === 'function' ? action(g.edges) : action;
+        const nextEdges = typeof action === 'function' ? action(g.edges || []) : action;
         return { ...g, edges: nextEdges };
       }
       return g;
@@ -1410,8 +1434,7 @@ ${formData.backstory}
                       const mx = (sx + tx) / 2;
                       const my = (sy + ty) / 2 + (sag * 0.5);
 
-                      const relationOpt = RELATION_OPTIONS.find((r) => r.label === edge.label);
-                      const EdgeIcon = edge.icon || relationOpt?.icon || Swords;
+                      const EdgeIcon = getEdgeIconComponent(edge);
 
                       return (
                         <g key={edge.id}>
@@ -1712,7 +1735,7 @@ ${formData.backstory}
                               className="w-full flex items-center gap-3 p-3 rounded-sm border border-transparent hover:border-[#d49a89] transition-all bg-white shadow-sm hover:shadow-md"
                               onClick={() => {
                                 if (pendingEdge.edgeId) {
-                                  setEdges(prev => prev.map(e => e.id === pendingEdge.edgeId ? { ...e, label: opt.label, color: opt.color, icon: opt.icon } : e));
+                                  setEdges(prev => prev.map(e => e.id === pendingEdge.edgeId ? { ...e, label: opt.label, color: opt.color } : e));
                                 } else {
                                   setEdges(prev => [...prev, {
                                     id: Date.now().toString(),
@@ -1720,7 +1743,6 @@ ${formData.backstory}
                                     target: pendingEdge.target,
                                     label: opt.label,
                                     color: opt.color,
-                                    icon: opt.icon
                                   }]);
                                 }
                                 setPendingEdge(null);
@@ -1746,7 +1768,7 @@ ${formData.backstory}
                             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                               const val = e.currentTarget.value.trim().toUpperCase();
                               if (pendingEdge.edgeId) {
-                                setEdges(prev => prev.map(edge => edge.id === pendingEdge.edgeId ? { ...edge, label: val, color: "#8c503c", icon: Bookmark } : edge));
+                                setEdges(prev => prev.map(edge => edge.id === pendingEdge.edgeId ? { ...edge, label: val, color: "#8c503c" } : edge));
                               } else {
                                 setEdges(prev => [...prev, {
                                   id: Date.now().toString(),
@@ -1754,7 +1776,6 @@ ${formData.backstory}
                                   target: pendingEdge.target,
                                   label: val,
                                   color: "#8c503c",
-                                  icon: Bookmark
                                 }]);
                               }
                               setPendingEdge(null);
