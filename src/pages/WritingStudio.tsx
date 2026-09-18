@@ -1,5 +1,5 @@
 import React, { ReactNode, useState, useEffect, useRef, useMemo } from "react";
-import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag, AlertTriangle, Trash2 } from "lucide-react";
+import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag, AlertTriangle, Trash2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { storage, ProjectData } from "@/lib/storage";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
+import AIPromptModal from "@/components/AIPromptModal";
 
 // Helper functions for manuscript tree
 const findFirstSceneId = (items: ManuscriptItem[]): string => {
@@ -51,6 +52,7 @@ export default function WritingStudio() {
   const [isContextOpen, setIsContextOpen] = useState(true);
   const [isManuscriptOpen, setIsManuscriptOpen] = useState(true);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isAIPromptModalOpen, setIsAIPromptModalOpen] = useState(false);
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
@@ -76,6 +78,14 @@ export default function WritingStudio() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const [projectMeta, setProjectMeta] = useState<any>(() => {
+    if (projectId) {
+      const projects = storage.getProjects();
+      return projects.find(p => p.id === projectId) || null;
+    }
+    return null;
+  });
 
   // Entities & Notes state with synchronous lazy initialization
   const [characters, setCharacters] = useState<any[]>(() => {
@@ -173,6 +183,9 @@ export default function WritingStudio() {
         setCharacters(data.characters && data.characters.length > 0 ? data.characters : []);
         setLocations(data.locations && data.locations.length > 0 ? data.locations : []);
         setSceneNotes(data.notes || {});
+
+        const projects = storage.getProjects();
+        setProjectMeta(projects.find(p => p.id === projectId) || null);
       }
     }
   }, [projectId]);
@@ -1051,6 +1064,15 @@ export default function WritingStudio() {
               <span className="text-[10px] font-bold tracking-widest uppercase">{readingTime} min read</span>
             </div>
           </div>
+
+          {/* Center AI Prompt Hub Button (No Star Icon) */}
+          <button
+            onClick={() => setIsAIPromptModalOpen(true)}
+            className="px-3.5 py-1 text-[11px] font-bold tracking-wider uppercase text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/20 hover:border-[#8C503C] rounded-sm transition-all duration-200 cursor-pointer select-none active:scale-95"
+            title="Open Ocean Novel AI Prompt Hub"
+          >
+            AI Prompt Hub
+          </button>
           
           <div className="flex items-center gap-3 text-stone-500">
             <span className="text-[10px] font-bold tracking-widest uppercase">Project Goal: {progressPercent}%</span>
@@ -1477,9 +1499,17 @@ export default function WritingStudio() {
 
               {/* Crafting Prompts / Checkpoints */}
               <div className="bg-[#F9F6ED] border border-[#E5E0D5] rounded-sm p-3 space-y-2">
-                <span className="text-[9px] uppercase tracking-widest font-bold text-[#5D3F32] block">
-                  Scene Focus Checkpoints
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-widest font-bold text-[#5D3F32] block">
+                    Scene Focus Checkpoints
+                  </span>
+                  <button
+                    onClick={() => setIsAIPromptModalOpen(true)}
+                    className="text-[10px] text-[#8C503C] hover:underline font-bold"
+                  >
+                    Generate AI Prompt
+                  </button>
+                </div>
                 <ul className="space-y-1.5 text-[11px] font-serif text-stone-600">
                   <li className="flex items-start gap-1.5">
                     <span className="text-[#8C503C] font-bold">•</span>
@@ -1524,6 +1554,18 @@ export default function WritingStudio() {
         onNavigateToScene={(sceneId) => {
           setActiveDocId(sceneId);
         }}
+      />
+
+      {/* Ocean Novel AI Prompt Hub Modal */}
+      <AIPromptModal
+        isOpen={isAIPromptModalOpen}
+        onClose={() => setIsAIPromptModalOpen(false)}
+        projectMeta={projectMeta}
+        activeSceneTitle={currentDoc?.title || 'Current Scene'}
+        activeSceneNotes={sceneNotes[activeDocId] || ''}
+        activeSceneContent={activeContent}
+        characters={characters}
+        locations={locations}
       />
 
       {/* Create Item Modal */}
