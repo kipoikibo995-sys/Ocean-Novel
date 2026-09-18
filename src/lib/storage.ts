@@ -238,10 +238,10 @@ const DEFAULT_TASKS: StudioTask[] = [
 ];
 
 const defaultProfile: UserProfile = {
-  name: "Jane Smith",
-  penName: "J. S. Hawthorne",
-  email: "jane.smith@example.com",
-  bio: "Historical fiction & noir mystery novelist with a fondness for fog-drenched coasts and moody characters.",
+  name: "Koji Academy",
+  penName: "Koji Academy",
+  email: "kojiacademy2026@gmail.com",
+  bio: "Lead Studio Author & Novel Architect at StreamWriter Studio.",
   avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
   plan: "pro",
   defaultFont: "Merriweather (Serif)",
@@ -285,11 +285,22 @@ let cachedTasks: StudioTask[] = (() => {
   } catch { return DEFAULT_TASKS; }
 })();
 let cachedProfile: UserProfile | null = (() => {
-  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
+  try { 
+    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); 
+    if (p && (p.email === 'jane.smith@example.com' || !p.email)) {
+      return { ...p, name: "Koji Academy", penName: "Koji Academy", email: "kojiacademy2026@gmail.com" };
+    }
+    return p;
+  } catch { return null; }
 })();
 let currentUserId: string | null = null;
 
 export const storage = {
+  getCurrentUserId: () => currentUserId,
+  setCurrentUserId: (userId: string | null) => {
+    currentUserId = userId;
+  },
+
   clearCache: () => {
     // Only clears user memory when logging out. Still falls back to LocalStorage
     cachedProjects = (() => {
@@ -308,6 +319,38 @@ export const storage = {
     currentUserId = null;
   },
   
+  syncAllLocalDataToCloud: async (userId: string) => {
+    currentUserId = userId;
+    try {
+      // 1. Profile
+      const prof = storage.getUserProfile();
+      await setDoc(doc(db, `users/${userId}/profile/default`), prof, { merge: true });
+
+      // 2. Projects & ProjectData
+      const projs = storage.getProjects();
+      for (const p of projs) {
+        const pWithUser = { ...p, userId };
+        await setDoc(doc(db, `users/${userId}/projects/${p.id}`), pWithUser, { merge: true });
+        const pData = storage.getProjectData(p.id);
+        if (pData) {
+          const pdWithUser = { ...pData, userId, id: p.id };
+          await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), pdWithUser, { merge: true });
+        }
+      }
+
+      // 3. Tasks
+      const ts = storage.getTasks();
+      for (const t of ts) {
+        const tWithUser = { ...t, userId };
+        await setDoc(doc(db, `users/${userId}/tasks/${t.id}`), tWithUser, { merge: true });
+      }
+      return true;
+    } catch (e) {
+      console.warn("Could not sync all to cloud directly", e);
+      return false;
+    }
+  },
+
   syncFromCloud: async (userId: string) => {
     currentUserId = userId;
     try {
@@ -326,15 +369,32 @@ export const storage = {
       // Load Projects
       try {
         const projSnapshot = await getDocs(collection(db, `users/${userId}/projects`));
-        cachedProjects = projSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMeta));
-        safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+        if (projSnapshot.docs.length > 0) {
+          cachedProjects = projSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMeta));
+          safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+        } else if (cachedProjects && cachedProjects.length > 0) {
+          // Push existing local projects to cloud so user never loses their manuscripts!
+          for (const p of cachedProjects) {
+            await setDoc(doc(db, `users/${userId}/projects/${p.id}`), { ...p, userId }, { merge: true });
+            const pData = storage.getProjectData(p.id);
+            if (pData) {
+              await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), { ...pData, userId, id: p.id }, { merge: true });
+            }
+          }
+        }
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`); }
 
       // Load Tasks
       try {
         const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
-        cachedTasks = taskSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as StudioTask));
-        safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
+        if (taskSnapshot.docs.length > 0) {
+          cachedTasks = taskSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as StudioTask));
+          safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
+        } else if (cachedTasks && cachedTasks.length > 0) {
+          for (const t of cachedTasks) {
+            await setDoc(doc(db, `users/${userId}/tasks/${t.id}`), { ...t, userId }, { merge: true });
+          }
+        }
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
 
       // Load all Project Data
@@ -512,6 +572,15 @@ export const storage = {
   },
 
   getUserProfile: (): UserProfile => {
+    if (cachedProfile && (cachedProfile.email === 'jane.smith@example.com' || !cachedProfile.email)) {
+      cachedProfile = {
+        ...cachedProfile,
+        name: "Koji Academy",
+        penName: "Koji Academy",
+        email: "kojiacademy2026@gmail.com"
+      };
+      safeLocalStorageSet(PROFILE_KEY, JSON.stringify(cachedProfile));
+    }
     return cachedProfile || defaultProfile;
   },
 

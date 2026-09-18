@@ -19,8 +19,11 @@ import {
   Search,
   ShieldCheck,
   BookOpen,
+  Cloud,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
 
 export function AppLayout() {
   return (
@@ -36,6 +39,7 @@ export function ProjectLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
+  const { user, openAuthModal, signOut } = useAuth();
 
   useEffect(() => {
     if (location.pathname.includes("/workspace/studio")) {
@@ -259,6 +263,30 @@ export function ProjectLayout() {
 
         <div className="flex flex-col gap-2 shrink-0">
           <button
+            type="button"
+            onClick={openAuthModal}
+            className={cn(
+              "flex items-center rounded-xl transition-colors border border-white/20 bg-white/10 text-white/90 hover:bg-white/20 hover:text-white",
+              isExpanded
+                ? "w-full px-3 h-10 gap-2.5 justify-start text-left"
+                : "w-10 h-10 justify-center mx-auto",
+            )}
+            title="StreamWriter Studio Account & Cloud Sync"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            {isExpanded && (
+              <div className="truncate text-left">
+                <p className="text-[11px] font-mono font-bold leading-tight truncate text-white">
+                  {user?.email || "kojiacademy2026@gmail.com"}
+                </p>
+                <p className="text-[9px] text-white/70 tracking-wider uppercase font-bold">
+                  Admin • Cloud
+                </p>
+              </div>
+            )}
+          </button>
+
+          <button
             onClick={() => {
               const projId = location.pathname.split("/")[2] || "1";
               navigate(`/project/${projId}/workspace/settings?tab=profile`);
@@ -296,6 +324,25 @@ export function ProjectLayout() {
             <Settings className="w-5 h-5 shrink-0" />
             {isExpanded && (
               <span className="font-medium text-sm">Settings</span>
+            )}
+          </button>
+
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate("/login");
+            }}
+            className={cn(
+              "flex items-center rounded-xl transition-colors text-white/50 hover:text-white hover:bg-white/10",
+              isExpanded
+                ? "w-full px-4 h-10 gap-3"
+                : "w-10 h-10 justify-center mx-auto",
+            )}
+            title="Sign Out to Login Page"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {isExpanded && (
+              <span className="font-medium text-sm">Sign Out</span>
             )}
           </button>
         </div>
