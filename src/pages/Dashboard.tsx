@@ -556,7 +556,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={() => setIsTimelineModalOpen(true)}
                 className="group flex items-center gap-3 sm:gap-6 bg-white/50 hover:bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/60 hover:border-amber-400/80 shadow-xs hover:shadow-md transition-all duration-200 shrink-0 w-max cursor-pointer text-left relative"
-                title="Nhấp để xem & cài đặt lại thông số timeline tác giả"
+                title="Click to view & configure author timeline and statistics"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner group-hover:scale-105 transition-transform">
@@ -643,7 +643,7 @@ export default function Dashboard() {
 
           {/* ARCHIVAL BOOKSHELF */}
         <div className="relative pt-12 pb-0 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
-          {/* Container cho kệ sách trải dài */}
+          {/* Bookshelf container */}
           <div className="relative flex flex-col shrink-0 min-w-full w-max">
             
             {/* Wooden Shelf Base */}
@@ -652,7 +652,7 @@ export default function Dashboard() {
             
             <div className="flex items-end h-[280px] gap-[2px] lg:gap-[3px] pb-6 relative z-10 px-4 lg:px-8 justify-start">
               
-              {/* Left Bookend (chặn sách trái) */}
+              {/* Left Bookend */}
               <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-r border-[#5c3a21] rounded-t-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] mr-1 z-20" />
 
               {savedProjects.length === 0 && (
@@ -661,7 +661,7 @@ export default function Dashboard() {
                 </div>
               )}
               {savedProjects.map((proj, index) => {
-                // 2. Cập nhật bảng màu rõ rệt hơn
+                // Genre-specific spine colors
                 const getGenreTheme = (gStr: string) => {
                   const g = (gStr || "").toLowerCase();
                   if (g.includes('fantasy')) return { bg: "bg-[#182330]", spine: "bg-[#0e1620]" }; // Navy
@@ -689,10 +689,7 @@ export default function Dashboard() {
                 const isComplete = progressRatio >= 1 && (proj.wordGoal || 0) > 0;
                 
                 const calculateFont = (maxW: number, defaultSize: number, charRatio: number = 0.8) => {
-                  // A more aggressive scaling to ensure it fits
                   // Calculate required font size based on string length and available width.
-                  // Average character width is approx 0.6 of font size for serif bold.
-                  // Add tracking to the character width.
                   const estimatedCharWidthMultiplier = 0.6;
                   const estimatedWidth = proj.title.length * (defaultSize * estimatedCharWidthMultiplier);
                   let finalSize = defaultSize;
@@ -709,7 +706,7 @@ export default function Dashboard() {
                 };
 
                 
-                // Giới hạn ribbon chỉ cho 2 sách cập nhật gần nhất
+                // Ribbon indicator for most recently updated books
                 const recentProjectIds = [...savedProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0)).slice(0, 2).map(p => p.id);
                 const isRecent = recentProjectIds.includes(proj.id);
 
@@ -821,7 +818,7 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* 1. Cover Plate Content (Trượt ra ngang accordion - Kích thước lớn hơn) */}
+                    {/* 1. Cover Plate Content (Accordion expanded slideout) */}
                     <div className={cn(
                       "absolute top-0 bottom-0 right-0 p-3 sm:p-4 transition-opacity duration-500 z-10 flex items-center justify-end overflow-hidden",
                       isSelected ? "opacity-100 delay-150" : "opacity-0 pointer-events-none"
@@ -867,7 +864,7 @@ export default function Dashboard() {
                             />
                           </div>
                           
-                          {/* Nút hành động */}
+                          {/* Action Button */}
                           <div className="mt-4 flex justify-end">
                             <button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/project/${proj.id}`); }}
@@ -883,7 +880,7 @@ export default function Dashboard() {
                 );
               })}
 
-              {/* Right Bookend (chặn sách phải) */}
+              {/* Right Bookend */}
               {savedProjects.length > 0 && (
                 <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-l border-[#2a1a0f] rounded-t-sm shadow-[-4px_0_8px_rgba(0,0,0,0.4)] ml-1 z-20" />
               )}
