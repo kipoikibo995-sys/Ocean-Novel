@@ -241,7 +241,7 @@ const defaultProfile: UserProfile = {
   name: "Koji Academy",
   penName: "Koji Academy",
   email: "kojiacademy2026@gmail.com",
-  bio: "Lead Studio Author & Novel Architect at StreamWriter Studio.",
+  bio: "Lead Studio Author & Novel Architect at Ocean Novel.",
   avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
   plan: "pro",
   defaultFont: "Merriweather (Serif)",
@@ -295,10 +295,21 @@ let cachedProfile: UserProfile | null = (() => {
 })();
 let currentUserId: string | null = null;
 
+function canSyncWithFirestore(targetUserId?: string | null): boolean {
+  const uid = targetUserId || currentUserId;
+  return Boolean(
+    auth.currentUser &&
+    uid &&
+    uid !== 'null' &&
+    uid !== 'undefined' &&
+    auth.currentUser.uid === uid
+  );
+}
+
 export const storage = {
   getCurrentUserId: () => currentUserId,
   setCurrentUserId: (userId: string | null) => {
-    currentUserId = userId;
+    currentUserId = userId && userId !== 'null' ? userId : null;
   },
 
   clearCache: () => {
@@ -320,7 +331,12 @@ export const storage = {
   },
   
   syncAllLocalDataToCloud: async (userId: string) => {
+    if (!userId || userId === 'null') return false;
     currentUserId = userId;
+    if (!canSyncWithFirestore(userId)) {
+      return false;
+    }
+
     try {
       // 1. Profile
       const prof = storage.getUserProfile();
@@ -352,7 +368,12 @@ export const storage = {
   },
 
   syncFromCloud: async (userId: string) => {
+    if (!userId || userId === 'null') return;
     currentUserId = userId;
+    if (!canSyncWithFirestore(userId)) {
+      return;
+    }
+
     try {
       // Load Profile
       try {
@@ -429,7 +450,7 @@ export const storage = {
     }
     
     safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
-    if (currentUserId) {
+    if (canSyncWithFirestore()) {
       setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
     }
@@ -438,7 +459,7 @@ export const storage = {
   deleteTask: (taskId: string) => {
     cachedTasks = cachedTasks.filter((t) => t.id !== taskId);
     safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
-    if (currentUserId) {
+    if (canSyncWithFirestore()) {
       deleteDoc(doc(db, `users/${currentUserId}/tasks/${taskId}`))
         .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/tasks/${taskId}`));
     }
@@ -447,7 +468,7 @@ export const storage = {
   saveAllTasks: (tasks: StudioTask[]) => {
     cachedTasks = tasks;
     safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
-    if (currentUserId) {
+    if (canSyncWithFirestore()) {
       tasks.forEach(task => {
         setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
@@ -477,8 +498,8 @@ export const storage = {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: sanitizedProject.id } }));
     }
-    if (currentUserId) {
-      sanitizedProject.userId = currentUserId;
+    if (canSyncWithFirestore()) {
+      sanitizedProject.userId = currentUserId!;
       setDoc(doc(db, `users/${currentUserId}/projects/${sanitizedProject.id}`), sanitizedProject)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${sanitizedProject.id}`));
     }
@@ -493,7 +514,7 @@ export const storage = {
       }
       cachedProjects[existingIndex] = { ...cachedProjects[existingIndex], ...sanitizedUpdates };
       safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
-      if (currentUserId) {
+      if (canSyncWithFirestore()) {
         setDoc(doc(db, `users/${currentUserId}/projects/${id}`), cachedProjects[existingIndex], { merge: true })
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${id}`));
       }
@@ -507,7 +528,7 @@ export const storage = {
     try {
       localStorage.removeItem(PROJECT_DATA_PREFIX + id);
     } catch {}
-    if (currentUserId) {
+    if (canSyncWithFirestore()) {
       deleteDoc(doc(db, `users/${currentUserId}/projects/${id}`))
         .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/projects/${id}`));
       deleteDoc(doc(db, `users/${currentUserId}/projectData/${id}`))
@@ -563,8 +584,8 @@ export const storage = {
       storage.saveProject(project);
     }
 
-    if (currentUserId) {
-      newData.userId = currentUserId;
+    if (canSyncWithFirestore()) {
+      newData.userId = currentUserId!;
       newData.id = id;
       setDoc(doc(db, `users/${currentUserId}/projectData/${id}`), newData)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projectData/${id}`));
@@ -589,7 +610,7 @@ export const storage = {
     const updated = { ...current, ...profile };
     cachedProfile = updated;
     safeLocalStorageSet(PROFILE_KEY, JSON.stringify(updated));
-    if (currentUserId) {
+    if (canSyncWithFirestore()) {
       setDoc(doc(db, `users/${currentUserId}/profile/default`), updated)
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));
     }

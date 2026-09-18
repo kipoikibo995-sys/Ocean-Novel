@@ -36,7 +36,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-[#fcfaf5] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-          <p className="font-serif text-sm text-stone-600">Loading StreamWriter Studio...</p>
+          <p className="font-serif text-sm text-stone-600">Loading Ocean Novel...</p>
         </div>
       </div>
     );

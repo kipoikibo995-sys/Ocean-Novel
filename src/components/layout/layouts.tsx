@@ -263,30 +263,6 @@ export function ProjectLayout() {
 
         <div className="flex flex-col gap-2 shrink-0">
           <button
-            type="button"
-            onClick={openAuthModal}
-            className={cn(
-              "flex items-center rounded-xl transition-colors border border-white/20 bg-white/10 text-white/90 hover:bg-white/20 hover:text-white",
-              isExpanded
-                ? "w-full px-3 h-10 gap-2.5 justify-start text-left"
-                : "w-10 h-10 justify-center mx-auto",
-            )}
-            title="StreamWriter Studio Account & Cloud Sync"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            {isExpanded && (
-              <div className="truncate text-left">
-                <p className="text-[11px] font-mono font-bold leading-tight truncate text-white">
-                  {user?.email || "kojiacademy2026@gmail.com"}
-                </p>
-                <p className="text-[9px] text-white/70 tracking-wider uppercase font-bold">
-                  Admin • Cloud
-                </p>
-              </div>
-            )}
-          </button>
-
-          <button
             onClick={() => {
               const projId = location.pathname.split("/")[2] || "1";
               navigate(`/project/${projId}/workspace/settings?tab=profile`);

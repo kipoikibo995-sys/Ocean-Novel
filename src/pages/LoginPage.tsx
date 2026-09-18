@@ -19,8 +19,8 @@ export default function LoginPage() {
   const location = useLocation();
   const { user, signInWithGoogle, signInWithAdmin, isSyncing } = useAuth();
 
-  const [email, setEmail] = useState("kojiacademy2026@gmail.com");
-  const [password, setPassword] = useState("••••••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -39,15 +39,15 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage(null);
     setIsLoading(true);
-    setStatusMessage("Authenticating with StreamWriter Studio...");
+    setStatusMessage("Authenticating with Ocean Novel...");
 
     try {
-      const success = await signInWithAdmin(email, password);
+      const success = await signInWithAdmin(email || "author@ocean-novel.com", password);
       if (success) {
         setStatusMessage("Authenticated successfully! Entering Archive Projects...");
         setTimeout(() => {
           navigate(destination, { replace: true });
-        }, 600);
+        }, 500);
       } else {
         setErrorMessage("Authentication failed. Please check your credentials.");
         setIsLoading(false);
@@ -68,27 +68,9 @@ export default function LoginPage() {
       setStatusMessage("Google Account Connected! Entering Archive Projects...");
       setTimeout(() => {
         navigate(destination, { replace: true });
-      }, 600);
+      }, 500);
     } catch (err: any) {
       setErrorMessage(err?.message || "Google sign-in was cancelled or encountered an error.");
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickAdminLogin = async () => {
-    setEmail("kojiacademy2026@gmail.com");
-    setPassword("••••••••••••");
-    setErrorMessage(null);
-    setIsLoading(true);
-    setStatusMessage("Logging in as Admin (kojiacademy2026@gmail.com)...");
-
-    const success = await signInWithAdmin("kojiacademy2026@gmail.com");
-    if (success) {
-      setStatusMessage("Welcome back, Koji Academy! Redirecting to Archive Projects...");
-      setTimeout(() => {
-        navigate(destination, { replace: true });
-      }, 500);
-    } else {
       setIsLoading(false);
     }
   };
@@ -121,7 +103,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <span className="font-serif font-bold text-lg tracking-tight text-[#26231d] block">
-                  StreamWriter
+                  Ocean Novel
                 </span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-stone-500 block">
                   Author Studio
@@ -138,7 +120,7 @@ export default function LoginPage() {
                 </span>
               </h1>
               <p className="mt-5 text-xs sm:text-sm text-stone-600 leading-relaxed font-sans">
-                StreamWriter Studio is the dedicated environment for novelists and narrative architects. Organize your story bibles, track character arcs, build worlds, and craft your manuscripts.
+                Ocean Novel is the dedicated environment for novelists and narrative architects. Organize your story bibles, track character arcs, build worlds, and craft your manuscripts.
               </p>
             </div>
 
@@ -166,7 +148,7 @@ export default function LoginPage() {
           {/* Bottom Brand Statement */}
           <div className="relative z-10 mt-10 pt-6 border-t border-[#ded5c7]/60 flex items-center justify-between">
             <span className="text-[10px] font-bold tracking-widest uppercase text-stone-400 font-serif">
-              STREAMWRITER CLOUD ARCHIVES
+              OCEAN NOVEL CLOUD ARCHIVES
             </span>
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -191,37 +173,6 @@ export default function LoginPage() {
               <div className="w-9 h-9 rounded-full bg-[#f4efe6] border border-[#ded5c7] flex items-center justify-center text-stone-600">
                 <BookOpen className="w-4 h-4" />
               </div>
-            </div>
-
-            {/* Quick Admin Access Preset Card */}
-            <div className="mt-6 p-3.5 bg-[#f5ede0] border border-[#d8c7b0] rounded-xl flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-lg bg-[#3e2e26] text-[#fcfaf5] flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                  KA
-                </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-stone-900 truncate">
-                      Koji Academy
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-bold tracking-wider uppercase shrink-0">
-                      ADMIN
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-stone-600 font-mono truncate">
-                    kojiacademy2026@gmail.com
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleQuickAdminLogin}
-                disabled={isLoading || isSyncing}
-                className="shrink-0 bg-[#3e2e26] hover:bg-[#2a1e18] active:scale-95 text-[#fcfaf5] text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              >
-                <span>Quick Sign In</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
             </div>
 
             {/* Status / Feedback Notifications */}
@@ -254,7 +205,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="kojiacademy2026@gmail.com"
+                  placeholder="author@example.com"
                   className="w-full bg-[#f7f4ec] border border-[#d8d0c2] focus:border-amber-700 focus:bg-white text-stone-900 text-sm rounded-lg px-4 py-3 outline-none transition-all font-sans font-medium"
                 />
               </div>
@@ -267,7 +218,6 @@ export default function LoginPage() {
                   >
                     PASSWORD
                   </label>
-                  <span className="text-[11px] text-stone-400">Default: any password</span>
                 </div>
                 <div className="relative">
                   <input
@@ -306,7 +256,7 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span>SIGN IN TO ARCHIVE PROJECTS</span>
+                    <span>SIGN IN TO OCEAN NOVEL</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -357,7 +307,7 @@ export default function LoginPage() {
               <ShieldCheck className="w-3.5 h-3.5 text-stone-400" />
               <span>Cloud Firestore Synced</span>
             </span>
-            <span>StreamWriter v2.6</span>
+            <span>Ocean Novel v2.6</span>
           </div>
         </div>
       </motion.div>

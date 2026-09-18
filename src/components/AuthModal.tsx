@@ -26,8 +26,8 @@ export function AuthModal() {
     lastSyncTime,
   } = useAuth();
 
-  const [email, setEmail] = useState("kojiacademy2026@gmail.com");
-  const [password, setPassword] = useState("••••••••••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -35,14 +35,14 @@ export function AuthModal() {
 
   const handleStudioSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMessage("Signing into StreamWriter Studio as Admin...");
-    const success = await signInWithAdmin(email, password);
+    setStatusMessage("Signing into Ocean Novel...");
+    const success = await signInWithAdmin(email || "author@ocean-novel.com", password);
     if (success) {
-      setStatusMessage("Authenticated as Admin! Synced manuscripts to Cloud.");
+      setStatusMessage("Authenticated successfully! Synced to Cloud.");
       setTimeout(() => {
         setStatusMessage(null);
         closeAuthModal();
-      }, 900);
+      }, 700);
     } else {
       setStatusMessage("Authentication failed. Please check credentials.");
     }
@@ -51,11 +51,11 @@ export function AuthModal() {
   const handleGoogleSignIn = async () => {
     setStatusMessage("Connecting to Google Account...");
     await signInWithGoogle();
-    setStatusMessage("Google Account Connected & Manuscripts Synced!");
+    setStatusMessage("Google Account Connected & Synced!");
     setTimeout(() => {
       setStatusMessage(null);
       closeAuthModal();
-    }, 900);
+    }, 700);
   };
 
   return (
@@ -100,7 +100,7 @@ export function AuthModal() {
                   </span>
                 </h2>
                 <p className="mt-4 text-xs sm:text-sm text-stone-600 leading-relaxed font-sans">
-                  StreamWriter is the premium environment for authors. Manage your library, organize ideas, and generate full manuscripts with advanced AI.
+                  Ocean Novel is the premium environment for authors. Manage your library, organize ideas, and generate full manuscripts with advanced AI.
                 </p>
               </div>
 
@@ -128,7 +128,7 @@ export function AuthModal() {
             {/* Brand Signature */}
             <div className="relative z-10 mt-8 pt-4">
               <span className="text-[10px] font-bold tracking-widest uppercase text-stone-400 font-serif">
-                — STREAMWRITER STUDIO
+                — OCEAN NOVEL STUDIO
               </span>
             </div>
           </div>
@@ -137,16 +137,13 @@ export function AuthModal() {
           <div className="w-full md:w-7/12 bg-white/95 sm:bg-[#fcfaf5]/90 p-6 sm:p-10 flex flex-col justify-between relative">
             {/* Top Close Bar */}
             <div className="flex items-center justify-between mb-4">
-              {user?.email && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold tracking-wide">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Admin Session Active</span>
-                </div>
-              )}
+              <span className="text-[10px] font-mono text-stone-500 font-semibold uppercase tracking-wider">
+                Cloud Sync Access
+              </span>
               <button
                 type="button"
                 onClick={closeAuthModal}
-                className="ml-auto text-stone-400 hover:text-stone-800 text-xs font-serif font-bold uppercase tracking-widest transition-colors py-1 px-2"
+                className="ml-auto text-stone-400 hover:text-stone-800 text-xs font-serif font-bold uppercase tracking-widest transition-colors py-1 px-2 cursor-pointer"
                 title="Close modal"
               >
                 CLOSE
@@ -185,8 +182,8 @@ export function AuthModal() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="kojiacademy2026@gmail.com"
-                    className="w-full bg-[#edf4fe] border border-[#d2def0] focus:border-amber-700 focus:bg-white text-stone-900 text-sm rounded-lg px-4 py-3 outline-none transition-all font-sans font-medium"
+                    placeholder="author@example.com"
+                    className="w-full bg-[#f7f4ec] border border-[#d8d0c2] focus:border-amber-700 focus:bg-white text-stone-900 text-sm rounded-lg px-4 py-3 outline-none transition-all font-sans font-medium"
                   />
                 </div>
 
@@ -205,7 +202,7 @@ export function AuthModal() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       placeholder="Enter your password"
-                      className="w-full bg-[#edf4fe] border border-[#d2def0] focus:border-amber-700 focus:bg-white text-stone-900 text-sm rounded-lg px-4 py-3 outline-none transition-all font-sans tracking-wider"
+                      className="w-full bg-[#f7f4ec] border border-[#d8d0c2] focus:border-amber-700 focus:bg-white text-stone-900 text-sm rounded-lg px-4 py-3 outline-none transition-all font-sans tracking-wider"
                     />
                     <button
                       type="button"
@@ -233,7 +230,7 @@ export function AuthModal() {
                       <span>CONNECTING...</span>
                     </>
                   ) : (
-                    <span>SIGN IN TO STUDIO</span>
+                    <span>SIGN IN TO OCEAN NOVEL</span>
                   )}
                 </button>
               </form>
@@ -275,61 +272,11 @@ export function AuthModal() {
                 </svg>
                 <span>Continue with Google</span>
               </button>
-
-              {/* Current Active Account Card & Cloud Sync */}
-              {user && (
-                <div className="mt-5 p-3 rounded-lg bg-[#f4efe6] border border-[#ded5c7] flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="w-7 h-7 rounded-full bg-[#8c503c] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                      {user.email.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="truncate">
-                      <p className="font-bold text-stone-800 truncate leading-tight">
-                        {user.email}
-                      </p>
-                      <p className="text-[10px] text-stone-500 font-mono flex items-center gap-1">
-                        <Cloud className="w-2.5 h-2.5 text-amber-700" />
-                        <span>Cloud Database Synced</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => syncNow()}
-                      disabled={isSyncing}
-                      className="p-1.5 hover:bg-stone-200/60 rounded text-stone-600 transition-colors"
-                      title="Sync all manuscripts to Cloud now"
-                    >
-                      <RefreshCw
-                        className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-amber-700" : ""}`}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => signOut()}
-                      className="p-1.5 hover:bg-stone-200/60 rounded text-stone-600 transition-colors"
-                      title="Sign out"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-stone-500" />
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Bottom Footer Text */}
             <div className="mt-6 text-center text-xs text-stone-500 font-sans">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusMessage("Admin account ready: kojiacademy2026@gmail.com. Click Sign In.");
-                }}
-                className="font-bold text-stone-800 hover:underline cursor-pointer"
-              >
-                Request access here.
-              </button>
+              Ocean Novel Cloud Studio • Secure Encrypted Persistence
             </div>
           </div>
         </motion.div>

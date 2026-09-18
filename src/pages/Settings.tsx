@@ -96,7 +96,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `scribe_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ocean_novel_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -614,20 +614,6 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
               <button
                 type="button"
-                onClick={openAuthModal}
-                className="flex items-center gap-2 bg-[#fcfaf5] hover:bg-[#f4efe6] text-[#4a3225] border border-[#d8d2c4] px-2.5 sm:px-3 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-wider uppercase transition-colors shadow-xs"
-                title="StreamWriter Studio Account & Cloud Sync"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="font-mono text-stone-700 font-semibold truncate max-w-[110px] sm:max-w-[170px]">
-                  {user?.email || "kojiacademy2026@gmail.com"}
-                </span>
-                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-900 font-bold hidden md:inline">
-                  ADMIN
-                </span>
-              </button>
-              <button
-                type="button"
                 onClick={async () => {
                   await signOut();
                   navigate("/login");
