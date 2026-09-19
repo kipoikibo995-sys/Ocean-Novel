@@ -29,14 +29,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const AVATAR_OPTIONS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80",
-];
-
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -373,38 +365,6 @@ export default function Settings() {
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-5">
-              {/* Avatar Selector */}
-              <div>
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-2 block">
-                  Author Avatar
-                </Label>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={profile.avatarUrl}
-                    alt={profile.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-[#8C503C] shadow-sm"
-                  />
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-xs text-stone-500">Choose from classic author portraits:</p>
-                    <div className="flex items-center gap-2">
-                      {AVATAR_OPTIONS.map((url, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setProfile({ ...profile, avatarUrl: url })}
-                          className={cn(
-                            "w-8 h-8 rounded-full overflow-hidden border-2 transition-transform hover:scale-105",
-                            profile.avatarUrl === url ? "border-[#8C503C] scale-110 shadow-md" : "border-stone-300 opacity-70"
-                          )}
-                        >
-                          <img src={url} alt="option" className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-stone-500">

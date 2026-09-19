@@ -3,14 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
   BookOpen, 
-  Sparkles, 
   Feather, 
   Compass, 
   Flame, 
   ShieldAlert, 
-  Heart, 
-  Rocket, 
-  Search,
   Hourglass,
   Layers,
   HelpCircle,
@@ -18,7 +14,12 @@ import {
   Check,
   Info,
   X,
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Crown,
+  Moon,
+  Waves,
+  Wand2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -40,10 +41,10 @@ interface GenreTheme {
 }
 
 const GENRE_THEMES: Record<string, GenreTheme> = {
-  Fantasy: {
-    name: "Fantasy",
-    icon: Sparkles,
-    tagline: "Ancient oaths, star-woven magic & forgotten realms",
+  "High & Epic Fantasy": {
+    name: "High & Epic Fantasy",
+    icon: Crown,
+    tagline: "Ancient dynastic oaths, world-shattering magic & forgotten empires",
     bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #18112C 0%, #100C1F 45%, #08060E 100%)",
     spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(168, 85, 247, 0.18), rgba(217, 119, 6, 0.12), transparent 75%)",
     accent: "bg-[#9353D3] hover:bg-[#7828C8]",
@@ -54,38 +55,10 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
     cardBorder: "border-[#A855F7]/20",
     defaultBindingName: "Midnight",
   },
-  "Sci-Fi": {
-    name: "Sci-Fi",
-    icon: Rocket,
-    tagline: "Deep cosmos, synthetic minds & cybernetic frontiers",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #071927 0%, #06111C 45%, #03080E 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(6, 182, 212, 0.22), rgba(14, 116, 144, 0.12), transparent 75%)",
-    accent: "bg-[#0EA5E9] hover:bg-[#0284C7]",
-    accentBorder: "border-[#38BDF8]/40 focus-within:border-[#7DD3FC]",
-    accentText: "text-[#BAE6FD]",
-    particleColor: "rgba(56, 189, 248, 0.75)",
-    cardBg: "bg-[#0A1622]/70 backdrop-blur-xl",
-    cardBorder: "border-[#38BDF8]/20",
-    defaultBindingName: "Obsidian",
-  },
-  Romance: {
-    name: "Romance",
-    icon: Heart,
-    tagline: "Intimate whispers, longing hearts & unforgettable bonds",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #24111B 0%, #1A0B13 45%, #0C0509 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(244, 114, 182, 0.18), rgba(251, 146, 60, 0.1), transparent 75%)",
-    accent: "bg-[#E11D48] hover:bg-[#BE123C]",
-    accentBorder: "border-[#FB7185]/40 focus-within:border-[#FDA4AF]",
-    accentText: "text-[#FFE4E6]",
-    particleColor: "rgba(251, 113, 133, 0.75)",
-    cardBg: "bg-[#1E0D16]/70 backdrop-blur-xl",
-    cardBorder: "border-[#FB7185]/20",
-    defaultBindingName: "Mahogany",
-  },
-  Thriller: {
-    name: "Thriller",
-    icon: Flame,
-    tagline: "Relentless suspense, high stakes & pulse-racing twists",
+  "Dark Fantasy & Grimdark": {
+    name: "Dark Fantasy & Grimdark",
+    icon: Moon,
+    tagline: "Forbidden blood sorcery, cursed relics & unforgiving realms",
     bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #1C1316 0%, #141012 45%, #090708 100%)",
     spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(239, 68, 68, 0.18), rgba(120, 113, 108, 0.1), transparent 75%)",
     accent: "bg-[#DC2626] hover:bg-[#B91C1C]",
@@ -96,10 +69,10 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
     cardBorder: "border-[#EF4444]/20",
     defaultBindingName: "Obsidian",
   },
-  Mystery: {
-    name: "Mystery",
-    icon: Search,
-    tagline: "Shadowed clues, fog-shrouded secrets & elusive truths",
+  "Gothic & Coastal Fantasy": {
+    name: "Gothic & Coastal Fantasy",
+    icon: Waves,
+    tagline: "Salt-stained codices, drowned archives & mist-bound archipelagoes",
     bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #0E1A18 0%, #091312 45%, #040808 100%)",
     spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(20, 184, 166, 0.18), rgba(217, 119, 6, 0.1), transparent 75%)",
     accent: "bg-[#0D9488] hover:bg-[#0F766E]",
@@ -110,10 +83,10 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
     cardBorder: "border-[#2DD4BF]/20",
     defaultBindingName: "Forest",
   },
-  Historical: {
-    name: "Historical",
-    icon: Hourglass,
-    tagline: "The patina of time, grand eras & legendary sagas",
+  "Mythic & Folklore Fantasy": {
+    name: "Mythic & Folklore Fantasy",
+    icon: Compass,
+    tagline: "Primeval pantheons, world trees & ancestral folklore",
     bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #221811 0%, #18100B 45%, #0B0705 100%)",
     spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(217, 119, 6, 0.2), rgba(180, 83, 9, 0.12), transparent 75%)",
     accent: "bg-[#B45309] hover:bg-[#92400E]",
@@ -124,19 +97,33 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
     cardBorder: "border-[#F59E0B]/20",
     defaultBindingName: "Parchment",
   },
-  Contemporary: {
-    name: "Contemporary",
-    icon: Feather,
-    tagline: "Real human resonance, modern lives & sharp prose",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #181920 0%, #111216 45%, #08090B 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(148, 163, 184, 0.18), rgba(99, 102, 241, 0.1), transparent 75%)",
-    accent: "bg-[#64748B] hover:bg-[#475569]",
-    accentBorder: "border-[#94A3B8]/40 focus-within:border-[#CBD5E1]",
-    accentText: "text-[#F1F5F9]",
-    particleColor: "rgba(148, 163, 184, 0.7)",
-    cardBg: "bg-[#14151B]/70 backdrop-blur-xl",
-    cardBorder: "border-[#94A3B8]/20",
+  "Arcane & Gaslamp Fantasy": {
+    name: "Arcane & Gaslamp Fantasy",
+    icon: Wand2,
+    tagline: "Alchemical colleges, secret mage guilds & clockwork mysteries",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #071927 0%, #06111C 45%, #03080E 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(6, 182, 212, 0.22), rgba(14, 116, 144, 0.12), transparent 75%)",
+    accent: "bg-[#0EA5E9] hover:bg-[#0284C7]",
+    accentBorder: "border-[#38BDF8]/40 focus-within:border-[#7DD3FC]",
+    accentText: "text-[#BAE6FD]",
+    particleColor: "rgba(56, 189, 248, 0.75)",
+    cardBg: "bg-[#0A1622]/70 backdrop-blur-xl",
+    cardBorder: "border-[#38BDF8]/20",
     defaultBindingName: "Obsidian",
+  },
+  "Sword & Sorcery": {
+    name: "Sword & Sorcery",
+    icon: Shield,
+    tagline: "Heroic wanderers, forbidden catacombs & daring escapades",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #24111B 0%, #1A0B13 45%, #0C0509 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(244, 114, 182, 0.18), rgba(251, 146, 60, 0.1), transparent 75%)",
+    accent: "bg-[#E11D48] hover:bg-[#BE123C]",
+    accentBorder: "border-[#FB7185]/40 focus-within:border-[#FDA4AF]",
+    accentText: "text-[#FFE4E6]",
+    particleColor: "rgba(251, 113, 133, 0.75)",
+    cardBg: "bg-[#1E0D16]/70 backdrop-blur-xl",
+    cardBorder: "border-[#FB7185]/20",
+    defaultBindingName: "Mahogany",
   },
 };
 
@@ -199,15 +186,14 @@ Recommend a reasonable total word count based on the story concept, genre, and t
 4. Logline / Central Premise
 Write a concise 35–70 word premise describing the main story hook, central conflict, and stakes.
 
-5. Primary Genre
+5. Primary Fantasy Sub-genre
 Choose exactly ONE:
-- FANTASY
-- SCI-FI
-- ROMANCE
-- THRILLER
-- MYSTERY
-- HISTORICAL
-- CONTEMPORARY
+- High & Epic Fantasy
+- Dark Fantasy & Grimdark
+- Gothic & Coastal Fantasy
+- Mythic & Folklore Fantasy
+- Arcane & Gaslamp Fantasy
+- Sword & Sorcery
 
 6. Target Audience
 Choose exactly ONE:
@@ -989,7 +975,7 @@ export default function CreateProject() {
                 {/* Section 1: Form field descriptions */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <BookOpen className="w-3.5 h-3.5" />
                     What to fill out on this page?
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
