@@ -39,21 +39,6 @@ import { runFantasySeed } from "@/lib/seed";
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setCurrentUser(u);
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    const seeded = runFantasySeed();
-    if (seeded) {
-      setTimeout(() => window.location.reload(), 1500);
-    }
-  }, []);
-
   const navigate = useNavigate();
 
   const [savedProjects, setSavedProjects] = useState<ProjectMeta[]>([]);
@@ -66,6 +51,28 @@ export default function Dashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskType, setNewTaskType] = useState<StudioTask['type']>("writing");
   const [newTaskUrgency, setNewTaskUrgency] = useState<StudioTask['urgency']>("medium");
+
+  // Auth & Per-User Data Sync
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setCurrentUser(u);
+      if (u && !u.isAnonymous) {
+        storage.switchUser(u.uid, u.email, u.displayName);
+        await storage.syncFromCloud(u.uid);
+        const projs = storage.getProjects().sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        setSavedProjects(projs);
+        if (projs.length > 0) {
+          setSelectedProjectId(projs[0].id);
+        }
+        setTasks(storage.getTasks());
+      } else {
+        storage.clearCache();
+        setSavedProjects([]);
+        setTasks([]);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // World Radar Expand Modal State
   const [isRadarExpanded, setIsRadarExpanded] = useState(false);
@@ -125,20 +132,6 @@ export default function Dashboard() {
     setRefreshTrigger(prev => prev + 1);
     setTimeout(() => setIsScanning(false), 500);
   };
-
-  useEffect(() => {
-    // Ensure all 5 fantasy sample books exist with complete manuscripts and characters
-    const projects = ensureFantasyBooksSeeded();
-
-    const sorted = (projects || []).sort((a, b) => b.lastModified - a.lastModified);
-    setSavedProjects(sorted);
-    if (sorted.length > 0) {
-      setSelectedProjectId(sorted[0].id);
-    }
-
-    // Load real tasks from storage
-    setTasks(storage.getTasks());
-  }, []);
 
   // Real Task Handlers
   const handleToggleTask = (taskId: string) => {

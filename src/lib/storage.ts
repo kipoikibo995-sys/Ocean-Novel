@@ -1,7 +1,7 @@
-import { ManuscriptItem } from "@/mockData";
+import { ManuscriptItem, MOCK_MANUSCRIPT, MOCK_CHARACTERS, MOCK_LOCATIONS } from "@/mockData";
 import { db, auth } from './firebase';
 import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export interface ProjectMeta {
   id: string;
@@ -49,8 +49,6 @@ export interface AuthorTimelineSettings {
   totalWritingMinutesTracked?: number;
 }
 
-const TIMELINE_SETTINGS_KEY = 'writing_studio_timeline_settings';
-
 const defaultTimelineSettings: AuthorTimelineSettings = {
   streakMode: 'auto',
   customStreakDays: 1,
@@ -86,7 +84,7 @@ export interface ProjectData {
     edges: Array<{ id: string; source: string; target: string; label: string }>;
     unmapped?: any[];
   };
-  notes?: Record<string, string>; // sceneId -> note content
+  notes?: Record<string, string>;
   lastActiveSceneId?: string;
   lastActiveSceneTitle?: string;
   storyBible?: StoryBibleData;
@@ -125,7 +123,7 @@ interface FirestoreErrorInfo {
     emailVerified?: boolean | null;
     isAnonymous?: boolean | null;
     tenantId?: string | null;
-  }
+  };
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
@@ -140,18 +138,24 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     },
     operationType,
     path
-  }
+  };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 }
 
-const PROJECTS_KEY = 'writing_studio_projects';
-const PROJECT_DATA_PREFIX = 'writing_studio_data_';
-const TASKS_KEY = 'writing_studio_tasks';
-const PROFILE_KEY = 'writing_studio_profile';
+let currentUserId: string | null = null;
+
+/**
+ * Returns a user-scoped localStorage key to completely isolate data between different user accounts.
+ */
+function getStorageKey(suffix: string, uid = currentUserId): string {
+  if (uid && uid !== 'null' && uid !== 'undefined') {
+    return `ocean_novelist_u_${uid}_${suffix}`;
+  }
+  return `ocean_novelist_guest_${suffix}`;
+}
 
 /**
  * Safe wrapper for localStorage.setItem with automatic QuotaExceededError recovery.
- * Protects against 5MB browser localStorage overflow.
  */
 export function safeLocalStorageSet(key: string, value: string): boolean {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -172,22 +176,13 @@ export function safeLocalStorageSet(key: string, value: string): boolean {
     if (isQuota) {
       console.warn(`[Ocean Novel Storage] QuotaExceededError writing "${key}". Initiating auto-recovery...`);
       try {
-        // 1. Sanitize heavy base64 cover images in cachedProjects
-        if (Array.isArray(cachedProjects)) {
-          cachedProjects.forEach(p => {
-            if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 50000) {
-              p.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
-            }
-          });
-        }
-
-        // 2. Remove any exceptionally large or stale entries in localStorage
+        // Clear non-critical entries to free space
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && k !== key && k !== PROJECTS_KEY && k !== PROFILE_KEY) {
+          if (k && k !== key && !k.endsWith('_profile')) {
             const itemVal = localStorage.getItem(k);
-            if (itemVal && itemVal.length > 250000) {
+            if (itemVal && itemVal.length > 200000) {
               keysToRemove.push(k);
             }
           }
@@ -196,35 +191,32 @@ export function safeLocalStorageSet(key: string, value: string): boolean {
           try { localStorage.removeItem(k); } catch {}
         });
 
-        // 3. If writing PROJECTS_KEY, strip heavy data from the value being written
-        let retryVal = value;
-        if (key === PROJECTS_KEY) {
-          try {
-            const list = JSON.parse(value);
-            if (Array.isArray(list)) {
-              const stripped = list.map((p: any) => {
-                if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 30000) {
-                  return { ...p, coverUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png" };
-                }
-                return p;
-              });
-              retryVal = JSON.stringify(stripped);
-            }
-          } catch {}
-        }
-
-        localStorage.setItem(key, retryVal);
-        console.info(`[Ocean Novel Storage] Successfully recovered and saved "${key}".`);
+        localStorage.setItem(key, value);
         return true;
       } catch {
-        console.warn(`[Ocean Novel Storage] Storage quota exhausted for "${key}". In-memory state and cloud sync are safely preserved.`);
         return false;
       }
-    } else {
-      console.error(`[Ocean Novel Storage] Error writing "${key}":`, error);
-      return false;
     }
+    return false;
   }
+}
+
+export function createDefaultProfile(email?: string | null, name?: string | null): UserProfile {
+  const cleanName = name || (email ? email.split('@')[0] : "Author");
+  const cleanEmail = email || "author@oceannovel.app";
+  return {
+    name: cleanName,
+    penName: cleanName,
+    email: cleanEmail,
+    bio: "Lead Studio Author & Novel Architect at Ocean Novel.",
+    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+    plan: "pro",
+    defaultFont: "Merriweather (Serif)",
+    fontSize: "Medium (18px)",
+    defaultPov: "Third Person Limited",
+    defaultTone: "Suspenseful",
+    theme: "light",
+  };
 }
 
 const DEFAULT_TASKS: StudioTask[] = [
@@ -238,63 +230,36 @@ const DEFAULT_TASKS: StudioTask[] = [
   }
 ];
 
-const defaultProfile: UserProfile = {
-  name: "Koji Academy",
-  penName: "Koji Academy",
-  email: "kojiacademy2026@gmail.com",
-  bio: "Lead Studio Author & Novel Architect at Ocean Novel.",
-  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-  plan: "pro",
-  defaultFont: "Merriweather (Serif)",
-  fontSize: "Medium (18px)",
-  defaultPov: "Third Person Limited",
-  defaultTone: "Suspenseful",
-  theme: "light",
-};
-
-// In-Memory Cache initialized from LocalStorage (Fallback if not logged in)
-let cachedProjects: ProjectMeta[] = (() => {
-  try {
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (!raw) return [];
-    const list: ProjectMeta[] = JSON.parse(raw);
-    if (!Array.isArray(list)) return [];
-    let cleaned = false;
-    const sanitized = list.map(p => {
-      if (p.coverUrl && p.coverUrl.startsWith('data:') && p.coverUrl.length > 50000) {
-        cleaned = true;
-        return {
-          ...p,
-          coverUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png"
-        };
-      }
-      return p;
-    });
-    if (cleaned) {
-      try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(sanitized)); } catch {}
-    }
-    return sanitized;
-  } catch {
-    return [];
-  }
-})();
+// Per-User In-Memory Caches
+let cachedProjects: ProjectMeta[] = [];
 let cachedProjectData: Record<string, ProjectData> = {};
-let cachedTasks: StudioTask[] = (() => {
+let cachedTasks: StudioTask[] = [];
+let cachedProfile: UserProfile | null = null;
+
+function loadLocalUserCache(uid: string | null) {
   try {
-    const data = localStorage.getItem(TASKS_KEY);
-    return data ? JSON.parse(data) : DEFAULT_TASKS;
-  } catch { return DEFAULT_TASKS; }
-})();
-let cachedProfile: UserProfile | null = (() => {
-  try { 
-    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); 
-    if (p && (p.email === 'jane.smith@example.com' || !p.email)) {
-      return { ...p, name: "Koji Academy", penName: "Koji Academy", email: "kojiacademy2026@gmail.com" };
-    }
-    return p;
-  } catch { return null; }
-})();
-let currentUserId: string | null = null;
+    const pRaw = localStorage.getItem(getStorageKey('projects', uid));
+    cachedProjects = pRaw ? JSON.parse(pRaw) : [];
+  } catch {
+    cachedProjects = [];
+  }
+
+  try {
+    const tRaw = localStorage.getItem(getStorageKey('tasks', uid));
+    cachedTasks = tRaw ? JSON.parse(tRaw) : DEFAULT_TASKS;
+  } catch {
+    cachedTasks = DEFAULT_TASKS;
+  }
+
+  try {
+    const profRaw = localStorage.getItem(getStorageKey('profile', uid));
+    cachedProfile = profRaw ? JSON.parse(profRaw) : null;
+  } catch {
+    cachedProfile = null;
+  }
+
+  cachedProjectData = {};
+}
 
 /**
  * Strips undefined properties and deeply prepares objects for error-free Firestore document insertion.
@@ -309,23 +274,6 @@ function cleanForFirestore<T>(data: T): T {
   );
 }
 
-export async function ensureFirebaseAuth(): Promise<string | null> {
-  if (auth.currentUser) {
-    storage.setCurrentUserId(auth.currentUser.uid);
-    return auth.currentUser.uid;
-  }
-  try {
-    const cred = await signInAnonymously(auth);
-    if (cred.user) {
-      storage.setCurrentUserId(cred.user.uid);
-      return cred.user.uid;
-    }
-  } catch (err) {
-    console.warn('Firebase anonymous authentication:', err);
-  }
-  return null;
-}
-
 function canSyncWithFirestore(targetUserId?: string | null): boolean {
   const uid = targetUserId || currentUserId;
   return Boolean(
@@ -337,57 +285,161 @@ function canSyncWithFirestore(targetUserId?: string | null): boolean {
   );
 }
 
+/**
+ * Creates starter sample fantasy novels specifically assigned to the newly created/logged-in user.
+ */
+function createStarterProjectsForUser(userId: string): { meta: ProjectMeta; data: ProjectData }[] {
+  return [
+    {
+      meta: {
+        id: `book-silent-harbor-${userId.slice(0, 6)}`,
+        title: "The Silent Harbor",
+        author: "Sarah Cole",
+        genre: "Gothic Coast Fantasy",
+        audience: "Adult",
+        logline: "An investigator returns to an isolated coastal town haunted by drowned gods and the fifteen-year-old mystery of her sister's disappearance.",
+        wordGoal: 75000,
+        currentWords: 18450,
+        lastModified: Date.now() - 3600000 * 2,
+        themeColor: "bg-[#2a1a14]",
+        userId,
+      },
+      data: {
+        manuscript: MOCK_MANUSCRIPT,
+        characters: MOCK_CHARACTERS,
+        locations: MOCK_LOCATIONS,
+        userId,
+        storyBible: {
+          title: "The Silent Harbor",
+          genre: "Gothic Coast Fantasy",
+          subgenre: "Occult Mystery",
+          targetAudience: "Adult",
+          pov: "Third Person Limited",
+          tone: "Melancholic, tense, atmospheric",
+          premise: "An occult investigator unearths ancient drowned deities lurking under her hometown.",
+          mainConflict: "Uncovering the truth of the sister's sacrifice while the town's secret society hunts her.",
+          worldDescription: "Cold, wind-battered coastlines lined with jagged obsidian cliffs and drowned sunken ruins.",
+          importantRules: "The Tide mirrors the heartbeat of the Sunken God; blood spilled on wet stone cannot be washed away by rainwater.",
+          narrativeStyle: "Lyrical prose with sensory focus on damp brine, creaking timber, and creeping shadows."
+        }
+      }
+    },
+    {
+      meta: {
+        id: `book-sunken-crown-${userId.slice(0, 6)}`,
+        title: "The Sunken Crown of Eldoria",
+        author: "Valen Hawke",
+        genre: "Epic High Fantasy",
+        audience: "Young Adult / New Adult",
+        logline: "When the Dragon Emperor perishes without an heir, an outcast solar knight and an exiled elven sorceress journey into the volcanic abyss to claim the mythical Sunken Crown.",
+        wordGoal: 95000,
+        currentWords: 31200,
+        lastModified: Date.now() - 3600000 * 5,
+        themeColor: "bg-[#3e1f17]",
+        userId,
+      },
+      data: {
+        manuscript: [
+          {
+            id: `sc-part-1-${userId.slice(0, 4)}`,
+            type: "part",
+            title: "Part I: The Shattered Altar",
+            children: [
+              {
+                id: `sc-ch-1-${userId.slice(0, 4)}`,
+                type: "chapter",
+                title: "Chapter 1: Ashes of the Dragon Throne",
+                children: [
+                  {
+                    id: `sc-scene-1-${userId.slice(0, 4)}`,
+                    type: "scene",
+                    title: "The Obsidian Citadel",
+                    content: `<p>The imperial throne room was choked with the smell of sulfur and scorched bronze. Above the shattered basalt dais, the Dragon Emperor's obsidian crown hung in midair, bathed in violet flames that refused to die.</p><p>Valen tightened his grip on the hilt of his sun-forged broadsword. The embers whispered to him in the archaic tongue of the Wyrm Lords—a promise of dominion, and a curse of blood.</p>`
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        characters: [
+          {
+            id: "1",
+            name: "Valen Hawke",
+            role: "Protagonist",
+            description: "Disgraced Knight of the Solar Order carrying the cursed sun-forged blade.",
+            age: "26",
+            motivation: "To redeem his fallen lineage and shatter the volcanic seal.",
+            locationId: "1",
+            traits: ["HONORABLE", "TORMENTED", "FEARLESS"],
+            imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/06_fur_clad_elder_warrior_cm6wxh.jpg",
+            backstory: "Exiled from the High Citadel after refusing to execute civilian sympathizers."
+          }
+        ],
+        locations: MOCK_LOCATIONS,
+        userId,
+        storyBible: {
+          title: "The Sunken Crown of Eldoria",
+          genre: "Epic High Fantasy",
+          targetAudience: "Young Adult / New Adult",
+          pov: "Third Person Multi-POV",
+          tone: "Heroic, grim, high-stakes",
+          premise: "An outcast knight and an elven sorceress brave volcanic depths for an emperor's relic.",
+          mainConflict: "Claiming the Crown before the necromantic dragon warlord conquers Eldoria.",
+          worldDescription: "A fractured realm of floating obsidian citadels and molten magma rivers.",
+          narrativeStyle: "Epic, grand, sweeping scale with poetic description of elemental sorcery."
+        }
+      }
+    }
+  ];
+}
+
 export const storage = {
   getCurrentUserId: () => currentUserId,
-  setCurrentUserId: (userId: string | null) => {
+  
+  /**
+   * Switch the active user context. Completely isolates and reloads the cache.
+   */
+  switchUser: (userId: string | null, email?: string | null, displayName?: string | null) => {
     currentUserId = userId && userId !== 'null' ? userId : null;
+    loadLocalUserCache(currentUserId);
+
+    if (currentUserId && !cachedProfile) {
+      cachedProfile = createDefaultProfile(email, displayName);
+      safeLocalStorageSet(getStorageKey('profile', currentUserId), JSON.stringify(cachedProfile));
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { userId: currentUserId } }));
+    }
+  },
+
+  setCurrentUserId: (userId: string | null) => {
+    storage.switchUser(userId);
   },
 
   clearCache: () => {
-    // Only clears user memory when logging out. Still falls back to LocalStorage
-    cachedProjects = (() => {
-      try { return JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]'); } catch { return []; }
-    })();
-    cachedTasks = (() => {
-      try {
-        const data = localStorage.getItem(TASKS_KEY);
-        return data ? JSON.parse(data) : DEFAULT_TASKS;
-      } catch { return DEFAULT_TASKS; }
-    })();
-    cachedProfile = (() => {
-      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
-    })();
-    cachedProjectData = {};
     currentUserId = null;
+    cachedProjects = [];
+    cachedProjectData = {};
+    cachedTasks = [];
+    cachedProfile = null;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { userId: null } }));
+    }
   },
   
   syncAllLocalDataToCloud: async (userId?: string) => {
-    let effectiveUid = userId || currentUserId;
-    if (!effectiveUid || !auth.currentUser) {
-      effectiveUid = (await ensureFirebaseAuth()) || undefined;
-    }
-
-    if (!effectiveUid || effectiveUid === 'null') {
-      console.warn("Cannot sync to cloud: no authenticated session available.");
-      return false;
-    }
-
-    currentUserId = effectiveUid;
-    if (!canSyncWithFirestore(effectiveUid)) {
+    const effectiveUid = userId || currentUserId;
+    if (!effectiveUid || !auth.currentUser || !canSyncWithFirestore(effectiveUid)) {
       return false;
     }
 
     try {
-      // 1. Profile (Assigned to kojiacademy2026@gmail.com)
+      // 1. Profile
       const prof = storage.getUserProfile();
-      if (!prof.email || prof.email === 'jane.smith@example.com') {
-        prof.email = 'kojiacademy2026@gmail.com';
-        prof.name = 'Koji Academy';
-        prof.penName = 'Koji Academy';
-      }
       await setDoc(doc(db, `users/${effectiveUid}/profile/default`), cleanForFirestore(prof), { merge: true });
 
-      // 2. Projects & ProjectData (all 5 fantasy sample books and user books)
+      // 2. Projects & ProjectData (for this user only)
       const projs = storage.getProjects();
       for (const p of projs) {
         const pWithUser = cleanForFirestore({ ...p, userId: effectiveUid });
@@ -427,20 +479,12 @@ export const storage = {
 
   initAutoSync: () => {
     try {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          storage.setCurrentUserId(user.uid);
-          await storage.syncAllLocalDataToCloud(user.uid);
-        } else {
-          try {
-            const cred = await signInAnonymously(auth);
-            if (cred.user) {
-              storage.setCurrentUserId(cred.user.uid);
-              await storage.syncAllLocalDataToCloud(cred.user.uid);
-            }
-          } catch (err) {
-            console.warn('Anonymous sign-in on auto-sync skipped:', err);
-          }
+      onAuthStateChanged(auth, async (user: User | null) => {
+        if (user && !user.isAnonymous) {
+          storage.switchUser(user.uid, user.email, user.displayName);
+          await storage.syncFromCloud(user.uid);
+        } else if (!user) {
+          storage.clearCache();
         }
       });
     } catch (err) {
@@ -450,125 +494,116 @@ export const storage = {
 
   syncFromCloud: async (userId: string) => {
     if (!userId || userId === 'null') return;
+    if (!canSyncWithFirestore(userId)) return;
+
     currentUserId = userId;
-    if (!canSyncWithFirestore(userId)) {
-      return;
-    }
 
     try {
-      // Load Profile
+      // 1. Load Profile from Cloud
       try {
         const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
         if (profileDoc.exists()) {
           cachedProfile = profileDoc.data() as UserProfile;
-          safeLocalStorageSet(PROFILE_KEY, JSON.stringify(cachedProfile));
+          safeLocalStorageSet(getStorageKey('profile', userId), JSON.stringify(cachedProfile));
         } else {
-          cachedProfile = cachedProfile || defaultProfile;
-          await setDoc(doc(db, `users/${userId}/profile/default`), cachedProfile);
+          // Initialize fresh profile for this user from Firebase Auth
+          const currentUser = auth.currentUser;
+          cachedProfile = createDefaultProfile(currentUser?.email, currentUser?.displayName);
+          safeLocalStorageSet(getStorageKey('profile', userId), JSON.stringify(cachedProfile));
+          await setDoc(doc(db, `users/${userId}/profile/default`), cleanForFirestore(cachedProfile));
         }
-      } catch(e) { handleFirestoreError(e, OperationType.GET, `users/${userId}/profile/default`); }
+      } catch(e) {
+        handleFirestoreError(e, OperationType.GET, `users/${userId}/profile/default`);
+      }
 
-      // Load Timeline Settings
+      // 2. Load Timeline Settings
       try {
         const tlDoc = await getDoc(doc(db, `users/${userId}/settings/timeline`));
         if (tlDoc.exists()) {
           const cloudTl = tlDoc.data() as AuthorTimelineSettings;
-          safeLocalStorageSet(TIMELINE_SETTINGS_KEY, JSON.stringify(cloudTl));
+          safeLocalStorageSet(getStorageKey('timeline', userId), JSON.stringify(cloudTl));
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: cloudTl }));
           }
         }
-      } catch(e) { handleFirestoreError(e, OperationType.GET, `users/${userId}/settings/timeline`); }
+      } catch(e) {
+        handleFirestoreError(e, OperationType.GET, `users/${userId}/settings/timeline`);
+      }
 
-      // Load Projects with Full Bidirectional Merge
+      // 3. Load Projects from Cloud (100% User Isolated)
       try {
         const projSnapshot = await getDocs(collection(db, `users/${userId}/projects`));
-        const cloudProjectsMap = new Map<string, ProjectMeta>();
-        projSnapshot.docs.forEach(d => {
-          cloudProjectsMap.set(d.id, { ...d.data(), id: d.id } as ProjectMeta);
-        });
+        
+        if (projSnapshot.empty) {
+          // Brand new user on Cloud: check if local scoped cache has projects
+          if (!cachedProjects || cachedProjects.length === 0) {
+            // Seed starter projects specifically for this user
+            const starters = createStarterProjectsForUser(userId);
+            cachedProjects = starters.map(s => s.meta);
+            safeLocalStorageSet(getStorageKey('projects', userId), JSON.stringify(cachedProjects));
 
-        // Current local projects
-        const localProjects = cachedProjects || [];
-        const mergedProjectsMap = new Map<string, ProjectMeta>(cloudProjectsMap);
-
-        // Merge local projects into cloud projects map
-        for (const localP of localProjects) {
-          if (!mergedProjectsMap.has(localP.id)) {
-            // Local project that was created locally/offline -> upload to Cloud Firestore
-            mergedProjectsMap.set(localP.id, { ...localP, userId });
-            await setDoc(doc(db, `users/${userId}/projects/${localP.id}`), { ...localP, userId }, { merge: true });
-            const pData = storage.getProjectData(localP.id);
-            if (pData) {
-              await setDoc(doc(db, `users/${userId}/projectData/${localP.id}`), { ...pData, userId, id: localP.id }, { merge: true });
+            for (const s of starters) {
+              cachedProjectData[s.meta.id] = s.data;
+              safeLocalStorageSet(getStorageKey(`data_${s.meta.id}`, userId), JSON.stringify(s.data));
+              await setDoc(doc(db, `users/${userId}/projects/${s.meta.id}`), cleanForFirestore(s.meta));
+              await setDoc(doc(db, `users/${userId}/projectData/${s.meta.id}`), cleanForFirestore(s.data));
             }
           } else {
-            // Both cloud and local have this project: keep the one with newer lastModified
-            const cloudP = mergedProjectsMap.get(localP.id)!;
-            if ((localP.lastModified || 0) > (cloudP.lastModified || 0)) {
-              mergedProjectsMap.set(localP.id, { ...localP, userId });
-              await setDoc(doc(db, `users/${userId}/projects/${localP.id}`), { ...localP, userId }, { merge: true });
-              const pData = storage.getProjectData(localP.id);
+            // Upload current user's local projects
+            for (const p of cachedProjects) {
+              await setDoc(doc(db, `users/${userId}/projects/${p.id}`), cleanForFirestore({ ...p, userId }));
+              const pData = storage.getProjectData(p.id);
               if (pData) {
-                await setDoc(doc(db, `users/${userId}/projectData/${localP.id}`), { ...pData, userId, id: localP.id }, { merge: true });
+                await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), cleanForFirestore({ ...pData, userId, id: p.id }));
               }
             }
           }
+        } else {
+          // User has projects in Firestore: populate user cache from Firestore
+          const cloudProjects: ProjectMeta[] = [];
+          projSnapshot.docs.forEach(d => {
+            cloudProjects.push({ ...d.data(), id: d.id } as ProjectMeta);
+          });
+          cachedProjects = cloudProjects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+          safeLocalStorageSet(getStorageKey('projects', userId), JSON.stringify(cachedProjects));
         }
 
-        cachedProjects = Array.from(mergedProjectsMap.values()).sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
-        safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: {} }));
+          window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { userId } }));
         }
-      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`); }
+      } catch(e) {
+        handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`);
+      }
 
-      // Load Tasks with Bidirectional Merge
+      // 4. Load Tasks from Cloud
       try {
         const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
-        const taskMap = new Map<string, StudioTask>();
-        taskSnapshot.docs.forEach(d => {
-          taskMap.set(d.id, { ...d.data(), id: d.id } as StudioTask);
-        });
+        if (!taskSnapshot.empty) {
+          const cloudTasks: StudioTask[] = [];
+          taskSnapshot.docs.forEach(d => {
+            cloudTasks.push({ ...d.data(), id: d.id } as StudioTask);
+          });
+          cachedTasks = cloudTasks;
+          safeLocalStorageSet(getStorageKey('tasks', userId), JSON.stringify(cachedTasks));
+        }
+      } catch(e) {
+        handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`);
+      }
 
-        (cachedTasks || []).forEach(t => {
-          if (!taskMap.has(t.id)) {
-            taskMap.set(t.id, { ...t, userId });
-            setDoc(doc(db, `users/${userId}/tasks/${t.id}`), { ...t, userId }, { merge: true }).catch(() => {});
-          }
-        });
-
-        cachedTasks = Array.from(taskMap.values());
-        safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
-      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
-
-      // Load all Project Data with Bidirectional Merge
+      // 5. Load Project Data from Cloud
       try {
         const pdSnapshot = await getDocs(collection(db, `users/${userId}/projectData`));
         pdSnapshot.docs.forEach(d => {
           const cloudPData = d.data() as ProjectData;
-          const localPData = storage.getProjectData(d.id);
-          if (!localPData) {
-            cachedProjectData[d.id] = cloudPData;
-            safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(cloudPData));
-          } else {
-            // Keep merged
-            cachedProjectData[d.id] = { ...cloudPData, ...localPData };
-            safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(cachedProjectData[d.id]));
-          }
+          cachedProjectData[d.id] = cloudPData;
+          safeLocalStorageSet(getStorageKey(`data_${d.id}`, userId), JSON.stringify(cloudPData));
         });
-
-        // Upload any local project data not yet in cloud
-        for (const p of (cachedProjects || [])) {
-          const localPData = storage.getProjectData(p.id);
-          if (localPData && !pdSnapshot.docs.some(d => d.id === p.id)) {
-            await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), { ...localPData, userId, id: p.id }, { merge: true });
-          }
-        }
-      } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projectData`); }
+      } catch(e) {
+        handleFirestoreError(e, OperationType.LIST, `users/${userId}/projectData`);
+      }
 
     } catch (e) {
-      console.error("Critical Sync Error", e);
+      console.error("Critical Cloud Sync Error:", e);
     }
   },
 
@@ -581,23 +616,24 @@ export const storage = {
   },
 
   saveTask: (task: StudioTask) => {
+    const taskWithUser = { ...task, userId: currentUserId || undefined };
     const existingIndex = cachedTasks.findIndex((t) => t.id === task.id);
     if (existingIndex >= 0) {
-      cachedTasks[existingIndex] = task;
+      cachedTasks[existingIndex] = taskWithUser;
     } else {
-      cachedTasks.unshift(task);
+      cachedTasks.unshift(taskWithUser);
     }
     
-    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
+    safeLocalStorageSet(getStorageKey('tasks'), JSON.stringify(cachedTasks));
     if (canSyncWithFirestore()) {
-      setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
+      setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), cleanForFirestore(taskWithUser))
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
     }
   },
 
   deleteTask: (taskId: string) => {
     cachedTasks = cachedTasks.filter((t) => t.id !== taskId);
-    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
+    safeLocalStorageSet(getStorageKey('tasks'), JSON.stringify(cachedTasks));
     if (canSyncWithFirestore()) {
       deleteDoc(doc(db, `users/${currentUserId}/tasks/${taskId}`))
         .catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${currentUserId}/tasks/${taskId}`));
@@ -605,11 +641,11 @@ export const storage = {
   },
 
   saveAllTasks: (tasks: StudioTask[]) => {
-    cachedTasks = tasks;
-    safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
+    cachedTasks = tasks.map(t => ({ ...t, userId: currentUserId || undefined }));
+    safeLocalStorageSet(getStorageKey('tasks'), JSON.stringify(cachedTasks));
     if (canSyncWithFirestore()) {
-      tasks.forEach(task => {
-        setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), task)
+      cachedTasks.forEach(task => {
+        setDoc(doc(db, `users/${currentUserId}/tasks/${task.id}`), cleanForFirestore(task))
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/tasks/${task.id}`));
       });
     }
@@ -620,8 +656,7 @@ export const storage = {
   },
 
   saveProject: (project: ProjectMeta) => {
-    // Sanitize any large base64 cover to protect quota
-    const sanitizedProject = { ...project };
+    const sanitizedProject: ProjectMeta = { ...project, userId: currentUserId || project.userId };
     if (sanitizedProject.coverUrl && sanitizedProject.coverUrl.startsWith('data:') && sanitizedProject.coverUrl.length > 80000) {
       sanitizedProject.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
     }
@@ -633,13 +668,12 @@ export const storage = {
       cachedProjects.push(sanitizedProject);
     }
     
-    safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    safeLocalStorageSet(getStorageKey('projects'), JSON.stringify(cachedProjects));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: sanitizedProject.id } }));
     }
     if (canSyncWithFirestore()) {
-      sanitizedProject.userId = currentUserId!;
-      setDoc(doc(db, `users/${currentUserId}/projects/${sanitizedProject.id}`), sanitizedProject)
+      setDoc(doc(db, `users/${currentUserId}/projects/${sanitizedProject.id}`), cleanForFirestore(sanitizedProject))
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${sanitizedProject.id}`));
     }
   },
@@ -652,9 +686,9 @@ export const storage = {
         sanitizedUpdates.coverUrl = "https://res.cloudinary.com/mekoxs1q/image/upload/v1788788313/7e1e3f9e-023d-4556-a04c-e0d633ba4cea_rcjcwh.png";
       }
       cachedProjects[existingIndex] = { ...cachedProjects[existingIndex], ...sanitizedUpdates };
-      safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+      safeLocalStorageSet(getStorageKey('projects'), JSON.stringify(cachedProjects));
       if (canSyncWithFirestore()) {
-        setDoc(doc(db, `users/${currentUserId}/projects/${id}`), cachedProjects[existingIndex], { merge: true })
+        setDoc(doc(db, `users/${currentUserId}/projects/${id}`), cleanForFirestore(cachedProjects[existingIndex]), { merge: true })
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projects/${id}`));
       }
     }
@@ -663,9 +697,9 @@ export const storage = {
   deleteProject: (id: string) => {
     cachedProjects = cachedProjects.filter(p => p.id !== id);
     delete cachedProjectData[id];
-    safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+    safeLocalStorageSet(getStorageKey('projects'), JSON.stringify(cachedProjects));
     try {
-      localStorage.removeItem(PROJECT_DATA_PREFIX + id);
+      localStorage.removeItem(getStorageKey(`data_${id}`));
     } catch {}
     if (canSyncWithFirestore()) {
       deleteDoc(doc(db, `users/${currentUserId}/projects/${id}`))
@@ -678,9 +712,8 @@ export const storage = {
   getProjectData: (id: string): ProjectData | null => {
     if (cachedProjectData[id]) return cachedProjectData[id];
     
-    // Try localStorage if not in cache (e.g. initial load without cloud)
     try {
-      const data = localStorage.getItem(PROJECT_DATA_PREFIX + id);
+      const data = localStorage.getItem(getStorageKey(`data_${id}`));
       if (data) {
         const parsed = JSON.parse(data);
         cachedProjectData[id] = parsed;
@@ -693,9 +726,10 @@ export const storage = {
 
   saveProjectData: (id: string, data: Partial<ProjectData>) => {
     const existing = storage.getProjectData(id) || { manuscript: [], characters: [], locations: [] };
-    const newData = { ...existing, ...data, id };
+    const newData: ProjectData = { ...existing, ...data, id, userId: currentUserId || existing.userId };
     cachedProjectData[id] = newData;
-    safeLocalStorageSet(PROJECT_DATA_PREFIX + id, JSON.stringify(newData));
+    safeLocalStorageSet(getStorageKey(`data_${id}`), JSON.stringify(newData));
+    
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { projectId: id } }));
     }
@@ -724,33 +758,28 @@ export const storage = {
     }
 
     if (canSyncWithFirestore()) {
-      newData.userId = currentUserId!;
-      newData.id = id;
-      setDoc(doc(db, `users/${currentUserId}/projectData/${id}`), newData)
+      setDoc(doc(db, `users/${currentUserId}/projectData/${id}`), cleanForFirestore(newData))
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/projectData/${id}`));
     }
   },
 
   getUserProfile: (): UserProfile => {
-    if (cachedProfile && (cachedProfile.email === 'jane.smith@example.com' || !cachedProfile.email)) {
-      cachedProfile = {
-        ...cachedProfile,
-        name: "Koji Academy",
-        penName: "Koji Academy",
-        email: "kojiacademy2026@gmail.com"
-      };
-      safeLocalStorageSet(PROFILE_KEY, JSON.stringify(cachedProfile));
+    if (cachedProfile) {
+      return cachedProfile;
     }
-    return cachedProfile || defaultProfile;
+    const currentUser = auth.currentUser;
+    const fallback = createDefaultProfile(currentUser?.email, currentUser?.displayName);
+    cachedProfile = fallback;
+    return fallback;
   },
 
   saveUserProfile: (profile: Partial<UserProfile>): UserProfile => {
-    const current = cachedProfile || defaultProfile;
+    const current = cachedProfile || storage.getUserProfile();
     const updated = { ...current, ...profile };
     cachedProfile = updated;
-    safeLocalStorageSet(PROFILE_KEY, JSON.stringify(updated));
+    safeLocalStorageSet(getStorageKey('profile'), JSON.stringify(updated));
     if (canSyncWithFirestore()) {
-      setDoc(doc(db, `users/${currentUserId}/profile/default`), updated)
+      setDoc(doc(db, `users/${currentUserId}/profile/default`), cleanForFirestore(updated))
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));
     }
     return updated;
@@ -758,7 +787,7 @@ export const storage = {
 
   getTimelineSettings: (): AuthorTimelineSettings => {
     try {
-      const stored = localStorage.getItem(TIMELINE_SETTINGS_KEY);
+      const stored = localStorage.getItem(getStorageKey('timeline'));
       return stored ? { ...defaultTimelineSettings, ...JSON.parse(stored) } : defaultTimelineSettings;
     } catch {
       return defaultTimelineSettings;
@@ -769,12 +798,12 @@ export const storage = {
     const current = storage.getTimelineSettings();
     const updated = { ...current, ...settings };
     try {
-      safeLocalStorageSet(TIMELINE_SETTINGS_KEY, JSON.stringify(updated));
+      safeLocalStorageSet(getStorageKey('timeline'), JSON.stringify(updated));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: updated }));
       }
       if (canSyncWithFirestore()) {
-        setDoc(doc(db, `users/${currentUserId}/settings/timeline`), updated, { merge: true })
+        setDoc(doc(db, `users/${currentUserId}/settings/timeline`), cleanForFirestore(updated), { merge: true })
           .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/settings/timeline`));
       }
     } catch (e) {
@@ -814,7 +843,6 @@ export const storage = {
         streak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else {
-        // If today has no activity yet, check if yesterday was active
         if (i === 0) {
           checkDate.setDate(checkDate.getDate() - 1);
           const yesterdayStr = checkDate.toISOString().slice(0, 10);
@@ -831,4 +859,3 @@ export const storage = {
     return Math.max(1, streak);
   }
 };
-

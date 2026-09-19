@@ -60,16 +60,13 @@ export default function Login() {
 
   // Monitor auth state on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && !user.isAnonymous) {
-        const prof = storage.getUserProfile();
-        if (user.email && prof.email !== user.email) {
-          storage.saveUserProfile({
-            ...prof,
-            email: user.email,
-            penName: user.displayName || prof.penName || "Author",
-            name: user.displayName || prof.name || "Author",
-          });
+        storage.switchUser(user.uid, user.email, user.displayName);
+        try {
+          await storage.syncFromCloud(user.uid);
+        } catch (e) {
+          console.warn("Auto-sync on login mount:", e);
         }
         // If already logged in, navigate straight to dashboard
         navigate("/dashboard", { replace: true });
@@ -80,16 +77,9 @@ export default function Login() {
 
   // Post-login data sync and redirection to Archive Projects
   const handlePostAuthSync = async (user: any, customPenName?: string) => {
-    storage.setCurrentUserId(user.uid);
-    const prof = storage.getUserProfile();
-    const updatedProf = {
-      ...prof,
-      email: user.email || prof.email || "author@oceannovel.app",
-      name: customPenName || user.displayName || prof.name || "Author",
-      penName: customPenName || user.displayName || prof.penName || "Author",
-    };
-    storage.saveUserProfile(updatedProf);
-
+    const authorName = customPenName || user.displayName || user.email?.split("@")[0] || "Author";
+    storage.switchUser(user.uid, user.email, authorName);
+    
     // Sync cloud Firestore with user data
     try {
       await storage.syncFromCloud(user.uid);

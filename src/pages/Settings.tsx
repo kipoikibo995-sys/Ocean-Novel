@@ -45,8 +45,11 @@ export default function Settings() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setFirebaseUser(u);
+      if (u) {
+        setProfile(storage.getUserProfile());
+      }
     });
     return () => unsub();
   }, []);
@@ -65,8 +68,8 @@ export default function Settings() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setSaveStatus("Signed out of Firebase account. Operating in offline/guest mode.");
-      setTimeout(() => setSaveStatus(null), 3500);
+      storage.clearCache();
+      navigate("/login", { replace: true });
     } catch (err: any) {
       console.warn("Sign out error:", err);
     }
@@ -312,7 +315,7 @@ export default function Settings() {
                         )}
                       </div>
                       <div className="text-xs text-stone-500 font-mono mt-0.5">
-                        {firebaseUser?.email || profile.email || "kojiacademy2026@gmail.com"}
+                        {firebaseUser?.email || profile.email || "author@oceannovel.app"}
                       </div>
                     </div>
                   </div>
@@ -722,7 +725,7 @@ export default function Settings() {
                   </span>
                 </div>
                 <CardDescription className="text-xs font-serif text-stone-500">
-                  Real-time database synchronization for <strong>kojiacademy2026@gmail.com</strong> (Project: <code className="text-[#8C503C] font-mono">oceannovel</code>).
+                  Real-time database synchronization for <strong>{firebaseUser?.email || profile.email || "Author"}</strong> (Project: <code className="text-[#8C503C] font-mono">oceannovel</code>).
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
