@@ -127,8 +127,15 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const isOfflineOrUnavailable = 
+    errMsg.includes('unavailable') || 
+    errMsg.includes('could not reach') || 
+    errMsg.includes('offline') ||
+    errMsg.includes('network');
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -139,7 +146,12 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+
+  if (isOfflineOrUnavailable) {
+    console.warn('[Firestore Offline Buffer]: Client is operating in resilient offline/local mode.', errMsg);
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  }
 }
 
 let currentUserId: string | null = null;
