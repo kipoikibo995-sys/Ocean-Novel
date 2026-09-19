@@ -43,6 +43,8 @@ export default function Dashboard() {
 
   const [savedProjects, setSavedProjects] = useState<ProjectMeta[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectMeta | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   // Real Tasks State (synced with LocalStorage)
   const [tasks, setTasks] = useState<StudioTask[]>([]);
@@ -168,6 +170,23 @@ export default function Dashboard() {
     const updated = tasks.filter((t) => t.id !== taskId);
     setTasks(updated);
     storage.deleteTask(taskId);
+  };
+
+  const handleDeleteProject = async (proj: ProjectMeta) => {
+    setIsDeletingProject(true);
+    try {
+      storage.deleteProject(proj.id);
+      const updated = storage.getProjects().sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+      setSavedProjects(updated);
+      if (selectedProjectId === proj.id) {
+        setSelectedProjectId(updated.length > 0 ? updated[0].id : null);
+      }
+      setProjectToDelete(null);
+    } catch (err) {
+      console.error("Error deleting book project:", err);
+    } finally {
+      setIsDeletingProject(false);
+    }
   };
 
   // Active / Most recent project
@@ -903,11 +922,22 @@ export default function Dashboard() {
                             />
                           </div>
                           
-                          {/* Action Button */}
-                          <div className="mt-4 flex justify-end">
+                          {/* Action Buttons */}
+                          <div className="mt-4 flex items-center justify-between gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(proj);
+                              }}
+                              className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors border border-transparent hover:border-rose-200 cursor-pointer"
+                              title={`Delete "${proj.title}"`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                             <button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/project/${proj.id}`); }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-white bg-[#2c1b13] hover:bg-[#8c503c] transition-colors px-3 py-1.5 rounded-sm"
+                              className="text-[9px] font-bold uppercase tracking-widest text-white bg-[#2c1b13] hover:bg-[#8c503c] transition-colors px-3 py-1.5 rounded-sm cursor-pointer"
                             >
                               Open Archive
                             </button>
@@ -1828,6 +1858,108 @@ export default function Dashboard() {
           totalWords={totalWordsAcrossAll}
           onUpdated={() => setTimelineSettings(storage.getTimelineSettings())}
         />
+
+        {/* DELETE ARCHIVE / BOOK CONFIRMATION MODAL */}
+        <AnimatePresence>
+          {projectToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => !isDeletingProject && setProjectToDelete(null)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="relative bg-[#FCFAF5] border border-[#D8D2C4] rounded-lg shadow-2xl w-full max-w-md overflow-hidden z-10"
+              >
+                {/* Header */}
+                <div className="p-4 sm:p-5 border-b border-[#E5E0D5] flex items-center justify-between bg-[#F4EFE6]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700">
+                      <Trash2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif font-bold text-stone-900 text-base leading-tight">
+                        Delete Manuscript Archive
+                      </h3>
+                      <p className="text-[11px] font-serif text-stone-500 mt-0.5">
+                        Permanent action confirmation
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    disabled={isDeletingProject}
+                    onClick={() => setProjectToDelete(null)}
+                    className="p-1.5 text-stone-400 hover:text-stone-700 rounded-sm transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4">
+                  <div className="bg-white border border-[#E5E0D5] rounded-md p-3.5 shadow-2xs">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#8C503C] mb-1">
+                      {projectToDelete.genre || "Fiction Novel"}
+                    </div>
+                    <h4 className="font-serif font-bold text-stone-900 text-lg leading-snug">
+                      {projectToDelete.title}
+                    </h4>
+                    <div className="flex items-center gap-3 text-xs text-stone-500 font-serif mt-2 pt-2 border-t border-stone-100">
+                      <span>Author: <strong>{projectToDelete.author || "Author"}</strong></span>
+                      <span>•</span>
+                      <span>Words: <strong>{(projectToDelete.currentWords || 0).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-stone-600 font-serif leading-relaxed">
+                    Are you sure you want to permanently delete this book archive? All associated manuscript chapters, characters, locations, notes, and story bible files will be permanently erased from your account and cloud sync.
+                  </p>
+
+                  <div className="bg-rose-50/80 border border-rose-200 rounded-md p-2.5 text-[11px] text-rose-800 font-serif flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>This action cannot be undone.</span>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 bg-[#F4EFE6] border-t border-[#E5E0D5] flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    disabled={isDeletingProject}
+                    onClick={() => setProjectToDelete(null)}
+                    className="px-4 py-2 border border-[#D8D2C4] bg-white hover:bg-stone-50 text-stone-700 text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Keep Archive
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingProject}
+                    onClick={() => handleDeleteProject(projectToDelete)}
+                    className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isDeletingProject ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Permanently</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
