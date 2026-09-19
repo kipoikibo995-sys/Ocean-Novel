@@ -1,12 +1,12 @@
 {
-  "projectId": "gen-lang-client-0668801654",
-  "appId": "1:774770386440:web:37dd3438a5223745bdd3bd",
-  "apiKey": "AIzaSyBr_XIqwyytWrWINXbGnSjbfZed-byi-fM",
-  "authDomain": "oceannovel.kojilaunch.com",
+  "projectId": "oceannovel",
+  "appId": "1:710253723413:web:8764236f9447ae2033331c",
+  "apiKey": "AIzaSyBbpxamaFNGN0RTkf9yFZhPo2OUIrgLXH4",
+  "authDomain": "oceannovel.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-novelist-fca8c749-967d-46b4-9714-a261746c3222",
-  "storageBucket": "gen-lang-client-0668801654.firebasestorage.app",
-  "messagingSenderId": "774770386440",
+  "storageBucket": "oceannovel.firebasestorage.app",
+  "messagingSenderId": "710253723413",
   "measurementId": "",
-  "oAuthClientId": "774770386440-tvv2v1v3vf56e1omjsivdpko83ccgtbi.apps.googleusercontent.com",
+  "oAuthClientId": "710253723413-9eogj98m45kc7vf9vr13f4l9bjb289ei.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }
