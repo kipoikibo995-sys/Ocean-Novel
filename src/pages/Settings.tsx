@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { storage, UserProfile } from "@/lib/storage";
+import { auth } from "@/lib/firebase";
+import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   User,
   PenTool,
@@ -22,6 +24,8 @@ import {
   Cloud,
   Database,
   RefreshCw,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +42,15 @@ export default function Settings() {
   const navigate = useNavigate();
   const { id: projectId } = useParams();
 
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setFirebaseUser(u);
+    });
+    return () => unsub();
+  }, []);
+
   const tabParam = searchParams.get("tab") || "profile";
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'appearance' | 'billing' | 'data'>(
     (tabParam as any) || 'profile'
@@ -48,6 +61,16 @@ export default function Settings() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setSaveStatus("Signed out of Firebase account. Operating in offline/guest mode.");
+      setTimeout(() => setSaveStatus(null), 3500);
+    } catch (err: any) {
+      console.warn("Sign out error:", err);
+    }
+  };
 
   const handleSyncCloudNow = async () => {
     setIsSyncingCloud(true);
@@ -251,7 +274,88 @@ export default function Settings() {
 
         {/* TAB 1: AUTHOR PROFILE */}
         {activeTab === 'profile' && (
-          <Card className="bg-[#FCFAF5] border-[#E5E0D5] shadow-sm">
+          <div className="space-y-6">
+            {/* Firebase Account & Auth Status Card */}
+            <Card className="bg-[#FCFAF5] border-[#E5E0D5] shadow-sm">
+              <CardHeader className="border-b border-[#E5E0D5] pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="font-serif text-lg text-[#4A3225]">Firebase Authentication & Cloud Account</CardTitle>
+                    <CardDescription className="text-xs font-serif text-stone-500">
+                      Manage your linked Google account or email credentials for permanent cloud synchronization.
+                    </CardDescription>
+                  </div>
+                  <div className="w-9 h-9 rounded-full bg-[#2E6B48]/10 flex items-center justify-center text-[#2E6B48]">
+                    <Cloud className="w-5 h-5" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-white border border-[#E5E0D5]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#8C503C]/10 border border-[#8C503C]/20 flex items-center justify-center text-[#8C503C] font-bold">
+                      {firebaseUser?.displayName ? firebaseUser.displayName.charAt(0).toUpperCase() : (profile.name?.charAt(0) || "A")}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-[#4A3225]">
+                          {firebaseUser?.displayName || profile.penName || "Author Account"}
+                        </span>
+                        {firebaseUser && !firebaseUser.isAnonymous ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Authenticated
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                            Guest Session
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-stone-500 font-mono mt-0.5">
+                        {firebaseUser?.email || profile.email || "kojiacademy2026@gmail.com"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {firebaseUser && !firebaseUser.isAnonymous ? (
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stone-300 hover:border-red-300 text-stone-600 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer bg-white"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sign Out
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/login")}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Sign In / Register
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/login")}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-[#DCD5C9] text-stone-700 hover:text-[#4A3225] text-xs font-bold tracking-wider uppercase bg-white hover:bg-stone-50 cursor-pointer"
+                    >
+                      Switch Account
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-stone-500 flex items-center justify-between pt-1">
+                  <span>Firebase Project: <strong className="text-stone-700 font-mono">oceannovel</strong></span>
+                  <span className="font-mono text-stone-400">UID: {firebaseUser?.uid || "local-session"}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Author Profile Details */}
+            <Card className="bg-[#FCFAF5] border-[#E5E0D5] shadow-sm">
             <CardHeader className="border-b border-[#E5E0D5] pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -360,6 +464,7 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </div>
         )}
 
         {/* TAB 2: WRITING PREFERENCES */}

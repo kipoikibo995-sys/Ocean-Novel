@@ -24,16 +24,29 @@ import {
   RefreshCw,
   BookOpen,
   ChevronDown,
+  User as UserIcon,
+  Cloud,
 } from "lucide-react";
 import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
 
 import { runFantasySeed } from "@/lib/seed";
 
 export default function Dashboard() {
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+    });
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     const seeded = runFantasySeed();
     if (seeded) {
@@ -657,11 +670,12 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
               <button
                 onClick={() => navigate("/settings")}
-                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase transition-colors shadow-sm cursor-pointer"
-                title="Author Profile & Settings"
+                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3.5 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer"
+                title={`Author Settings (${currentUser?.email || "Author"})`}
               >
-                <SettingsIcon className="w-3.5 h-3.5 text-[#8c503c]" />
-                <span className="hidden sm:inline">Settings</span>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <SettingsIcon className="w-3.5 h-3.5 text-[#8c503c] shrink-0" />
+                <span className="max-w-[130px] truncate">{currentUser?.displayName || currentUser?.email?.split('@')[0] || "Settings"}</span>
               </button>
               <button
                 onClick={() => navigate("/create")}
