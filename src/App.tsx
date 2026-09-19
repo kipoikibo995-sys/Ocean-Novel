@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -11,6 +12,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AppLayout, ProjectLayout } from "./components/layout/layouts";
+import { storage } from "./lib/storage";
 import Dashboard from "./pages/Dashboard";
 import CreateProject from "./pages/CreateProject";
 import ProjectOverview from "./pages/ProjectOverview";
@@ -60,6 +62,10 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    storage.initAutoSync();
+  }, []);
+
   return (
     <BrowserRouter>
       <AnimatedRoutes />

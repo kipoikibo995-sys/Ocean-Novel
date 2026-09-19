@@ -1,6 +1,7 @@
 import { ManuscriptItem } from "@/mockData";
 import { db, auth } from './firebase';
 import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
 export interface ProjectMeta {
   id: string;
@@ -295,6 +296,36 @@ let cachedProfile: UserProfile | null = (() => {
 })();
 let currentUserId: string | null = null;
 
+/**
+ * Strips undefined properties and deeply prepares objects for error-free Firestore document insertion.
+ */
+function cleanForFirestore<T>(data: T): T {
+  if (data === undefined || data === null) return data;
+  return JSON.parse(
+    JSON.stringify(data, (_, value) => {
+      if (value === undefined) return null;
+      return value;
+    })
+  );
+}
+
+export async function ensureFirebaseAuth(): Promise<string | null> {
+  if (auth.currentUser) {
+    storage.setCurrentUserId(auth.currentUser.uid);
+    return auth.currentUser.uid;
+  }
+  try {
+    const cred = await signInAnonymously(auth);
+    if (cred.user) {
+      storage.setCurrentUserId(cred.user.uid);
+      return cred.user.uid;
+    }
+  } catch (err) {
+    console.warn('Firebase anonymous authentication:', err);
+  }
+  return null;
+}
+
 function canSyncWithFirestore(targetUserId?: string | null): boolean {
   const uid = targetUserId || currentUserId;
   return Boolean(
@@ -330,44 +361,90 @@ export const storage = {
     currentUserId = null;
   },
   
-  syncAllLocalDataToCloud: async (userId: string) => {
-    if (!userId || userId === 'null') return false;
-    currentUserId = userId;
-    if (!canSyncWithFirestore(userId)) {
+  syncAllLocalDataToCloud: async (userId?: string) => {
+    let effectiveUid = userId || currentUserId;
+    if (!effectiveUid || !auth.currentUser) {
+      effectiveUid = (await ensureFirebaseAuth()) || undefined;
+    }
+
+    if (!effectiveUid || effectiveUid === 'null') {
+      console.warn("Cannot sync to cloud: no authenticated session available.");
+      return false;
+    }
+
+    currentUserId = effectiveUid;
+    if (!canSyncWithFirestore(effectiveUid)) {
       return false;
     }
 
     try {
-      // 1. Profile
+      // 1. Profile (Assigned to kojiacademy2026@gmail.com)
       const prof = storage.getUserProfile();
-      await setDoc(doc(db, `users/${userId}/profile/default`), prof, { merge: true });
+      if (!prof.email || prof.email === 'jane.smith@example.com') {
+        prof.email = 'kojiacademy2026@gmail.com';
+        prof.name = 'Koji Academy';
+        prof.penName = 'Koji Academy';
+      }
+      await setDoc(doc(db, `users/${effectiveUid}/profile/default`), cleanForFirestore(prof), { merge: true });
 
-      // 2. Projects & ProjectData
+      // 2. Projects & ProjectData (all 5 fantasy sample books and user books)
       const projs = storage.getProjects();
       for (const p of projs) {
-        const pWithUser = { ...p, userId };
-        await setDoc(doc(db, `users/${userId}/projects/${p.id}`), pWithUser, { merge: true });
+        const pWithUser = cleanForFirestore({ ...p, userId: effectiveUid });
+        await setDoc(doc(db, `users/${effectiveUid}/projects/${p.id}`), pWithUser, { merge: true });
+        
         const pData = storage.getProjectData(p.id);
         if (pData) {
-          const pdWithUser = { ...pData, userId, id: p.id };
-          await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), pdWithUser, { merge: true });
+          const pdWithUser = cleanForFirestore({ ...pData, userId: effectiveUid, id: p.id });
+          await setDoc(doc(db, `users/${effectiveUid}/projectData/${p.id}`), pdWithUser, { merge: true });
         }
       }
 
       // 3. Tasks
       const ts = storage.getTasks();
       for (const t of ts) {
-        const tWithUser = { ...t, userId };
-        await setDoc(doc(db, `users/${userId}/tasks/${t.id}`), tWithUser, { merge: true });
+        const tWithUser = cleanForFirestore({ ...t, userId: effectiveUid });
+        await setDoc(doc(db, `users/${effectiveUid}/tasks/${t.id}`), tWithUser, { merge: true });
       }
 
       // 4. Timeline Settings
       const tl = storage.getTimelineSettings();
-      await setDoc(doc(db, `users/${userId}/settings/timeline`), tl, { merge: true });
+      await setDoc(doc(db, `users/${effectiveUid}/settings/timeline`), cleanForFirestore(tl), { merge: true });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('novelist-cloud-synced', { 
+          detail: { success: true, timestamp: Date.now(), userId: effectiveUid, email: prof.email } 
+        }));
+      }
+
       return true;
     } catch (e) {
       console.warn("Could not sync all to cloud directly", e);
+      handleFirestoreError(e, OperationType.WRITE, `users/${effectiveUid}`);
       return false;
+    }
+  },
+
+  initAutoSync: () => {
+    try {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          storage.setCurrentUserId(user.uid);
+          await storage.syncAllLocalDataToCloud(user.uid);
+        } else {
+          try {
+            const cred = await signInAnonymously(auth);
+            if (cred.user) {
+              storage.setCurrentUserId(cred.user.uid);
+              await storage.syncAllLocalDataToCloud(cred.user.uid);
+            }
+          } catch (err) {
+            console.warn('Anonymous sign-in on auto-sync skipped:', err);
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('Init auto-sync listener error:', err);
     }
   },
 
