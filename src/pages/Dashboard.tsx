@@ -23,6 +23,7 @@ import {
   MapPin,
   RefreshCw,
   BookOpen,
+  ChevronDown,
 } from "lucide-react";
 import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const [isScanning, setIsScanning] = useState(false);
 
   // Author Timeline & Stats Configuration Modal
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [timelineSettings, setTimelineSettings] = useState(() => storage.getTimelineSettings());
 
@@ -533,8 +535,8 @@ export default function Dashboard() {
     >
       <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-4 lg:py-6 h-full relative z-10 flex flex-col gap-4">
         {/* SECTION 1: THE MANUSCRIPTS */}
-        <section className="shrink-0 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fcfaf5] p-4 lg:p-6 rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.2)] border border-[#e5e0d5] relative">
+        <section className="shrink-0 flex flex-col gap-3 relative z-30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fcfaf5] p-4 lg:p-6 rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.2)] border border-[#e5e0d5] relative z-30">
             {/* Archive Folder Tab Decoration */}
             <div
               className="absolute -top-4 left-4 w-32 h-5 bg-[#e5e0d5]"
@@ -542,69 +544,114 @@ export default function Dashboard() {
             />
             <div className="absolute -top-1 left-4 right-4 h-2 bg-[#fcfaf5] rounded-t-sm z-0" />
             
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6 relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6 relative z-30">
               <h1 className="text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase">
                 Archive Projects
               </h1>
 
-              {/* AUTHOR STATS STRIP - CLICKABLE TO CONFIGURE TIMELINE */}
-              <button
-                type="button"
-                onClick={() => setIsTimelineModalOpen(true)}
-                className="group flex items-center gap-3 sm:gap-6 bg-white/50 hover:bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/60 hover:border-amber-400/80 shadow-xs hover:shadow-md transition-all duration-200 shrink-0 w-max cursor-pointer text-left relative"
-                title="Click to view & configure author timeline and statistics"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner group-hover:scale-105 transition-transform">
-                    <Flame className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
+              {/* COMPACT COLLAPSIBLE AUTHOR STATS */}
+              <div className="relative z-50">
+                <button
+                  type="button"
+                  onClick={() => setIsStatsOpen((prev) => !prev)}
+                  className={cn(
+                    "group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer shadow-xs select-none",
+                    isStatsOpen
+                      ? "bg-[#8c503c] text-[#fcfaf5] border-[#4a3225] shadow-inner"
+                      : "bg-white/70 hover:bg-white text-stone-700 hover:text-[#4a3225] border-[#e5e0d5] hover:border-amber-400/80"
+                  )}
+                  title="Click to view full writing stats & timeline"
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded-full flex items-center justify-center transition-colors",
+                    isStatsOpen ? "bg-amber-400/30 text-amber-200" : "bg-orange-100 text-orange-600"
+                  )}>
+                    <Flame className="w-2.5 h-2.5" />
                   </div>
-                  <div>
-                    <p className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-stone-500 leading-none mb-0.5">
-                      Streak
-                    </p>
-                    <p className="text-[10px] lg:text-xs font-bold text-stone-800 leading-none">
-                      {displayStreak}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="w-px h-4 lg:h-5 bg-stone-300/50" />
+                  <span className="text-[11px] font-bold tracking-tight">
+                    {displayStreak}
+                  </span>
 
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-105 transition-transform">
-                    <Type className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
-                  </div>
-                  <div>
-                    <p className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-stone-500 leading-none mb-0.5">
-                      Total Words
-                    </p>
-                    <p className="text-[10px] lg:text-xs font-bold text-stone-800 leading-none">
-                      {totalWordsAcrossAll.toLocaleString()} W
-                    </p>
-                  </div>
-                </div>
+                  <span className={cn("text-[10px] opacity-40", isStatsOpen ? "text-white" : "text-stone-400")}>•</span>
 
-                <div className="w-px h-4 lg:h-5 bg-stone-300/50" />
+                  <span className="text-[11px] font-medium opacity-90">
+                    {totalWordsAcrossAll > 1000 ? `${(totalWordsAcrossAll / 1000).toFixed(1)}k W` : `${totalWordsAcrossAll} W`}
+                  </span>
 
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#f4efe6] flex items-center justify-center text-[#8c503c] border border-[#e5e0d5] group-hover:scale-105 transition-transform">
-                    <Coffee className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
-                  </div>
-                  <div>
-                    <p className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-stone-500 leading-none mb-0.5">
-                      Writing Time
-                    </p>
-                    <p className="text-[10px] lg:text-xs font-bold text-[#4a3225] leading-none">
-                      {displayWritingTime}
-                    </p>
-                  </div>
-                </div>
+                  <ChevronDown className={cn(
+                    "w-3 h-3 transition-transform duration-200 ml-0.5",
+                    isStatsOpen ? "rotate-180 text-[#fcfaf5]" : "text-stone-400 group-hover:text-stone-700"
+                  )} />
+                </button>
 
-                {/* Subtle indicator tag */}
-                <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-amber-800 transition-colors ml-1">
-                  ✎
-                </span>
-              </button>
+                {/* Collapsible Dropdown Details Card */}
+                <AnimatePresence>
+                  {isStatsOpen && (
+                    <>
+                      {/* Backdrop overlay for outside-click dismiss */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsStatsOpen(false)}
+                      />
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="absolute left-0 sm:left-auto sm:right-auto top-full mt-2 z-50 bg-[#fcfaf5] border border-[#d8d2c4] rounded-lg shadow-xl p-3.5 w-76 sm:w-84 flex flex-col gap-3"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-[#e5e0d5]">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#4a3225] flex items-center gap-1.5">
+                            <TrendingUp className="w-3.5 h-3.5 text-[#8c503c]" />
+                            Writing Stats & Streak
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsStatsOpen(false);
+                              setIsTimelineModalOpen(true);
+                            }}
+                            className="text-[10px] font-bold uppercase tracking-wider text-[#8c503c] hover:text-[#5a3225] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            Configure ✎
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Streak */}
+                          <div className="bg-white/80 border border-[#e5e0d5] rounded-md p-2 flex flex-col items-center text-center shadow-xs">
+                            <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 mb-1">
+                              <Flame className="w-3.5 h-3.5" />
+                            </div>
+                            <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Streak</p>
+                            <p className="text-[11px] font-bold text-stone-900 mt-0.5">{displayStreak}</p>
+                          </div>
+
+                          {/* Total Words */}
+                          <div className="bg-white/80 border border-[#e5e0d5] rounded-md p-2 flex flex-col items-center text-center shadow-xs">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-1">
+                              <Type className="w-3.5 h-3.5" />
+                            </div>
+                            <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Total Words</p>
+                            <p className="text-[11px] font-bold text-stone-900 mt-0.5">{totalWordsAcrossAll.toLocaleString()} W</p>
+                          </div>
+
+                          {/* Writing Time */}
+                          <div className="bg-white/80 border border-[#e5e0d5] rounded-md p-2 flex flex-col items-center text-center shadow-xs">
+                            <div className="w-6 h-6 rounded-full bg-[#f4efe6] border border-[#e5e0d5] flex items-center justify-center text-[#8c503c] mb-1">
+                              <Coffee className="w-3.5 h-3.5" />
+                            </div>
+                            <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Writing Time</p>
+                            <p className="text-[11px] font-bold text-[#4a3225] mt-0.5">{displayWritingTime}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
