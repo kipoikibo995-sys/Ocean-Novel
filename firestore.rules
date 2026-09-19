@@ -31,6 +31,10 @@ service cloud.firestore {
       match /profile/{profileId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
+
+      match /settings/{settingId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
   }
 }

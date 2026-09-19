@@ -360,6 +360,10 @@ export const storage = {
         const tWithUser = { ...t, userId };
         await setDoc(doc(db, `users/${userId}/tasks/${t.id}`), tWithUser, { merge: true });
       }
+
+      // 4. Timeline Settings
+      const tl = storage.getTimelineSettings();
+      await setDoc(doc(db, `users/${userId}/settings/timeline`), tl, { merge: true });
       return true;
     } catch (e) {
       console.warn("Could not sync all to cloud directly", e);
@@ -387,45 +391,103 @@ export const storage = {
         }
       } catch(e) { handleFirestoreError(e, OperationType.GET, `users/${userId}/profile/default`); }
 
-      // Load Projects
+      // Load Timeline Settings
+      try {
+        const tlDoc = await getDoc(doc(db, `users/${userId}/settings/timeline`));
+        if (tlDoc.exists()) {
+          const cloudTl = tlDoc.data() as AuthorTimelineSettings;
+          safeLocalStorageSet(TIMELINE_SETTINGS_KEY, JSON.stringify(cloudTl));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: cloudTl }));
+          }
+        }
+      } catch(e) { handleFirestoreError(e, OperationType.GET, `users/${userId}/settings/timeline`); }
+
+      // Load Projects with Full Bidirectional Merge
       try {
         const projSnapshot = await getDocs(collection(db, `users/${userId}/projects`));
-        if (projSnapshot.docs.length > 0) {
-          cachedProjects = projSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMeta));
-          safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
-        } else if (cachedProjects && cachedProjects.length > 0) {
-          // Push existing local projects to cloud so user never loses their manuscripts!
-          for (const p of cachedProjects) {
-            await setDoc(doc(db, `users/${userId}/projects/${p.id}`), { ...p, userId }, { merge: true });
-            const pData = storage.getProjectData(p.id);
+        const cloudProjectsMap = new Map<string, ProjectMeta>();
+        projSnapshot.docs.forEach(d => {
+          cloudProjectsMap.set(d.id, { ...d.data(), id: d.id } as ProjectMeta);
+        });
+
+        // Current local projects
+        const localProjects = cachedProjects || [];
+        const mergedProjectsMap = new Map<string, ProjectMeta>(cloudProjectsMap);
+
+        // Merge local projects into cloud projects map
+        for (const localP of localProjects) {
+          if (!mergedProjectsMap.has(localP.id)) {
+            // Local project that was created locally/offline -> upload to Cloud Firestore
+            mergedProjectsMap.set(localP.id, { ...localP, userId });
+            await setDoc(doc(db, `users/${userId}/projects/${localP.id}`), { ...localP, userId }, { merge: true });
+            const pData = storage.getProjectData(localP.id);
             if (pData) {
-              await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), { ...pData, userId, id: p.id }, { merge: true });
+              await setDoc(doc(db, `users/${userId}/projectData/${localP.id}`), { ...pData, userId, id: localP.id }, { merge: true });
+            }
+          } else {
+            // Both cloud and local have this project: keep the one with newer lastModified
+            const cloudP = mergedProjectsMap.get(localP.id)!;
+            if ((localP.lastModified || 0) > (cloudP.lastModified || 0)) {
+              mergedProjectsMap.set(localP.id, { ...localP, userId });
+              await setDoc(doc(db, `users/${userId}/projects/${localP.id}`), { ...localP, userId }, { merge: true });
+              const pData = storage.getProjectData(localP.id);
+              if (pData) {
+                await setDoc(doc(db, `users/${userId}/projectData/${localP.id}`), { ...pData, userId, id: localP.id }, { merge: true });
+              }
             }
           }
         }
+
+        cachedProjects = Array.from(mergedProjectsMap.values()).sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        safeLocalStorageSet(PROJECTS_KEY, JSON.stringify(cachedProjects));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: {} }));
+        }
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projects`); }
 
-      // Load Tasks
+      // Load Tasks with Bidirectional Merge
       try {
         const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
-        if (taskSnapshot.docs.length > 0) {
-          cachedTasks = taskSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as StudioTask));
-          safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
-        } else if (cachedTasks && cachedTasks.length > 0) {
-          for (const t of cachedTasks) {
-            await setDoc(doc(db, `users/${userId}/tasks/${t.id}`), { ...t, userId }, { merge: true });
+        const taskMap = new Map<string, StudioTask>();
+        taskSnapshot.docs.forEach(d => {
+          taskMap.set(d.id, { ...d.data(), id: d.id } as StudioTask);
+        });
+
+        (cachedTasks || []).forEach(t => {
+          if (!taskMap.has(t.id)) {
+            taskMap.set(t.id, { ...t, userId });
+            setDoc(doc(db, `users/${userId}/tasks/${t.id}`), { ...t, userId }, { merge: true }).catch(() => {});
           }
-        }
+        });
+
+        cachedTasks = Array.from(taskMap.values());
+        safeLocalStorageSet(TASKS_KEY, JSON.stringify(cachedTasks));
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/tasks`); }
 
-      // Load all Project Data
+      // Load all Project Data with Bidirectional Merge
       try {
         const pdSnapshot = await getDocs(collection(db, `users/${userId}/projectData`));
         pdSnapshot.docs.forEach(d => {
-          const pData = d.data() as ProjectData;
-          cachedProjectData[d.id] = pData;
-          safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(pData));
+          const cloudPData = d.data() as ProjectData;
+          const localPData = storage.getProjectData(d.id);
+          if (!localPData) {
+            cachedProjectData[d.id] = cloudPData;
+            safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(cloudPData));
+          } else {
+            // Keep merged
+            cachedProjectData[d.id] = { ...cloudPData, ...localPData };
+            safeLocalStorageSet(PROJECT_DATA_PREFIX + d.id, JSON.stringify(cachedProjectData[d.id]));
+          }
         });
+
+        // Upload any local project data not yet in cloud
+        for (const p of (cachedProjects || [])) {
+          const localPData = storage.getProjectData(p.id);
+          if (localPData && !pdSnapshot.docs.some(d => d.id === p.id)) {
+            await setDoc(doc(db, `users/${userId}/projectData/${p.id}`), { ...localPData, userId, id: p.id }, { merge: true });
+          }
+        }
       } catch(e) { handleFirestoreError(e, OperationType.LIST, `users/${userId}/projectData`); }
 
     } catch (e) {
@@ -633,6 +695,10 @@ export const storage = {
       safeLocalStorageSet(TIMELINE_SETTINGS_KEY, JSON.stringify(updated));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('novelist-timeline-updated', { detail: updated }));
+      }
+      if (canSyncWithFirestore()) {
+        setDoc(doc(db, `users/${currentUserId}/settings/timeline`), updated, { merge: true })
+          .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/settings/timeline`));
       }
     } catch (e) {
       console.error("Error saving timeline settings", e);

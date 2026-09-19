@@ -19,11 +19,8 @@ import {
   Search,
   ShieldCheck,
   BookOpen,
-  Cloud,
-  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/AuthContext";
 
 export function AppLayout() {
   return (
@@ -39,7 +36,6 @@ export function ProjectLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
-  const { user, openAuthModal, signOut } = useAuth();
 
   useEffect(() => {
     if (location.pathname.includes("/workspace/studio")) {
@@ -300,25 +296,6 @@ export function ProjectLayout() {
             <Settings className="w-5 h-5 shrink-0" />
             {isExpanded && (
               <span className="font-medium text-sm">Settings</span>
-            )}
-          </button>
-
-          <button
-            onClick={async () => {
-              await signOut();
-              navigate("/login");
-            }}
-            className={cn(
-              "flex items-center rounded-xl transition-colors text-white/50 hover:text-white hover:bg-white/10",
-              isExpanded
-                ? "w-full px-4 h-10 gap-3"
-                : "w-10 h-10 justify-center mx-auto",
-            )}
-            title="Sign Out to Login Page"
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            {isExpanded && (
-              <span className="font-medium text-sm">Sign Out</span>
             )}
           </button>
         </div>

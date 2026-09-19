@@ -22,46 +22,12 @@ import WritingStudio from "./pages/WritingStudio";
 import Settings from "./pages/Settings";
 import GlobalSearchPage from "./pages/GlobalSearchPage";
 import ConsistencyCheckerPage from "./pages/ConsistencyCheckerPage";
-import LoginPage from "./pages/LoginPage";
-
-import { AuthProvider, useAuth } from "./lib/AuthContext";
-import { AuthModal } from "./components/AuthModal";
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#fcfaf5] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-          <p className="font-serif text-sm text-stone-600">Loading Ocean Novel...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return <>{children}</>;
-}
 
 function AnimatedRoutes() {
   const location = useLocation();
   return (
     <Routes location={location}>
-      <Route path="/login" element={<LoginPage />} />
-
-      <Route
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
+      <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create" element={<CreateProject />} />
         <Route path="/settings" element={<Settings />} />
@@ -95,11 +61,8 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AuthModal />
-        <AnimatedRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AnimatedRoutes />
+    </BrowserRouter>
   );
 }

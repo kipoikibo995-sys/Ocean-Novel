@@ -23,15 +23,12 @@ import {
   MapPin,
   RefreshCw,
   BookOpen,
-  Cloud,
-  LogOut,
 } from "lucide-react";
 import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
-import { useAuth } from "@/lib/AuthContext";
 
 import { runFantasySeed } from "@/lib/seed";
 
@@ -44,7 +41,6 @@ export default function Dashboard() {
   }, []);
 
   const navigate = useNavigate();
-  const { user, openAuthModal, signOut } = useAuth();
 
   const [savedProjects, setSavedProjects] = useState<ProjectMeta[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -613,19 +609,8 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
               <button
-                type="button"
-                onClick={async () => {
-                  await signOut();
-                  navigate("/login");
-                }}
-                className="flex items-center justify-center p-2 bg-[#fcfaf5] hover:bg-stone-200 text-stone-600 hover:text-stone-900 border border-[#d8d2c4] rounded-sm transition-colors shadow-xs"
-                title="Log Out (Return to Login Screen)"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-              <button
                 onClick={() => navigate("/settings")}
-                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase transition-colors shadow-sm"
+                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase transition-colors shadow-sm cursor-pointer"
                 title="Author Profile & Settings"
               >
                 <SettingsIcon className="w-3.5 h-3.5 text-[#8c503c]" />
@@ -633,7 +618,7 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={() => navigate("/create")}
-                className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto border border-[#4a3225]"
+                className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto border border-[#4a3225] cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Archive
