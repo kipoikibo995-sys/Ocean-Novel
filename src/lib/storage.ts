@@ -73,6 +73,24 @@ export interface UserProfile {
   theme: 'light' | 'dark' | 'system';
 }
 
+export interface FrontBackMatterData {
+  subtitle?: string;
+  publisher?: string;
+  edition?: string;
+  copyrightYear?: string;
+  copyrightOwner?: string;
+  isbn?: string;
+  asin?: string;
+  disclaimerText?: string;
+  dedication?: string;
+  acknowledgmentsText?: string;
+  authorPenName?: string;
+  authorBioText?: string;
+  authorWebsiteOrNewsletter?: string;
+  reviewCtaHeading?: string;
+  reviewCtaText?: string;
+}
+
 export interface ProjectData {
   id?: string;
   manuscript: ManuscriptItem[];
@@ -90,6 +108,7 @@ export interface ProjectData {
   storyBible?: StoryBibleData;
   plotEvents?: any[];
   plotArcs?: any[];
+  frontBackMatter?: FrontBackMatterData;
   userId?: string;
 }
 
