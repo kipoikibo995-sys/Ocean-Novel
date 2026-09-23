@@ -59,7 +59,7 @@ export default function WritingStudio() {
 
   // License check for OTO2 AI Ghostwriter
   const userProfile = storage.getUserProfile();
-  const currentPlan = userProfile?.plan || 'pro';
+  const currentPlan = userProfile?.plan || 'free';
   const hasAiGhostwriter = PLAN_LIMITS[currentPlan]?.hasAiGhostwriterHub ?? false;
 
   const handleOpenAiPromptHub = () => {

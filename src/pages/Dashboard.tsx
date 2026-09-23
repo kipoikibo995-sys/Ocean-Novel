@@ -51,7 +51,7 @@ export default function Dashboard() {
 
   // Check quota for projects
   const profile = storage.getUserProfile();
-  const maxAllowedProjects = PLAN_LIMITS[profile?.plan || 'pro'].maxProjects;
+  const maxAllowedProjects = PLAN_LIMITS[profile?.plan || 'free'].maxProjects;
 
   const handleNewProjectClick = () => {
     if (savedProjects.length >= maxAllowedProjects) {

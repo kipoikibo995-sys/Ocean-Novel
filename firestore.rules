@@ -36,7 +36,16 @@ service cloud.firestore {
       }
       
       match /profile/{profileId} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow update: if isSignedIn() && (
+          isAdmin() ||
+          (request.auth.uid == userId && (
+            !('plan' in request.resource.data) ||
+            request.resource.data.plan == resource.data.plan
+          ))
+        );
+        allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       }
 
       match /settings/{settingId} {
@@ -46,7 +55,22 @@ service cloud.firestore {
 
     match /registeredUsers/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        (request.auth.uid == userId && (
+          !('tier' in request.resource.data) ||
+          request.resource.data.tier == 'FrontEnd' ||
+          request.resource.data.tier == 'Free'
+        ))
+      );
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+          (!('tier' in request.resource.data) || request.resource.data.tier == resource.data.tier) &&
+          (!('isBanned' in request.resource.data) || request.resource.data.isBanned == resource.data.isBanned)
+        )
+      );
+      allow delete: if isAdmin();
     }
 
     match /ipnPendingPurchases/{purchaseId} {

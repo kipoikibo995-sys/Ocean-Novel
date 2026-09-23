@@ -75,3 +75,18 @@ export const FE_QUOTAS = {
   MAX_LOCATIONS_PER_PROJECT: 15,
 };
 
+export function tierToPlan(tier?: string | null): LicensePlan {
+  if (!tier) return 'free';
+  const clean = tier.trim().toUpperCase();
+  if (clean === 'OTO2' || clean === 'MASTER') return 'master';
+  if (clean === 'OTO1' || clean === 'PRO') return 'pro';
+  if (clean === 'COMMERCIAL') return 'commercial';
+  return 'free';
+}
+
+export function planToTier(plan?: LicensePlan): 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2' {
+  if (plan === 'master' || plan === 'commercial') return 'OTO2';
+  if (plan === 'pro') return 'OTO1';
+  return 'FrontEnd';
+}
+

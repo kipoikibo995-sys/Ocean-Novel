@@ -2,6 +2,7 @@ import { ManuscriptItem, MOCK_MANUSCRIPT, MOCK_CHARACTERS, MOCK_LOCATIONS } from
 import { db, auth } from './firebase';
 import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { isUserAdmin } from './adminService';
 
 export interface ProjectMeta {
   id: string;
@@ -246,13 +247,14 @@ export function safeLocalStorageSet(key: string, value: string): boolean {
 export function createDefaultProfile(email?: string | null, name?: string | null): UserProfile {
   const cleanName = name || (email ? email.split('@')[0] : "Author");
   const cleanEmail = email || "author@oceannovel.app";
+  const isAdmin = isUserAdmin(cleanEmail);
   return {
     name: cleanName,
     penName: cleanName,
     email: cleanEmail,
-    bio: "Lead Studio Author & Novel Architect at Ocean Novel.",
+    bio: isAdmin ? "Master Administrator & Novel Architect at Ocean Novel." : "Author & Novel Architect at Ocean Novel.",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-    plan: "pro",
+    plan: isAdmin ? "master" : "free",
     defaultFont: "Merriweather (Serif)",
     fontSize: "Medium (18px)",
     defaultPov: "Third Person Limited",
@@ -296,6 +298,12 @@ function loadLocalUserCache(uid: string | null) {
   try {
     const profRaw = localStorage.getItem(getStorageKey('profile', uid));
     cachedProfile = profRaw ? JSON.parse(profRaw) : null;
+    if (cachedProfile) {
+      const userEmail = auth.currentUser?.email || cachedProfile.email;
+      if (isUserAdmin(userEmail)) {
+        cachedProfile.plan = 'master';
+      }
+    }
   } catch {
     cachedProfile = null;
   }
@@ -543,16 +551,49 @@ export const storage = {
     currentUserId = userId;
 
     try {
-      // 1. Load Profile from Cloud
+      // 1. Load Profile from Cloud with authoritative CRM Tier sync
       try {
+        const currentUser = auth.currentUser;
+        const userEmail = currentUser?.email || "";
+        const isAdmin = isUserAdmin(userEmail);
+
+        let authoritativePlan: LicensePlan = isAdmin ? 'master' : 'free';
+
+        // Check CRM registeredUsers record
+        try {
+          const regDoc = await getDoc(doc(db, `registeredUsers/${userId}`));
+          if (regDoc.exists()) {
+            const regData = regDoc.data();
+            if (isAdmin) {
+              authoritativePlan = 'master';
+            } else if (regData?.tier === 'OTO2') {
+              authoritativePlan = 'master';
+            } else if (regData?.tier === 'OTO1') {
+              authoritativePlan = 'pro';
+            } else {
+              authoritativePlan = 'free';
+            }
+          }
+        } catch (crmErr) {
+          console.warn("Could not read CRM registeredUsers for plan sync:", crmErr);
+        }
+
         const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
         if (profileDoc.exists()) {
-          cachedProfile = profileDoc.data() as UserProfile;
+          const loadedProfile = profileDoc.data() as UserProfile;
+          cachedProfile = {
+            ...loadedProfile,
+            plan: authoritativePlan,
+          };
           safeLocalStorageSet(getStorageKey('profile', userId), JSON.stringify(cachedProfile));
+          // If the cloud profile had a stale plan, update it with the authoritative plan
+          if (loadedProfile.plan !== authoritativePlan) {
+            await setDoc(doc(db, `users/${userId}/profile/default`), cleanForFirestore(cachedProfile), { merge: true });
+          }
         } else {
           // Initialize fresh profile for this user from Firebase Auth
-          const currentUser = auth.currentUser;
-          cachedProfile = createDefaultProfile(currentUser?.email, currentUser?.displayName);
+          cachedProfile = createDefaultProfile(userEmail, currentUser?.displayName);
+          cachedProfile.plan = authoritativePlan;
           safeLocalStorageSet(getStorageKey('profile', userId), JSON.stringify(cachedProfile));
           await setDoc(doc(db, `users/${userId}/profile/default`), cleanForFirestore(cachedProfile));
         }
@@ -810,10 +851,15 @@ export const storage = {
   },
 
   getUserProfile: (): UserProfile => {
+    const currentUser = auth.currentUser;
+    const isAdmin = isUserAdmin(currentUser?.email);
+
     if (cachedProfile) {
+      if (isAdmin && cachedProfile.plan !== 'master') {
+        cachedProfile.plan = 'master';
+      }
       return cachedProfile;
     }
-    const currentUser = auth.currentUser;
     const fallback = createDefaultProfile(currentUser?.email, currentUser?.displayName);
     cachedProfile = fallback;
     return fallback;
@@ -821,7 +867,30 @@ export const storage = {
 
   saveUserProfile: (profile: Partial<UserProfile>): UserProfile => {
     const current = cachedProfile || storage.getUserProfile();
-    const updated = { ...current, ...profile };
+    const currentUser = auth.currentUser;
+    const isAdmin = isUserAdmin(currentUser?.email || current.email);
+
+    // SECURITY RESTRICTION:
+    // Only Admin can manually change or test license plans.
+    // Regular users cannot modify their plan tier via client actions.
+    let targetPlan = current.plan;
+    if (profile.plan !== undefined) {
+      if (isAdmin) {
+        targetPlan = profile.plan;
+      } else {
+        // Non-admin cannot change plan; maintain existing assigned plan
+        targetPlan = current.plan;
+      }
+    }
+    if (isAdmin && !profile.plan && targetPlan !== 'master') {
+      targetPlan = 'master';
+    }
+
+    const updated: UserProfile = {
+      ...current,
+      ...profile,
+      plan: targetPlan,
+    };
     cachedProfile = updated;
     safeLocalStorageSet(getStorageKey('profile'), JSON.stringify(updated));
     if (canSyncWithFirestore()) {

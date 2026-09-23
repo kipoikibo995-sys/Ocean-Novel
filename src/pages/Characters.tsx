@@ -459,8 +459,8 @@ export default function Characters() {
 
   // License quota check
   const profile = storage.getUserProfile();
-  const maxCharacters = PLAN_LIMITS[profile?.plan || 'pro'].maxCharactersPerProject;
-  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'pro'].hasImageLibrary;
+  const maxCharacters = PLAN_LIMITS[profile?.plan || 'free'].maxCharactersPerProject;
+  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'free'].hasImageLibrary;
   const isCharacterLimitReached = characters.length >= maxCharacters;
 
   // Group Management State (Standard + Custom)

@@ -5,7 +5,7 @@ import {
   Plus, MoreVertical, Search, X, MapPin, Map as MapIcon, Compass, Mountain, 
   TreePine, Castle, Edit3, Trash2, Home, Building, LayoutGrid, Route, Move, 
   Pen, Link2, ZoomIn, ZoomOut, Maximize2, Image as ImageIcon,
-  Users, BookOpen, HelpCircle, Check, ClipboardCopy, Feather, Info 
+  Users, BookOpen, HelpCircle, Check, ClipboardCopy, Feather, Info, Lock
 } from "lucide-react";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 import { PLAN_LIMITS } from "@/lib/license";
@@ -508,7 +508,7 @@ export default function Locations() {
 
   // License quota check
   const profile = storage.getUserProfile();
-  const maxLocations = PLAN_LIMITS[profile?.plan || 'pro'].maxLocationsPerProject;
+  const maxLocations = PLAN_LIMITS[profile?.plan || 'free'].maxLocationsPerProject;
   const isLocationLimitReached = locations.length >= maxLocations;
 
   const [formData, setFormData] = useState({

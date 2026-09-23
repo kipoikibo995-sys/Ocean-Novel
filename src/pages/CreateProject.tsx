@@ -397,7 +397,7 @@ export default function CreateProject() {
   // License check
   const profile = storage.getUserProfile();
   const existingProjects = storage.getProjects();
-  const maxProjects = PLAN_LIMITS[profile?.plan || 'pro'].maxProjects;
+  const maxProjects = PLAN_LIMITS[profile?.plan || 'free'].maxProjects;
 
   const handleCopyArchitectPrompt = async () => {
     try {

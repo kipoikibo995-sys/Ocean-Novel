@@ -8,11 +8,14 @@ import {
   BookOpen,
   RotateCcw,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 import { storage, FrontBackMatterData } from "@/lib/storage";
+import { PLAN_LIMITS } from "@/lib/license";
+import UpgradeModal from "@/components/UpgradeModal";
 import { ManuscriptItem } from "@/mockData";
 import {
   exportToEpub,
@@ -33,9 +36,6 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("format");
-  const [format, setFormat] = useState<ExportFormat>("epub");
-  const [includeTitlePage, setIncludeTitlePage] = useState(true);
   const [includeCopyright, setIncludeCopyright] = useState(true);
   const [includeTocPage, setIncludeTocPage] = useState(true);
   const [includeAboutAuthor, setIncludeAboutAuthor] = useState(true);
@@ -56,8 +56,13 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   const project = storage.getProjects().find((p) => p.id === projectId);
   const projectData = storage.getProjectData(projectId);
   const profile = storage.getUserProfile();
-
   const authorFallback = profile.penName || profile.name || "Author";
+  const hasEpub3Export = PLAN_LIMITS[profile?.plan || 'free'].hasEpub3Export;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>("format");
+  const [format, setFormat] = useState<ExportFormat>(() => (hasEpub3Export ? "epub" : "docx"));
+  const [includeTitlePage, setIncludeTitlePage] = useState(true);
   const defaultYear = new Date().getFullYear().toString();
 
   const defaultMatter: FrontBackMatterData = {
@@ -246,6 +251,10 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   };
 
   const handleExport = async () => {
+    if (format === "epub" && !hasEpub3Export) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setIsExporting(true);
     setExportComplete(false);
     setExportError(null);
@@ -603,19 +612,29 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* EPUB Option */}
                     <button
-                      onClick={() => setFormat("epub")}
+                      onClick={() => {
+                        if (!hasEpub3Export) {
+                          setShowUpgradeModal(true);
+                        } else {
+                          setFormat("epub");
+                        }
+                      }}
                       className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all cursor-pointer ${
                         format === "epub"
                           ? "border-[#8C503C] bg-[#8C503C]/10 text-[#8C503C] ring-1 ring-[#8C503C] shadow-xs"
                           : "border-[#E5E0D5] bg-white text-stone-600 hover:bg-stone-50"
                       }`}
                     >
-                      <span className="absolute -top-2 right-1.5 bg-[#8C503C] text-white text-[8px] font-bold font-mono px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-2xs">
-                        Gold KDP
+                      <span className="absolute -top-2 right-1.5 bg-[#8C503C] text-white text-[8px] font-bold font-mono px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-2xs flex items-center gap-0.5">
+                        {!hasEpub3Export && <Lock className="w-2 h-2 inline-block mr-0.5" />}
+                        {hasEpub3Export ? "Gold KDP" : "OTO1 Tier"}
                       </span>
                       <BookOpen className="w-5 h-5 mt-1" />
-                      <span className="text-xs font-bold font-mono uppercase">EPUB 3</span>
-                      <span className="text-[9px] text-stone-500 font-sans">Kindle & E-book</span>
+                      <span className="text-xs font-bold font-mono uppercase flex items-center gap-1">
+                        <span>EPUB 3</span>
+                        {!hasEpub3Export && <Lock className="w-3 h-3 text-[#8C503C]" />}
+                      </span>
+                      <span className="text-[9px] text-stone-500 font-sans">{hasEpub3Export ? "Kindle & E-book" : "Requires OTO1"}</span>
                     </button>
 
                     {/* DOCX Option */}
@@ -1141,6 +1160,15 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
           </motion.div>
         </div>
       )}
+
+      {/* Upgrade Modal for locked EPUB 3 export */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="projects"
+        title="Amazon KDP EPUB 3 Export Locked"
+        description="Gold Standard EPUB 3.3 Amazon KDP export package (dual NCX/EPUB 3 navigation, Landmarked start-reading offsets, and Kindle typography) is unlocked in OTO1: Unlimited Studio Edition ($47)."
+      />
     </AnimatePresence>
   );
 }

@@ -34,7 +34,7 @@ export default function ImagePickerModal({
 }: ImagePickerModalProps) {
   const navigate = useNavigate();
   const profile = storage.getUserProfile();
-  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'pro'].hasImageLibrary;
+  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'free'].hasImageLibrary;
 
   const [activeTab, setActiveTab] = useState<"upload" | "url" | "presets">(defaultTab);
   const [urlInput, setUrlInput] = useState(currentImage.startsWith("data:") ? "" : currentImage);

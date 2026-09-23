@@ -234,11 +234,31 @@ export const adminService = {
   },
 
   /**
-   * Upgrade Tier for User in Firestore
+   * Upgrade Tier for User in Firestore & sync to user profile
    */
   updateTier: async (uid: string, tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2'): Promise<void> => {
     const userDocRef = doc(db, "registeredUsers", uid);
     await updateDoc(userDocRef, { tier });
+
+    // Sync authoritative plan to user profile document
+    const planMap: Record<string, 'free' | 'pro' | 'master'> = {
+      'OTO2': 'master',
+      'OTO1': 'pro',
+      'FrontEnd': 'free',
+      'Free': 'free',
+    };
+    const newPlan = planMap[tier] || 'free';
+    try {
+      const userProfileRef = doc(db, `users/${uid}/profile/default`);
+      const profSnap = await getDoc(userProfileRef);
+      if (profSnap.exists()) {
+        await updateDoc(userProfileRef, { plan: newPlan });
+      } else {
+        await setDoc(userProfileRef, { plan: newPlan }, { merge: true });
+      }
+    } catch (e) {
+      console.warn("Could not sync updated plan to user profile doc:", e);
+    }
   },
 
   /**

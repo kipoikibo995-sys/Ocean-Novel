@@ -35,7 +35,7 @@ export default function ConsistencyCheckerPage() {
 
   // License check for OTO2 Continuity Engine
   const userProfile = storage.getUserProfile();
-  const currentPlan = userProfile?.plan || 'pro';
+  const currentPlan = userProfile?.plan || 'free';
   const hasContinuityEngine = PLAN_LIMITS[currentPlan]?.hasContinuityEngine ?? false;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 

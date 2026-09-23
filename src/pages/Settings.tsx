@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { storage, UserProfile } from "@/lib/storage";
 import { auth } from "@/lib/firebase";
 import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { isUserAdmin } from "@/lib/adminService";
+import UpgradeModal from "@/components/UpgradeModal";
 import {
   User,
   PenTool,
@@ -27,6 +29,7 @@ import {
   LogOut,
   LogIn,
   Zap,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +60,10 @@ export default function Settings() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeModalFeature, setUpgradeModalFeature] = useState<"projects" | "characters" | "locations" | "image_library" | "epub" | "continuity" | "ai_hub">("projects");
+
+  const isAdmin = isUserAdmin(firebaseUser?.email || profile.email);
 
   const handleSignOut = async () => {
     try {
@@ -113,14 +120,20 @@ export default function Settings() {
   };
 
   const handleSetPlan = (newPlan: 'free' | 'pro' | 'master') => {
+    if (!isAdmin) {
+      setUpgradeModalFeature(newPlan === 'master' ? 'ai_hub' : 'projects');
+      setShowUpgradeModal(true);
+      return;
+    }
     const updated = storage.saveUserProfile({ plan: newPlan });
     setProfile(updated);
     const planName = newPlan === 'free' ? 'Author Edition (FE)' : newPlan === 'pro' ? 'OTO1: Unlimited Studio' : 'OTO2: Ocean Novel Premium';
-    setSaveStatus(`Switched license to ${planName}!`);
+    setSaveStatus(`[Admin Simulation] Switched license preview to ${planName}!`);
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
   const handleTogglePlan = () => {
+    if (!isAdmin) return;
     const newPlan = profile.plan === 'master' ? 'free' : profile.plan === 'pro' ? 'master' : 'pro';
     handleSetPlan(newPlan);
   };
@@ -612,182 +625,329 @@ export default function Settings() {
         {activeTab === 'billing' && (
           <Card className="bg-[#FCFAF5] border-[#E5E0D5] shadow-sm">
             <CardHeader className="border-b border-[#E5E0D5] pb-4">
-              <CardTitle className="font-serif text-lg text-[#4A3225]">Subscription & Cloud Vault</CardTitle>
+              <CardTitle className="font-serif text-lg text-[#4A3225]">Subscription & License Rights</CardTitle>
               <CardDescription className="text-xs font-serif text-stone-500">
-                Manage your account tier and unlimited manuscript storage.
+                {isAdmin
+                  ? "Master Administrator license control & user tier quota simulator."
+                  : "View your active license tier and unlock studio capabilities."}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-[#8C503C]/30 rounded-sm bg-[#F4EFE6] gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-serif text-lg font-bold text-[#4A3225]">
-                      Current License: {profile.plan === 'master' ? 'Tier 3: OTO2 — Ocean Novel Premium ($67)' : profile.plan === 'pro' ? 'Tier 2: OTO1 — Unlimited Studio ($47)' : 'Tier 1: FE — Author Edition ($27)'}
-                    </span>
-                    <span className={cn(
-                      "px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono",
-                      profile.plan === 'master' ? "bg-[#8C503C] text-white" : profile.plan === 'pro' ? "bg-[#A25D47] text-white" : "bg-[#D8D2C4] text-stone-800"
-                    )}>
-                      {profile.plan === 'master' ? 'OTO2 PREMIUM' : profile.plan === 'pro' ? 'OTO1 UNLIMITED' : 'FE AUTHOR'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-stone-600 font-serif">
-                    {profile.plan === 'master'
-                      ? 'All features unlocked: Unlimited projects & Story Bible, 50+ fantasy art assets, EPUB export, AI Ghostwriter Hub, & Narrative Continuity Engine.'
-                      : profile.plan === 'pro'
-                      ? 'Unlimited novel manuscripts, complete Story Bible, 50+ fantasy character portraits & location art library, EPUB 3 export.'
-                      : 'Up to 3 novel projects, 25 characters/project, 15 locations/project, @Mentions enabled, custom upload/URL image support.'}
-                  </p>
-                </div>
+              {/* ADMIN VIEW BANNER */}
+              {isAdmin ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-[#8C503C]/40 rounded-sm bg-[#F4EFE6] gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-serif text-lg font-bold text-[#4A3225]">
+                          Master Administrator: Tier 3: OTO2 — Ocean Novel Premium
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono bg-[#2C1B13] text-[#C89D66] border border-[#5A3A29]">
+                          MASTER ADMIN (LIFETIME OTO2)
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-600 font-serif">
+                        You have unrestricted access to all features (AI Ghostwriter Hub, Deep Continuity Engine, 50+ Art Presets, EPUB 3 Export, Unlimited Projects). As Administrator, you have exclusive authority to assign and upgrade license tiers for other users in the Admin Dashboard.
+                      </p>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => handleSetPlan('free')}
-                    variant={profile.plan === 'free' ? 'default' : 'outline'}
-                    className={cn(
-                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
-                      profile.plan === 'free' ? "bg-[#5D3F32] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
-                    )}
-                  >
-                    FE ($27)
-                  </Button>
-                  <Button
-                    onClick={() => handleSetPlan('pro')}
-                    variant={profile.plan === 'pro' ? 'default' : 'outline'}
-                    className={cn(
-                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
-                      profile.plan === 'pro' ? "bg-[#8C503C] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
-                    )}
-                  >
-                    OTO1 ($47)
-                  </Button>
-                  <Button
-                    onClick={() => handleSetPlan('master')}
-                    variant={profile.plan === 'master' ? 'default' : 'outline'}
-                    className={cn(
-                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
-                      profile.plan === 'master' ? "bg-[#723F2F] text-white" : "bg-white text-[#8C503C] border-[#8C503C]/40 font-bold"
-                    )}
-                  >
-                    OTO2 ($67)
-                  </Button>
+                    <Button
+                      onClick={() => navigate("/admin")}
+                      className="bg-[#2C1B13] hover:bg-[#4A3225] text-[#FAF8F5] border border-[#5A3A29] text-xs font-bold font-mono tracking-wider h-9 px-4 rounded-sm shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#C89D66]" />
+                      <span>Admin User Manager</span>
+                    </Button>
+                  </div>
+
+                  {/* Admin Simulation Toolbar */}
+                  <div className="p-3.5 bg-amber-50/80 border border-amber-200/90 rounded-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 text-amber-900">
+                      <span className="font-bold font-mono text-[9px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded tracking-wide">
+                        Admin Quota Testing
+                      </span>
+                      <span className="text-stone-700">Preview app constraints under other tiers:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => handleSetPlan('free')}
+                        variant={profile.plan === 'free' ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn(
+                          "text-[10px] font-bold tracking-wider px-3 h-7 rounded-sm",
+                          profile.plan === 'free' ? "bg-[#5D3F32] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
+                        )}
+                      >
+                        FE Simulation
+                      </Button>
+                      <Button
+                        onClick={() => handleSetPlan('pro')}
+                        variant={profile.plan === 'pro' ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn(
+                          "text-[10px] font-bold tracking-wider px-3 h-7 rounded-sm",
+                          profile.plan === 'pro' ? "bg-[#8C503C] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
+                        )}
+                      >
+                        OTO1 Simulation
+                      </Button>
+                      <Button
+                        onClick={() => handleSetPlan('master')}
+                        variant={profile.plan === 'master' ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn(
+                          "text-[10px] font-bold tracking-wider px-3 h-7 rounded-sm",
+                          profile.plan === 'master' ? "bg-[#723F2F] text-white" : "bg-white text-[#8C503C] border-[#8C503C]/40 font-bold"
+                        )}
+                      >
+                        Reset to Master OTO2
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* REGULAR USER VIEW BANNER */
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-[#8C503C]/30 rounded-sm bg-[#F4EFE6] gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-serif text-lg font-bold text-[#4A3225]">
+                        Current License: {profile.plan === 'master' ? 'Tier 3: OTO2 — Ocean Novel Premium ($67)' : profile.plan === 'pro' ? 'Tier 2: OTO1 — Unlimited Studio ($47)' : 'Tier 1: FE — Author Edition ($27)'}
+                      </span>
+                      <span className={cn(
+                        "px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono",
+                        profile.plan === 'master' ? "bg-[#8C503C] text-white" : profile.plan === 'pro' ? "bg-[#A25D47] text-white" : "bg-[#5D3F32] text-white"
+                      )}>
+                        {profile.plan === 'master' ? 'OTO2 ACTIVE' : profile.plan === 'pro' ? 'OTO1 ACTIVE' : 'FE ACTIVE'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-stone-600 font-serif">
+                      {profile.plan === 'master'
+                        ? 'All features unlocked: Unlimited projects & Story Bible, 50+ fantasy art assets, EPUB export, AI Ghostwriter Hub, & Narrative Continuity Engine.'
+                        : profile.plan === 'pro'
+                        ? 'Unlimited novel manuscripts, complete Story Bible, 50+ fantasy character portraits & location art library, EPUB 3 export.'
+                        : 'Default Author Edition (FE): Up to 3 novel projects, 25 characters/project, 15 locations/project, @Mentions enabled, custom upload/URL image support.'}
+                    </p>
+                    <p className="text-[11px] text-stone-500 font-serif mt-2 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                      <span>Account status: License tier managed by Administrator (kojiacademy2026@gmail.com).</span>
+                    </p>
+                  </div>
+
+                  {profile.plan !== 'master' && (
+                    <Button
+                      onClick={() => {
+                        setUpgradeModalFeature(profile.plan === 'free' ? 'projects' : 'ai_hub');
+                        setShowUpgradeModal(true);
+                      }}
+                      className="bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 h-9 rounded-sm shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Upgrade Tier</span>
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* 3-Tier Funnel Breakdown: FE -> OTO1 -> OTO2 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                 {/* TIER 1: FE */}
                 <div className={cn(
-                  "p-4 rounded-sm border bg-white space-y-3 transition-all",
+                  "p-4 rounded-sm border bg-white space-y-3 transition-all flex flex-col justify-between",
                   profile.plan === 'free' ? "ring-2 ring-[#5D3F32] border-[#5D3F32]" : "border-[#E5E0D5]"
                 )}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] uppercase tracking-widest font-mono text-stone-500 font-bold block">Tier 1</span>
-                      <h4 className="font-serif font-bold text-sm text-[#4A3225]">Author Edition (FE)</h4>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-[9px] uppercase tracking-widest font-mono text-stone-500 font-bold block">Tier 1</span>
+                        <h4 className="font-serif font-bold text-sm text-[#4A3225]">Author Edition (FE)</h4>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-xs">$27</span>
                     </div>
-                    <span className="text-xs font-mono font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-xs">$27</span>
+                    <ul className="space-y-2 text-xs font-serif text-stone-600">
+                      <li className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                        <span><strong>Max 3 Novel Projects</strong> simultaneously</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                        <span><strong>25 Characters & 15 Locations</strong> per novel</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                        <span><strong>Smart @Mentions</strong> throughout all chapters</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                        <span>Custom image file upload & web URL links</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-stone-400">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                        <span>50+ Preset Fantasy Art Library (OTO1)</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-stone-400">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                        <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
+                      </li>
+                    </ul>
                   </div>
-                  <ul className="space-y-2 text-xs font-serif text-stone-600">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                      <span><strong>Max 3 Novel Projects</strong> simultaneously</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                      <span><strong>25 Characters & 15 Locations</strong> per novel</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                      <span><strong>Smart @Mentions</strong> throughout all chapters</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                      <span>Custom image file upload & web URL links</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-stone-400">
-                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                      <span>50+ Preset Fantasy Art Library (OTO1)</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-stone-400">
-                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                      <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
-                    </li>
-                  </ul>
+
+                  <div className="pt-3 border-t border-stone-200">
+                    {profile.plan === 'free' ? (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#5D3F32] py-1">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Current Active Plan</span>
+                      </div>
+                    ) : isAdmin ? (
+                      <Button
+                        onClick={() => handleSetPlan('free')}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold uppercase cursor-pointer"
+                      >
+                        Simulate FE Quota
+                      </Button>
+                    ) : (
+                      <div className="text-[11px] text-stone-400 font-serif py-1">Included in your license</div>
+                    )}
+                  </div>
                 </div>
 
                 {/* TIER 2: OTO1 */}
                 <div className={cn(
-                  "p-4 rounded-sm border bg-[#FAF8F5] space-y-3 relative overflow-hidden transition-all",
+                  "p-4 rounded-sm border bg-[#FAF8F5] space-y-3 relative overflow-hidden transition-all flex flex-col justify-between",
                   profile.plan === 'pro' ? "ring-2 ring-[#8C503C] border-[#8C503C]" : "border-[#E5E0D5]"
                 )}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">Tier 2</span>
-                      <h4 className="font-serif font-bold text-sm text-[#8C503C]">OTO1 — Unlimited Studio</h4>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-[9px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">Tier 2</span>
+                        <h4 className="font-serif font-bold text-sm text-[#8C503C]">OTO1 — Unlimited Studio</h4>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-[#8C503C] bg-[#8C503C]/10 px-2 py-0.5 rounded-xs">$47</span>
                     </div>
-                    <span className="text-xs font-mono font-bold text-[#8C503C] bg-[#8C503C]/10 px-2 py-0.5 rounded-xs">$47</span>
+                    <ul className="space-y-2 text-xs font-serif text-stone-700">
+                      <li className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                        <span><strong>Unlimited Novel Archives</strong> & Series Shelves</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                        <span><strong>Unlimited Characters</strong> & World Locations</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                        <span><strong>50+ Curated Fantasy Art Library</strong> (Portraits & Locations)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                        <span><strong>EPUB 3 Amazon KDP</strong> publication exporter</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-stone-400">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                        <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
+                      </li>
+                    </ul>
                   </div>
-                  <ul className="space-y-2 text-xs font-serif text-stone-700">
-                    <li className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                      <span><strong>Unlimited Novel Archives</strong> & Series Shelves</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                      <span><strong>Unlimited Characters</strong> & World Locations</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                      <span><strong>50+ Curated Fantasy Art Library</strong> (Portraits & Locations)</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                      <span><strong>EPUB 3 Amazon KDP</strong> publication exporter</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-stone-400">
-                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                      <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
-                    </li>
-                  </ul>
+
+                  <div className="pt-3 border-t border-stone-200">
+                    {profile.plan === 'pro' ? (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C503C] py-1">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Current Active Plan</span>
+                      </div>
+                    ) : isAdmin ? (
+                      <Button
+                        onClick={() => handleSetPlan('pro')}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold uppercase cursor-pointer"
+                      >
+                        Simulate OTO1 Quota
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          setUpgradeModalFeature('projects');
+                          setShowUpgradeModal(true);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold text-[#8C503C] border-[#8C503C]/30 hover:bg-[#8C503C]/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Requires OTO1 Upgrade</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* TIER 3: OTO2 */}
                 <div className={cn(
-                  "p-4 rounded-sm border-2 bg-[#F9F5EC] space-y-3 relative overflow-hidden transition-all shadow-xs",
+                  "p-4 rounded-sm border-2 bg-[#F9F5EC] space-y-3 relative overflow-hidden transition-all shadow-xs flex flex-col justify-between",
                   profile.plan === 'master' ? "ring-2 ring-[#723F2F] border-[#723F2F]" : "border-[#8C503C]/40"
                 )}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
-                        <Zap className="w-2.5 h-2.5 text-[#723F2F]" /> Tier 3
-                      </span>
-                      <h4 className="font-serif font-bold text-sm text-[#723F2F]">OTO2 — Ocean Novel Premium</h4>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-[9px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
+                          <Zap className="w-2.5 h-2.5 text-[#723F2F]" /> Tier 3
+                        </span>
+                        <h4 className="font-serif font-bold text-sm text-[#723F2F]">OTO2 — Ocean Novel Premium</h4>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-white bg-[#723F2F] px-2 py-0.5 rounded-xs">$67</span>
                     </div>
-                    <span className="text-xs font-mono font-bold text-white bg-[#723F2F] px-2 py-0.5 rounded-xs">$67</span>
+                    <ul className="space-y-2 text-xs font-serif text-stone-800">
+                      <li className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                        <span><strong>All OTO1 Unlimited Features</strong> Included</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                        <span><strong>AI Ghostwriter Hub</strong>: High-tension prompt generator</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                        <span><strong>Story Context Bridge</strong> into ChatGPT/Gemini</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                        <span><strong>Continuity Conflict Engine</strong>: Timeline & logic checks</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                        <span><strong>Word Echoes & Prose Cadence</strong> monotony scanner</span>
+                      </li>
+                    </ul>
                   </div>
-                  <ul className="space-y-2 text-xs font-serif text-stone-800">
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                      <span><strong>All OTO1 Unlimited Features</strong> Included</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                      <span><strong>AI Ghostwriter Hub</strong>: High-tension prompt generator</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                      <span><strong>Story Context Bridge</strong> into ChatGPT/Gemini</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                      <span><strong>Continuity Conflict Engine</strong>: Timeline & logic checks</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                      <span><strong>Word Echoes & Prose Cadence</strong> monotony scanner</span>
-                    </li>
-                  </ul>
+
+                  <div className="pt-3 border-t border-stone-200">
+                    {profile.plan === 'master' ? (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#723F2F] py-1">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Current Active Plan</span>
+                      </div>
+                    ) : isAdmin ? (
+                      <Button
+                        onClick={() => handleSetPlan('master')}
+                        size="sm"
+                        className="w-full text-xs font-bold text-white bg-[#723F2F] hover:bg-[#5D3326] cursor-pointer"
+                      >
+                        Reset to Master OTO2
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          setUpgradeModalFeature('ai_hub');
+                          setShowUpgradeModal(true);
+                        }}
+                        size="sm"
+                        className="w-full text-xs font-bold text-white bg-[#723F2F] hover:bg-[#5D3326] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Requires OTO2 Upgrade</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -896,6 +1056,12 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Upgrade Modal for feature upsells */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          feature={upgradeModalFeature}
+        />
       </div>
     </div>
   );
