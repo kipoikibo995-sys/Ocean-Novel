@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { 
   X, Upload, Link2, Trash2, Check, Image as ImageIcon, 
-  AlertCircle, RefreshCw, Search, User, MapPin
+  AlertCircle, RefreshCw, Search, User, MapPin, Lock, ArrowRight
 } from "lucide-react";
 import { 
   fileToOptimizedDataUrl, 
@@ -9,6 +9,9 @@ import {
   FANTASY_PRESET_LOCATIONS,
   PresetImage
 } from "@/lib/imageUtils";
+import { storage } from "@/lib/storage";
+import { PLAN_LIMITS } from "@/lib/license";
+import { useNavigate } from "react-router-dom";
 
 interface ImagePickerModalProps {
   isOpen: boolean;
@@ -29,6 +32,10 @@ export default function ImagePickerModal({
   type = "character",
   defaultTab = "upload",
 }: ImagePickerModalProps) {
+  const navigate = useNavigate();
+  const profile = storage.getUserProfile();
+  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'pro'].hasImageLibrary;
+
   const [activeTab, setActiveTab] = useState<"upload" | "url" | "presets">(defaultTab);
   const [urlInput, setUrlInput] = useState(currentImage.startsWith("data:") ? "" : currentImage);
   const [previewImage, setPreviewImage] = useState<string>(currentImage);
@@ -216,7 +223,12 @@ export default function ImagePickerModal({
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5 text-[#b8785e]" />
-            {type === "character" ? `Portrait Library (${presets.length})` : `Location Library (${presets.length})`}
+            <span>{type === "character" ? `Portrait Library (${presets.length})` : `Location Library (${presets.length})`}</span>
+            {!hasImageLibrary && (
+              <span className="flex items-center gap-0.5 bg-[#8C503C] text-white text-[8px] font-sans font-bold px-1.5 py-0.5 rounded-xs tracking-wider uppercase ml-1">
+                <Lock className="w-2.5 h-2.5" /> PRO
+              </span>
+            )}
           </button>
         </div>
 
@@ -310,6 +322,48 @@ export default function ImagePickerModal({
 
           {/* TAB 3: FANTASY LIBRARY */}
           {activeTab === "presets" && (
+            !hasImageLibrary ? (
+              <div className="p-8 text-center bg-[#F4F1EA] rounded-md border border-[#E5E0D5] flex flex-col items-center justify-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-[#8C503C]/10 border border-[#8C503C]/20 flex items-center justify-center text-[#8C503C] shadow-xs">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <div className="max-w-md space-y-1.5">
+                  <div className="flex items-center justify-center gap-1.5 text-[#8C503C]">
+                    <ImageIcon className="w-4 h-4" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest">
+                      Ocean Novel Pro Exclusive
+                    </span>
+                  </div>
+                  <h3 className="font-serif text-xl font-bold text-[#4A3225]">
+                    {type === "character" ? "Fantasy Portrait Library (25 Presets)" : "Location Landmark Library (25 Presets)"}
+                  </h3>
+                  <p className="text-xs text-stone-600 font-serif leading-relaxed">
+                    The curated library of high-definition character portraits and fantasy landscape art is available in <strong>Ocean Novel Pro</strong>. In this Author Edition (FE), you can freely upload your own photos or paste web image links using the other tabs!
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("upload")}
+                    className="px-4 py-2 bg-white border border-[#DCD5C9] hover:bg-stone-50 text-[#4A3225] text-xs font-semibold rounded-sm transition-colors cursor-pointer"
+                  >
+                    Upload My Own Image Instead
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      navigate("/settings");
+                    }}
+                    className="px-5 py-2 bg-[#8C503C] hover:bg-[#723E2E] text-white text-xs font-bold uppercase tracking-wider rounded-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Upgrade to Pro</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
               {/* Filter Controls: Search & Category Pills */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#e5e0d5]/80">
@@ -431,6 +485,7 @@ export default function ImagePickerModal({
                 </div>
               )}
             </div>
+            )
           )}
 
           {/* PREVIEW CONTAINER */}

@@ -24,6 +24,8 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { storage } from "@/lib/storage";
+import { PLAN_LIMITS } from "@/lib/license";
+import UpgradeModal from "@/components/UpgradeModal";
 
 interface GenreTheme {
   name: string;
@@ -390,6 +392,12 @@ export default function CreateProject() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPromptCopied, setIsPromptCopied] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // License check
+  const profile = storage.getUserProfile();
+  const existingProjects = storage.getProjects();
+  const maxProjects = PLAN_LIMITS[profile?.plan || 'pro'].maxProjects;
 
   const handleCopyArchitectPrompt = async () => {
     try {
@@ -427,6 +435,11 @@ export default function CreateProject() {
   };
 
   const handleCreate = () => {
+    if (existingProjects.length >= maxProjects) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     setTimeout(() => {
@@ -1074,6 +1087,15 @@ export default function CreateProject() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* FE Quota Exceeded Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="projects"
+        currentCount={existingProjects.length}
+        maxLimit={maxProjects}
+      />
     </motion.div>
   );
 }

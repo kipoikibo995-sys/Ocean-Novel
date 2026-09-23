@@ -30,11 +30,14 @@ import {
   BookOpen,
   HelpCircle,
   Info,
-  Feather
+  Feather,
+  Lock
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { storage } from "@/lib/storage";
+import { PLAN_LIMITS } from "@/lib/license";
+import UpgradeModal from "@/components/UpgradeModal";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 import ImagePickerModal from "@/components/ImagePickerModal";
 import { FANTASY_PRESET_PORTRAITS } from "@/lib/imageUtils";
@@ -451,6 +454,14 @@ export default function Characters() {
   const [showPortraitGalleryModal, setShowPortraitGalleryModal] = useState(false);
   const [showCharacterGuideModal, setShowCharacterGuideModal] = useState(false);
   const [isCharacterPromptCopied, setIsCharacterPromptCopied] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeModalFeature, setUpgradeModalFeature] = useState<"characters" | "image_library">("characters");
+
+  // License quota check
+  const profile = storage.getUserProfile();
+  const maxCharacters = PLAN_LIMITS[profile?.plan || 'pro'].maxCharactersPerProject;
+  const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'pro'].hasImageLibrary;
+  const isCharacterLimitReached = characters.length >= maxCharacters;
 
   // Group Management State (Standard + Custom)
   const [isCustomGroupMode, setIsCustomGroupMode] = useState(false);
@@ -509,6 +520,11 @@ export default function Characters() {
   };
 
   const handleOpenEditorNew = () => {
+    if (isCharacterLimitReached) {
+      setUpgradeModalFeature("characters");
+      setShowUpgradeModal(true);
+      return;
+    }
     setPreviousViewMode(viewMode === "editor" ? previousViewMode : viewMode);
     setEditingCharId(null);
     setAliasInput("");
@@ -1482,13 +1498,26 @@ ${backstoryText}`;
                 </div>
 
                 <button
-                  onClick={() => setShowPortraitGalleryModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5d3f32]/40 hover:bg-[#5d3f32]/70 text-[#d49a89] hover:text-[#fcfaf5] border border-[#8c503c]/50 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all shadow-sm ml-2"
-                  title="Browse Character Portrait Library (25 presets)"
+                  onClick={() => {
+                    if (!hasImageLibrary) {
+                      setUpgradeModalFeature("image_library");
+                      setShowUpgradeModal(true);
+                    } else {
+                      setShowPortraitGalleryModal(true);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5d3f32]/40 hover:bg-[#5d3f32]/70 text-[#d49a89] hover:text-[#fcfaf5] border border-[#8c503c]/50 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all shadow-sm ml-2 cursor-pointer"
+                  title={hasImageLibrary ? "Browse Character Portrait Library (25 presets)" : "Portrait Library (Ocean Novel Pro Feature)"}
                 >
                   <ImageIcon className="w-3.5 h-3.5 text-[#d49a89]" />
                   <span className="hidden sm:inline">Portrait Library</span>
-                  <span className="bg-[#b8785e] text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">25</span>
+                  {!hasImageLibrary ? (
+                    <span className="flex items-center gap-0.5 bg-[#8C503C] text-white text-[8px] px-1.5 py-0.5 rounded-full font-sans font-bold">
+                      <Lock className="w-2.5 h-2.5" /> PRO
+                    </span>
+                  ) : (
+                    <span className="bg-[#b8785e] text-white text-[9px] px-1.5 py-0.2 rounded-full font-sans font-semibold">25</span>
+                  )}
                 </button>
               </div>
             ) : (
@@ -1556,13 +1585,20 @@ ${backstoryText}`;
             {/* New Character Card */}
             <div 
               onClick={handleOpenEditorNew}
-              className="relative group cursor-pointer h-[420px] rounded-sm bg-[#5d3f32]/20 backdrop-blur-sm border-2 border-dashed border-[#8c503c]/40 transition-all flex flex-col items-center justify-center hover:bg-[#5d3f32]/40 hover:border-[#8c503c]/70 hover:-translate-y-1 mt-4"
+              className={`relative group cursor-pointer h-[420px] rounded-sm backdrop-blur-sm border-2 border-dashed transition-all flex flex-col items-center justify-center mt-4 ${
+                isCharacterLimitReached
+                  ? "bg-[#5d3f32]/10 border-amber-600/40 hover:border-amber-500"
+                  : "bg-[#5d3f32]/20 border-[#8c503c]/40 hover:bg-[#5d3f32]/40 hover:border-[#8c503c]/70 hover:-translate-y-1"
+              }`}
             >
               <div className="w-16 h-16 rounded-full border-2 border-dashed border-[#d49a89]/40 flex items-center justify-center mb-4 text-[#d49a89]/60 group-hover:text-[#d49a89] group-hover:border-[#d49a89]/60 transition-all duration-300">
-                <Plus className="w-6 h-6 stroke-[1.5]" />
+                {isCharacterLimitReached ? <Lock className="w-6 h-6 stroke-[1.5] text-amber-300" /> : <Plus className="w-6 h-6 stroke-[1.5]" />}
               </div>
               <span className="text-[10px] tracking-widest uppercase font-bold text-[#d49a89]/60 group-hover:text-[#d49a89] transition-colors">
-                New Character
+                {isCharacterLimitReached ? "Unlock Unlimited (Quota Reached)" : "New Character"}
+              </span>
+              <span className="text-[9px] font-mono font-semibold text-stone-400 mt-1">
+                {characters.length} / {maxCharacters === Infinity ? "∞" : maxCharacters} Dossiers
               </span>
             </div>
 
@@ -2540,6 +2576,14 @@ ${backstoryText}`;
           </div>
         </div>
       )}
+      {/* Character Quota Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeModalFeature}
+        currentCount={characters.length}
+        maxLimit={maxCharacters}
+      />
     </div>
   );
 }

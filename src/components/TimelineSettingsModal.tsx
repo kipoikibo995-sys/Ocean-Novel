@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Flame, Clock, Type, RotateCcw, Check, Sparkles, Calendar, BookOpen } from "lucide-react";
+import { X, Flame, Clock, Type, RotateCcw, Check, Calendar, BookOpen } from "lucide-react";
 import { storage, ProjectMeta, AuthorTimelineSettings } from "@/lib/storage";
 
 interface TimelineSettingsModalProps {

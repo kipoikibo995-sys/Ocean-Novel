@@ -59,13 +59,15 @@ const defaultTimelineSettings: AuthorTimelineSettings = {
   totalWritingMinutesTracked: 0,
 };
 
+import { LicensePlan } from './license';
+
 export interface UserProfile {
   name: string;
   penName: string;
   email: string;
   bio: string;
   avatarUrl?: string;
-  plan: 'free' | 'pro';
+  plan: LicensePlan;
   defaultFont: string;
   fontSize: string;
   defaultPov: string;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Copy, Check, ExternalLink, X, BookOpen, Layers, Compass, Feather, Info, ArrowRight } from 'lucide-react';
+import { Copy, Check, ExternalLink, X, BookOpen, Layers, Compass, Feather, Info, ArrowRight } from 'lucide-react';
 import { ProjectMeta } from '@/lib/storage';
 
 interface AIPromptModalProps {
@@ -177,8 +177,8 @@ ${textSnippet}`;
                 <h3 className="font-serif text-lg font-bold text-[#4A3225]">
                   Ocean Novel AI Prompt Hub
                 </h3>
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#8C503C]/10 text-[#8C503C]">
-                  External AI Bridge
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#8C503C] text-white">
+                  OTO2 Premium
                 </span>
               </div>
               <p className="text-xs text-stone-500 font-serif mt-0.5">

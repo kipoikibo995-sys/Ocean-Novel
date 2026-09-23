@@ -18,6 +18,7 @@ import {
   X,
   RefreshCw,
   Download,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -374,12 +375,12 @@ export default function ProjectOverview() {
               </div>
 
               {/* Mini Bento Nav */}
-              <div className="grid grid-cols-3 gap-3 flex-1 min-h-[100px]">
+              <div className="grid grid-cols-4 gap-2.5 flex-1 min-h-[100px]">
                 <button
                   onClick={() =>
                     navigate(`/project/${(id || '1')}/workspace/bible`)
                   }
-                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
+                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] group cursor-pointer"
                 >
                   <BookOpen className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500 transition-colors">
@@ -388,7 +389,7 @@ export default function ProjectOverview() {
                 </button>
                 <button
                   onClick={() => navigate(`/project/${(id || '1')}/characters`)}
-                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
+                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] group cursor-pointer"
                 >
                   <Users className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500 transition-colors">
@@ -399,11 +400,23 @@ export default function ProjectOverview() {
                   onClick={() =>
                     navigate(`/project/${(id || '1')}/workspace/locations`)
                   }
-                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] group"
+                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] group cursor-pointer"
                 >
                   <Map className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500 transition-colors">
                     Map
+                  </span>
+                </button>
+                <button
+                  onClick={() =>
+                    navigate(`/project/${(id || '1')}/workspace/consistency`)
+                  }
+                  className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] group cursor-pointer"
+                  title="Consistency & Continuity Checker (OTO2)"
+                >
+                  <ShieldCheck className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500 transition-colors">
+                    Checks
                   </span>
                 </button>
               </div>

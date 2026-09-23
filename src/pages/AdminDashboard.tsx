@@ -17,7 +17,7 @@ import {
   AlertCircle,
   Clock,
   Send,
-  Sparkles,
+  Info,
   Copy,
   Check,
   X,
@@ -400,7 +400,7 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
               <div className="flex items-start gap-2.5">
                 {feedback.type === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
                 {feedback.type === "error" && <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />}
-                {feedback.type === "info" && <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />}
+                {feedback.type === "info" && <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />}
                 <span className="font-medium leading-relaxed">{feedback.message}</span>
               </div>
               <button

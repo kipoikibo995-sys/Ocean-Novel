@@ -8,6 +8,8 @@ import {
   Users, BookOpen, HelpCircle, Check, ClipboardCopy, Feather, Info 
 } from "lucide-react";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
+import { PLAN_LIMITS } from "@/lib/license";
+import UpgradeModal from "@/components/UpgradeModal";
 
 export interface LocationNode {
   id: string;
@@ -502,6 +504,13 @@ export default function Locations() {
   };
 
   const [editingLocId, setEditingLocId] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // License quota check
+  const profile = storage.getUserProfile();
+  const maxLocations = PLAN_LIMITS[profile?.plan || 'pro'].maxLocationsPerProject;
+  const isLocationLimitReached = locations.length >= maxLocations;
+
   const [formData, setFormData] = useState({
     name: "",
     type: "",
@@ -512,6 +521,10 @@ export default function Locations() {
   });
 
   const handleOpenCreate = () => {
+    if (isLocationLimitReached) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setEditingLocId(null);
     setFormData({ name: "", type: "", description: "", atmosphere: "", region: "", imageUrl: "" });
     setIsModalOpen(true);
@@ -632,10 +645,17 @@ export default function Locations() {
 
           <button 
             onClick={handleOpenCreate}
-            className="px-6 py-2 bg-[#b8785e] hover:bg-[#a66850] text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all flex items-center gap-2 shrink-0"
+            className={`px-5 py-2 text-white text-[11px] font-bold tracking-widest uppercase rounded-sm shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              isLocationLimitReached
+                ? "bg-[#8c503c] hover:bg-[#723e2e]"
+                : "bg-[#b8785e] hover:bg-[#a66850]"
+            }`}
           >
-            <Plus className="w-3 h-3" />
-            Add Location
+            {isLocationLimitReached ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+            <span>Add Location</span>
+            <span className="ml-1 text-[9px] font-mono px-1.5 py-0.2 bg-black/30 rounded-xs">
+              {locations.length}/{maxLocations === Infinity ? "∞" : maxLocations}
+            </span>
           </button>
         </div>
       </div>
@@ -1415,6 +1435,14 @@ export default function Locations() {
           </div>
         </div>
       )}
+      {/* Location Quota Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="locations"
+        currentCount={locations.length}
+        maxLimit={maxLocations}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { ReactNode, useState, useEffect, useRef, useMemo } from "react";
-import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag, AlertTriangle, Trash2, Sparkles } from "lucide-react";
+import { Maximize2, Plus, MoreVertical, FileText, Settings, RefreshCw, Copy, X, ListTree, ChevronDown, ChevronRight, ChevronLeft, Check, Focus, AlignLeft, Type, Target, Clock, MessageSquare, BookOpen, PanelRight, Users, MapPin, StickyNote, Search, ExternalLink, Tag, AlertTriangle, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { storage, ProjectData } from "@/lib/storage";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import AIPromptModal from "@/components/AIPromptModal";
+import UpgradeModal from "@/components/UpgradeModal";
+import { PLAN_LIMITS } from "@/lib/license";
 
 // Helper functions for manuscript tree
 const findFirstSceneId = (items: ManuscriptItem[]): string => {
@@ -53,6 +55,20 @@ export default function WritingStudio() {
   const [isManuscriptOpen, setIsManuscriptOpen] = useState(true);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isAIPromptModalOpen, setIsAIPromptModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // License check for OTO2 AI Ghostwriter
+  const userProfile = storage.getUserProfile();
+  const currentPlan = userProfile?.plan || 'pro';
+  const hasAiGhostwriter = PLAN_LIMITS[currentPlan]?.hasAiGhostwriterHub ?? false;
+
+  const handleOpenAiPromptHub = () => {
+    if (!hasAiGhostwriter) {
+      setShowUpgradeModal(true);
+    } else {
+      setIsAIPromptModalOpen(true);
+    }
+  };
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
@@ -1067,11 +1083,16 @@ export default function WritingStudio() {
 
           {/* Center AI Prompt Hub Button (No Star Icon) */}
           <button
-            onClick={() => setIsAIPromptModalOpen(true)}
-            className="px-3.5 py-1 text-[11px] font-bold tracking-wider uppercase text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/20 hover:border-[#8C503C] rounded-sm transition-all duration-200 cursor-pointer select-none active:scale-95"
-            title="Open Ocean Novel AI Prompt Hub"
+            onClick={handleOpenAiPromptHub}
+            className="px-3.5 py-1 text-[11px] font-bold tracking-wider uppercase text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/20 hover:border-[#8C503C] rounded-sm transition-all duration-200 cursor-pointer select-none active:scale-95 flex items-center gap-1.5"
+            title="Open Ocean Novel AI Prompt Hub (OTO2)"
           >
-            AI Prompt Hub
+            <span>AI Prompt Hub</span>
+            {!hasAiGhostwriter && (
+              <span className="text-[8px] bg-[#8C503C] text-white px-1 py-0.2 rounded-xs font-mono font-bold">
+                OTO2
+              </span>
+            )}
           </button>
           
           <div className="flex items-center gap-3 text-stone-500">
@@ -1504,7 +1525,7 @@ export default function WritingStudio() {
                     Scene Focus Checkpoints
                   </span>
                   <button
-                    onClick={() => setIsAIPromptModalOpen(true)}
+                    onClick={handleOpenAiPromptHub}
                     className="text-[10px] text-[#8C503C] hover:underline font-bold"
                   >
                     Generate AI Prompt
@@ -1752,6 +1773,13 @@ export default function WritingStudio() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* OTO2 AI Ghostwriter Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="ai_hub"
+      />
     </div>
   );
 }

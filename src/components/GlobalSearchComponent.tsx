@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
   Search, Replace, Check, X, ArrowRight, BookOpen, Users, MapPin, 
-  StickyNote, Sparkles, Filter, ChevronRight, AlertCircle, RefreshCw,
+  StickyNote, Filter, ChevronRight, AlertCircle, RefreshCw,
   SlidersHorizontal, CheckSquare, Square
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";

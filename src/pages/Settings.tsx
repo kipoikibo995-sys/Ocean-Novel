@@ -26,6 +26,7 @@ import {
   RefreshCw,
   LogOut,
   LogIn,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,12 +112,17 @@ export default function Settings() {
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  const handleTogglePlan = () => {
-    const newPlan = profile.plan === 'pro' ? 'free' : 'pro';
+  const handleSetPlan = (newPlan: 'free' | 'pro' | 'master') => {
     const updated = storage.saveUserProfile({ plan: newPlan });
     setProfile(updated);
-    setSaveStatus(`Switched plan to ${newPlan.toUpperCase()}!`);
+    const planName = newPlan === 'free' ? 'Author Edition (FE)' : newPlan === 'pro' ? 'OTO1: Unlimited Studio' : 'OTO2: Ocean Novel Premium';
+    setSaveStatus(`Switched license to ${planName}!`);
     setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  const handleTogglePlan = () => {
+    const newPlan = profile.plan === 'master' ? 'free' : profile.plan === 'pro' ? 'master' : 'pro';
+    handleSetPlan(newPlan);
   };
 
   // Export JSON Backup
@@ -616,52 +622,172 @@ export default function Settings() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-serif text-lg font-bold text-[#4A3225]">
-                      Current Plan: {profile.plan === 'pro' ? 'Pro Master Scribe' : 'Free Writer Tier'}
+                      Current License: {profile.plan === 'master' ? 'Tier 3: OTO2 — Ocean Novel Premium ($67)' : profile.plan === 'pro' ? 'Tier 2: OTO1 — Unlimited Studio ($47)' : 'Tier 1: FE — Author Edition ($27)'}
                     </span>
                     <span className={cn(
-                      "px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider",
-                      profile.plan === 'pro' ? "bg-[#8C503C] text-white" : "bg-stone-300 text-stone-800"
+                      "px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono",
+                      profile.plan === 'master' ? "bg-[#8C503C] text-white" : profile.plan === 'pro' ? "bg-[#A25D47] text-white" : "bg-[#D8D2C4] text-stone-800"
                     )}>
-                      {profile.plan === 'pro' ? 'Active' : 'Basic'}
+                      {profile.plan === 'master' ? 'OTO2 PREMIUM' : profile.plan === 'pro' ? 'OTO1 UNLIMITED' : 'FE AUTHOR'}
                     </span>
                   </div>
                   <p className="text-xs text-stone-600 font-serif">
-                    {profile.plan === 'pro'
-                      ? 'Unlimited manuscripts, complete Story Bible, character relationship matrix, and instant full exports.'
-                      : 'Standard editor, up to 3 projects, and local browser persistence.'}
+                    {profile.plan === 'master'
+                      ? 'All features unlocked: Unlimited projects & Story Bible, 50+ fantasy art assets, EPUB export, AI Ghostwriter Hub, & Narrative Continuity Engine.'
+                      : profile.plan === 'pro'
+                      ? 'Unlimited novel manuscripts, complete Story Bible, 50+ fantasy character portraits & location art library, EPUB 3 export.'
+                      : 'Up to 3 novel projects, 25 characters/project, 15 locations/project, @Mentions enabled, custom upload/URL image support.'}
                   </p>
                 </div>
 
-                <Button
-                  onClick={handleTogglePlan}
-                  className={cn(
-                    "font-bold uppercase tracking-widest text-xs px-5 py-2 rounded-sm transition-colors",
-                    profile.plan === 'pro'
-                      ? "bg-stone-200 hover:bg-stone-300 text-stone-800"
-                      : "bg-[#8C503C] hover:bg-[#723F2F] text-white"
-                  )}
-                >
-                  {profile.plan === 'pro' ? 'Downgrade to Free' : 'Upgrade to Pro'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => handleSetPlan('free')}
+                    variant={profile.plan === 'free' ? 'default' : 'outline'}
+                    className={cn(
+                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
+                      profile.plan === 'free' ? "bg-[#5D3F32] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
+                    )}
+                  >
+                    FE ($27)
+                  </Button>
+                  <Button
+                    onClick={() => handleSetPlan('pro')}
+                    variant={profile.plan === 'pro' ? 'default' : 'outline'}
+                    className={cn(
+                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
+                      profile.plan === 'pro' ? "bg-[#8C503C] text-white" : "bg-white text-stone-700 border-[#D8D2C4]"
+                    )}
+                  >
+                    OTO1 ($47)
+                  </Button>
+                  <Button
+                    onClick={() => handleSetPlan('master')}
+                    variant={profile.plan === 'master' ? 'default' : 'outline'}
+                    className={cn(
+                      "text-[10px] uppercase font-bold tracking-wider px-3 py-1 h-8 rounded-sm",
+                      profile.plan === 'master' ? "bg-[#723F2F] text-white" : "bg-white text-[#8C503C] border-[#8C503C]/40 font-bold"
+                    )}
+                  >
+                    OTO2 ($67)
+                  </Button>
+                </div>
               </div>
 
-              {/* Pro Perks */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="flex items-start gap-2 text-xs font-serif text-stone-700">
-                  <ShieldCheck className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
-                  <span>Full local and cloud export to Markdown, Word, and JSON.</span>
+              {/* 3-Tier Funnel Breakdown: FE -> OTO1 -> OTO2 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {/* TIER 1: FE */}
+                <div className={cn(
+                  "p-4 rounded-sm border bg-white space-y-3 transition-all",
+                  profile.plan === 'free' ? "ring-2 ring-[#5D3F32] border-[#5D3F32]" : "border-[#E5E0D5]"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-widest font-mono text-stone-500 font-bold block">Tier 1</span>
+                      <h4 className="font-serif font-bold text-sm text-[#4A3225]">Author Edition (FE)</h4>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-xs">$27</span>
+                  </div>
+                  <ul className="space-y-2 text-xs font-serif text-stone-600">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                      <span><strong>Max 3 Novel Projects</strong> simultaneously</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                      <span><strong>25 Characters & 15 Locations</strong> per novel</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                      <span><strong>Smart @Mentions</strong> throughout all chapters</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
+                      <span>Custom image file upload & web URL links</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-stone-400">
+                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                      <span>50+ Preset Fantasy Art Library (OTO1)</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-stone-400">
+                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                      <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
+                    </li>
+                  </ul>
                 </div>
-                <div className="flex items-start gap-2 text-xs font-serif text-stone-700">
-                  <ShieldCheck className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
-                  <span>Smart @ mention tracking and World Radar frequency analytics.</span>
+
+                {/* TIER 2: OTO1 */}
+                <div className={cn(
+                  "p-4 rounded-sm border bg-[#FAF8F5] space-y-3 relative overflow-hidden transition-all",
+                  profile.plan === 'pro' ? "ring-2 ring-[#8C503C] border-[#8C503C]" : "border-[#E5E0D5]"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">Tier 2</span>
+                      <h4 className="font-serif font-bold text-sm text-[#8C503C]">OTO1 — Unlimited Studio</h4>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-[#8C503C] bg-[#8C503C]/10 px-2 py-0.5 rounded-xs">$47</span>
+                  </div>
+                  <ul className="space-y-2 text-xs font-serif text-stone-700">
+                    <li className="flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                      <span><strong>Unlimited Novel Archives</strong> & Series Shelves</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                      <span><strong>Unlimited Characters</strong> & World Locations</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                      <span><strong>50+ Curated Fantasy Art Library</strong> (Portraits & Locations)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
+                      <span><strong>EPUB 3 Amazon KDP</strong> publication exporter</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-stone-400">
+                      <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
+                      <span>AI Prompt Hub & Continuity Engine (OTO2)</span>
+                    </li>
+                  </ul>
                 </div>
-                <div className="flex items-start gap-2 text-xs font-serif text-stone-700">
-                  <ShieldCheck className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
-                  <span>Unlimited scenes, acts, and nested chapter binders.</span>
-                </div>
-                <div className="flex items-start gap-2 text-xs font-serif text-stone-700">
-                  <ShieldCheck className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
-                  <span>Zero telemetry, private offline-first writing architecture.</span>
+
+                {/* TIER 3: OTO2 */}
+                <div className={cn(
+                  "p-4 rounded-sm border-2 bg-[#F9F5EC] space-y-3 relative overflow-hidden transition-all shadow-xs",
+                  profile.plan === 'master' ? "ring-2 ring-[#723F2F] border-[#723F2F]" : "border-[#8C503C]/40"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
+                        <Zap className="w-2.5 h-2.5 text-[#723F2F]" /> Tier 3
+                      </span>
+                      <h4 className="font-serif font-bold text-sm text-[#723F2F]">OTO2 — Ocean Novel Premium</h4>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-white bg-[#723F2F] px-2 py-0.5 rounded-xs">$67</span>
+                  </div>
+                  <ul className="space-y-2 text-xs font-serif text-stone-800">
+                    <li className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                      <span><strong>All OTO1 Unlimited Features</strong> Included</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                      <span><strong>AI Ghostwriter Hub</strong>: High-tension prompt generator</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                      <span><strong>Story Context Bridge</strong> into ChatGPT/Gemini</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                      <span><strong>Continuity Conflict Engine</strong>: Timeline & logic checks</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
+                      <span><strong>Word Echoes & Prose Cadence</strong> monotony scanner</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </CardContent>

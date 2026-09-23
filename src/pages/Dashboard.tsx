@@ -34,6 +34,8 @@ import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
+import UpgradeModal from "@/components/UpgradeModal";
+import { PLAN_LIMITS } from "@/lib/license";
 
 import { isUserAdmin } from "@/lib/adminService";
 
@@ -45,6 +47,19 @@ export default function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<ProjectMeta | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Check quota for projects
+  const profile = storage.getUserProfile();
+  const maxAllowedProjects = PLAN_LIMITS[profile?.plan || 'pro'].maxProjects;
+
+  const handleNewProjectClick = () => {
+    if (savedProjects.length >= maxAllowedProjects) {
+      setShowUpgradeModal(true);
+    } else {
+      navigate("/create");
+    }
+  };
 
   // Real Tasks State (synced with LocalStorage)
   const [tasks, setTasks] = useState<StudioTask[]>([]);
@@ -700,11 +715,16 @@ export default function Dashboard() {
                 <span className="max-w-[85px] sm:max-w-[130px] truncate">{currentUser?.displayName || currentUser?.email?.split('@')[0] || "Settings"}</span>
               </button>
               <button
-                onClick={() => navigate("/create")}
+                onClick={handleNewProjectClick}
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 bg-[#8c503c] text-[#fcfaf5] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-sm text-[10px] sm:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md border border-[#4a3225] cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span className="whitespace-nowrap">New Archive</span>
+                {savedProjects.length >= maxAllowedProjects && (
+                  <span className="ml-1 px-1.5 py-0.2 text-[9px] bg-black/40 text-amber-200 rounded-xs font-mono font-bold">
+                    3/3
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -748,7 +768,7 @@ export default function Dashboard() {
                 
                 const titleLength = (proj.title || "").trim().length;
 
-                // Natural random variation in book spine thickness (cuốn dày cuốn mỏng ngẫu nhiên):
+                // Natural random variation in book spine thickness (random thick & slim books):
                 // Uses a deterministic seed from the project ID & index so each book retains its unique physical volume consistently.
                 // Maximum thickness is strictly capped at 60px per user request.
                 const pseudoRandom = (proj.id || "").split("").reduce((acc, char, i) => acc + char.charCodeAt(0) * (i + 1), index * 41);
@@ -767,7 +787,7 @@ export default function Dashboard() {
                 
                 const isComplete = progressRatio >= 1 && (proj.wordGoal || 0) > 0;
                 
-                // Dynamic font calculation (size chữ):
+                // Dynamic font calculation (font size scaling):
                 // Utilizes the full length of the book spine. Scales font size smoothly so the entire title fits.
                 // Truncates with '...' only if an exceptionally long title still exceeds the full spine length at minimum font size.
                 const getSpineTitleConfig = (title: string, availableHeight: number) => {
@@ -1994,6 +2014,15 @@ export default function Dashboard() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* FE Quota Exceeded Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          feature="projects"
+          currentCount={savedProjects.length}
+          maxLimit={maxAllowedProjects}
+        />
       </div>
     </motion.div>
   );

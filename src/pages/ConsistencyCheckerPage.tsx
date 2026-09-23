@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
   ShieldCheck, AlertTriangle, AlertCircle, Info, Check, Search, 
-  ArrowRight, RefreshCw, BookOpen, Users, MapPin, Sparkles, Filter, 
+  ArrowRight, RefreshCw, BookOpen, Users, MapPin, Filter, 
   ChevronRight, BarChart3, Repeat, Clock, HelpCircle, PlusCircle, 
   CheckCircle2, ExternalLink
 } from "lucide-react";
@@ -13,6 +13,9 @@ import {
 } from "@/lib/consistencyChecker";
 import { executeBatchReplace } from "@/lib/globalSearch";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
+import UpgradeModal from "@/components/UpgradeModal";
+import { PLAN_LIMITS } from "@/lib/license";
+import { Lock } from "lucide-react";
 
 export default function ConsistencyCheckerPage() {
   const { id = "1" } = useParams();
@@ -29,6 +32,12 @@ export default function ConsistencyCheckerPage() {
   // Global Search Modal state
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState("");
+
+  // License check for OTO2 Continuity Engine
+  const userProfile = storage.getUserProfile();
+  const currentPlan = userProfile?.plan || 'pro';
+  const hasContinuityEngine = PLAN_LIMITS[currentPlan]?.hasContinuityEngine ?? false;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Load project data
   const loadData = () => {
@@ -294,7 +303,12 @@ export default function ConsistencyCheckerPage() {
           >
             <ShieldCheck className="w-4 h-4" />
             <span>Logic & Continuity Conflicts</span>
-            {analysisResult && (
+            {!hasContinuityEngine && (
+              <span className="text-[9px] bg-[#8C503C] text-white px-1.5 py-0.2 rounded-xs font-mono font-bold flex items-center gap-0.5">
+                <Lock className="w-2.5 h-2.5" /> OTO2
+              </span>
+            )}
+            {analysisResult && hasContinuityEngine && (
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans ${
                 analysisResult.issues.length > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
               }`}>
@@ -312,10 +326,15 @@ export default function ConsistencyCheckerPage() {
             }`}
           >
             <Repeat className="w-4 h-4" />
-            <span>Repetitive Words & Echoes</span>
-            {analysisResult && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-200 text-stone-700 font-sans">
-                {analysisResult.echoes.length} echoes
+            <span>Repetition & Prose Cadence</span>
+            {!hasContinuityEngine && (
+              <span className="text-[9px] bg-[#8C503C] text-white px-1.5 py-0.2 rounded-xs font-mono font-bold flex items-center gap-0.5">
+                <Lock className="w-2.5 h-2.5" /> OTO2
+              </span>
+            )}
+            {analysisResult && hasContinuityEngine && (
+              <span className="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.2 rounded-full font-sans">
+                {analysisResult.echoes.length + analysisResult.overusedWords.length}
               </span>
             )}
           </button>
@@ -346,10 +365,60 @@ export default function ConsistencyCheckerPage() {
 
       {/* Tab Contents Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-[#FCFAF5] custom-scrollbar">
-        {/* ======================================================== */}
-        {/* TAB 1: CONTINUITY & LOGIC CONFLICTS                     */}
-        {/* ======================================================== */}
-        {activeTab === 'continuity' && (
+        {!hasContinuityEngine ? (
+          <div className="max-w-xl mx-auto my-12 p-8 bg-[#FAF8F5] border-2 border-[#8C503C]/30 rounded-2xl shadow-sm text-center space-y-5">
+            <div className="w-16 h-16 mx-auto rounded-full bg-[#8C503C]/10 border border-[#8C503C]/20 flex items-center justify-center text-[#8C503C]">
+              <Lock className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#8C503C] text-white">
+                Tier 3: OTO2 — Ocean Novel Premium
+              </span>
+              <h2 className="font-serif text-2xl font-bold text-[#4A3225]">
+                Logic & Continuity Conflict Engine
+              </h2>
+              <p className="text-xs font-serif text-stone-600 leading-relaxed max-w-md mx-auto">
+                Deep narrative analysis, location paradox detection, character appearance consistency tracking, and prose monotony rhythm scanning are exclusive features of <strong>OTO2 — Ocean Novel Premium ($67)</strong>.
+              </p>
+            </div>
+
+            <div className="bg-white border border-[#E5E0D5] p-4 rounded-xl text-left space-y-2 text-xs font-serif text-stone-700">
+              <div className="font-bold text-[#8C503C] text-[11px] uppercase tracking-wider mb-1">
+                Included in OTO2 Premium:
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#5A9672] shrink-0" />
+                <span>Automatic manuscript-wide location & character conflict scanning</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#5A9672] shrink-0" />
+                <span>Repetitive word echo detection within tight paragraph windows</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#5A9672] shrink-0" />
+                <span>Sentence rhythm & prose cadence cadence diagnosis</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#5A9672] shrink-0" />
+                <span>Full AI Prompt Hub with ChatGPT & Gemini context bridge</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="px-6 py-2.5 bg-[#8C503C] hover:bg-[#723F2F] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm transition-all cursor-pointer"
+              >
+                Upgrade to OTO2: Ocean Novel Premium ($67)
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ======================================================== */}
+            {/* TAB 1: CONTINUITY & LOGIC CONFLICTS                     */}
+            {/* ======================================================== */}
+            {activeTab === 'continuity' && (
           <div className="space-y-3 max-w-5xl mx-auto">
             {filteredIssues.length === 0 ? (
               <div className="h-64 flex flex-col items-center justify-center text-center">
@@ -637,6 +706,8 @@ export default function ConsistencyCheckerPage() {
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Global Search Modal for Instant Word Investigation */}
@@ -645,6 +716,13 @@ export default function ConsistencyCheckerPage() {
         onClose={() => setSearchModalOpen(false)}
         projectId={id}
         initialQuery={searchInitialQuery}
+      />
+
+      {/* OTO2 Continuity Engine Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="continuity"
       />
     </div>
   );
