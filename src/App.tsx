@@ -16,7 +16,7 @@ import { AppLayout, ProjectLayout } from "./components/layout/layouts";
 import { storage } from "./lib/storage";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Feather, RefreshCw, ShieldAlert } from "lucide-react";
+import { RefreshCw, ShieldAlert } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
 import CreateProject from "./pages/CreateProject";
 import ProjectOverview from "./pages/ProjectOverview";
@@ -57,9 +57,6 @@ function ProtectedRoute() {
   if (loading) {
     return (
       <div className="min-h-screen w-full bg-[#F4F1EA] flex flex-col items-center justify-center text-[#4A3225] select-none">
-        <div className="w-12 h-12 rounded-lg bg-[#8C503C] flex items-center justify-center text-[#FAF7F2] shadow-md mb-4 animate-pulse">
-          <Feather className="w-6 h-6" />
-        </div>
         <div className="font-serif text-lg font-bold">Ocean Novel Studio</div>
         <div className="flex items-center gap-2 text-xs text-stone-500 font-serif mt-2">
           <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#8C503C]" />
