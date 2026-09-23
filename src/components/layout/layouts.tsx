@@ -96,7 +96,7 @@ export function ProjectLayout() {
     <div className="flex flex-1 overflow-hidden h-full bg-[#F4F1EA]">
       <aside
         className={cn(
-          "bg-[#B56D6D] border-r border-[#9A5A5A] flex flex-col shrink-0 py-6 shadow-[4px_0_12px_rgba(0,0,0,0.1)] z-50 transition-all duration-300 ease-in-out",
+          "bg-[#2C1D16] border-r border-[#3E291F] flex flex-col shrink-0 py-6 shadow-[4px_0_20px_rgba(0,0,0,0.3)] z-50 transition-all duration-300 ease-in-out",
           isExpanded ? "w-64 px-4 items-stretch" : "w-16 px-0 items-center",
         )}
       >
@@ -108,13 +108,13 @@ export function ProjectLayout() {
           )}
         >
           {isExpanded && (
-            <span className="text-white font-serif tracking-widest font-bold uppercase text-sm">
+            <span className="text-[#FAF7F2] font-serif tracking-widest font-bold uppercase text-sm">
               Ocean Novel
             </span>
           )}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-white/70 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
+            className="text-stone-400 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
           >
             {isExpanded ? (
               <ChevronLeft className="w-5 h-5" />
@@ -128,19 +128,19 @@ export function ProjectLayout() {
         <button
           onClick={() => navigate("/dashboard")}
           className={cn(
-            "flex items-center rounded-xl transition-colors mb-4 border border-white/20 shadow-sm bg-white/5",
+            "flex items-center rounded-xl transition-colors mb-4 border border-[#442E23] shadow-sm bg-[#38241B]/70",
             isExpanded ? "w-full px-4 h-11 gap-3" : "w-11 h-11 justify-center mx-auto",
-            "text-white/90 hover:text-white hover:bg-white/15 hover:border-white/40"
+            "text-stone-300 hover:text-white hover:bg-[#442E23] hover:border-[#5A3E30]"
           )}
           title="All Books"
         >
-          <Grid className="w-5 h-5 shrink-0" />
+          <Grid className="w-5 h-5 shrink-0 text-amber-500/80" />
           {isExpanded && <span className="font-semibold text-sm">All Books</span>}
         </button>
 
         <nav className="flex-1 w-full flex flex-col gap-1.5 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {isExpanded && (
-            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-1">
+            <div className="text-stone-400 text-[10px] uppercase font-bold tracking-widest px-4 mb-1 mt-1">
               Database
             </div>
           )}
@@ -157,11 +157,11 @@ export function ProjectLayout() {
                     ? "w-full px-4 h-10 gap-3"
                     : "w-10 h-10 justify-center mx-auto",
                   isActive
-                    ? "bg-[#F59E0B] text-[#3E2723] shadow-md font-bold"
-                    : "text-white/70 hover:text-white hover:bg-white/10 font-medium",
+                    ? "bg-[#8C503C] text-white shadow-md font-bold"
+                    : "text-stone-300 hover:text-white hover:bg-[#3D281E] font-medium",
                 )}
               >
-                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#3E2723]" : "")} />
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-amber-300" : "text-stone-400")} />
                 {isExpanded && (
                   <span className="text-sm truncate">
                     {item.label}
@@ -173,13 +173,13 @@ export function ProjectLayout() {
 
           <div
             className={cn(
-              "bg-white/20 my-3",
+              "bg-[#422C21] my-3",
               isExpanded ? "w-full h-px" : "w-8 h-px mx-auto",
             )}
           />
 
           {isExpanded && (
-            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
+            <div className="text-stone-400 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
               Create
             </div>
           )}
@@ -191,16 +191,16 @@ export function ProjectLayout() {
                 to={item.href}
                 title={!isExpanded ? item.label : undefined}
                 className={cn(
-                  "flex items-center rounded-2xl transition-all shadow-lg border-2",
+                  "flex items-center rounded-2xl transition-all shadow-lg border",
                   isExpanded
                     ? "w-full px-4 h-12 gap-3"
                     : "w-12 h-12 justify-center mx-auto",
                   isActive
-                    ? "bg-[#F59E0B] border-[#F59E0B] text-[#3E2723]"
-                    : "bg-[#8A5252] border-[#8A5252] text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] hover:text-[#3E2723]",
+                    ? "bg-[#D97706] border-[#F59E0B] text-white font-bold shadow-amber-900/30"
+                    : "bg-[#8C503C] border-[#A25D47] text-[#FAF7F2] hover:bg-[#A05C46] hover:border-[#B56B52]",
                 )}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
+                <item.icon className="w-5 h-5 shrink-0 text-amber-200" />
                 {isExpanded && (
                   <span className="font-bold text-sm truncate">
                     {item.label}
@@ -212,13 +212,13 @@ export function ProjectLayout() {
 
           <div
             className={cn(
-              "bg-white/20 my-3",
+              "bg-[#422C21] my-3",
               isExpanded ? "w-full h-px" : "w-8 h-px mx-auto",
             )}
           />
 
           {isExpanded && (
-            <div className="text-white/70 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
+            <div className="text-stone-400 text-[10px] uppercase font-bold tracking-widest px-4 mb-1">
               Tools & Quality
             </div>
           )}
@@ -235,11 +235,11 @@ export function ProjectLayout() {
                     ? "w-full px-4 h-10 gap-3"
                     : "w-10 h-10 justify-center mx-auto",
                   isActive
-                    ? "bg-[#F59E0B] text-[#3E2723] font-bold shadow-md"
-                    : "bg-transparent text-white/70 hover:bg-white/10 hover:text-white font-medium",
+                    ? "bg-[#8C503C] text-white font-bold shadow-md"
+                    : "bg-transparent text-stone-300 hover:bg-[#3D281E] hover:text-white font-medium",
                 )}
               >
-                <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#3E2723]" : "")} />
+                <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-amber-300" : "text-stone-400")} />
                 {isExpanded && (
                   <span className="text-xs truncate">
                     {item.label}
@@ -252,7 +252,7 @@ export function ProjectLayout() {
 
         <div
           className={cn(
-            "bg-white/20 mb-3 mt-auto shrink-0",
+            "bg-[#422C21] mb-3 mt-auto shrink-0",
             isExpanded ? "w-full h-px" : "w-8 h-px mx-auto"
           )}
         />
@@ -269,8 +269,8 @@ export function ProjectLayout() {
                 ? "w-full px-4 h-10 gap-3"
                 : "w-10 h-10 justify-center mx-auto",
               location.pathname.includes("settings") && (location.search.includes("tab=profile") || !location.search.includes("tab="))
-                ? "bg-[#8A5252] text-white shadow-inner"
-                : "text-white/60 hover:text-white hover:bg-white/10"
+                ? "bg-[#442E23] text-white shadow-inner border border-[#5A3E30]"
+                : "text-stone-400 hover:text-white hover:bg-[#3D281E]"
             )}
             title="Profile"
           >
@@ -288,8 +288,8 @@ export function ProjectLayout() {
                 ? "w-full px-4 h-10 gap-3"
                 : "w-10 h-10 justify-center mx-auto",
               location.pathname.includes("settings") && location.search.includes("tab=preferences")
-                ? "bg-[#8A5252] text-white shadow-inner"
-                : "text-white/60 hover:text-white hover:bg-white/10"
+                ? "bg-[#442E23] text-white shadow-inner border border-[#5A3E30]"
+                : "text-stone-400 hover:text-white hover:bg-[#3D281E]"
             )}
             title="Settings"
           >
