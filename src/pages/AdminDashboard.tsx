@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   RefreshCw,
   History,
-  Coins,
   Zap,
   Shield,
   ShieldOff,
@@ -23,9 +22,6 @@ import {
   Check,
   X,
   Lock,
-  PlusCircle,
-  Database,
-  ExternalLink,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import {
@@ -61,8 +57,6 @@ export default function AdminDashboard() {
 
   // Modals state
   const [selectedUserForHistory, setSelectedUserForHistory] = useState<RegisteredUser | null>(null);
-  const [selectedUserForCredits, setSelectedUserForCredits] = useState<RegisteredUser | null>(null);
-  const [newCreditAmount, setNewCreditAmount] = useState<number>(1000);
   const [selectedUserForTier, setSelectedUserForTier] = useState<RegisteredUser | null>(null);
   const [newTierSelection, setNewTierSelection] = useState<'Free' | 'FrontEnd' | 'OTO1' | 'OTO2'>("FrontEnd");
   const [userToDelete, setUserToDelete] = useState<RegisteredUser | null>(null);
@@ -71,7 +65,6 @@ export default function AdminDashboard() {
   const [ipnEmail, setIpnEmail] = useState("");
   const [ipnProduct, setIpnProduct] = useState("FrontEnd: Ocean Novel Studio ($27)");
   const [ipnTier, setIpnTier] = useState<'Free' | 'FrontEnd' | 'OTO1' | 'OTO2'>("FrontEnd");
-  const [ipnCredits, setIpnCredits] = useState(1000);
   const [ipnTxnId, setIpnTxnId] = useState("");
   const [isSubmittingIpn, setIsSubmittingIpn] = useState(false);
 
@@ -135,7 +128,7 @@ export default function AdminDashboard() {
       if (statusFilter === "offline" && (isOnline || u.isBanned)) return false;
       if (statusFilter === "banned" && !u.isBanned) return false;
 
-      // Search query filter (Email, UID, or Tier)
+      // Search query filter (Email, UID, Name, or Tier)
       if (queryLower) {
         const matchEmail = (u.email || "").toLowerCase().includes(queryLower);
         const matchUid = (u.uid || "").toLowerCase().includes(queryLower);
@@ -170,25 +163,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveCredits = async () => {
-    if (!selectedUserForCredits) return;
-    try {
-      await adminService.updateCredits(selectedUserForCredits.uid, newCreditAmount);
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.uid === selectedUserForCredits.uid ? { ...u, credits: newCreditAmount } : u
-        )
-      );
-      setFeedback({
-        type: "success",
-        message: `Credits for "${selectedUserForCredits.email}" updated to ${newCreditAmount.toLocaleString()}.`,
-      });
-      setSelectedUserForCredits(null);
-    } catch {
-      setFeedback({ type: "error", message: "Failed to adjust credits in Firestore." });
-    }
-  };
-
   const handleSaveTier = async () => {
     if (!selectedUserForTier) return;
     try {
@@ -200,7 +174,7 @@ export default function AdminDashboard() {
       );
       setFeedback({
         type: "success",
-        message: `Tier for "${selectedUserForTier.email}" updated to ${newTierSelection}.`,
+        message: `License tier for "${selectedUserForTier.email}" updated to ${newTierSelection}.`,
       });
       setSelectedUserForTier(null);
     } catch {
@@ -235,7 +209,7 @@ export default function AdminDashboard() {
       setPendingPurchases((prev) => prev.filter((p) => p.id !== id));
       setFeedback({
         type: "info",
-        message: `Pending transaction for "${email}" deleted (Refunded).`,
+        message: `Pending purchase for "${email}" removed (Refunded).`,
       });
     } catch {
       setFeedback({ type: "error", message: "Failed to delete pending purchase." });
@@ -256,7 +230,6 @@ export default function AdminDashboard() {
         buyerEmail: ipnEmail,
         productItem: ipnProduct,
         tier: ipnTier,
-        creditsAssigned: Number(ipnCredits) || 1000,
         txnId: ipnTxnId.trim() || undefined,
       });
 
@@ -473,7 +446,7 @@ export default function AdminDashboard() {
             )}
           >
             <Zap className="w-4 h-4" />
-            <span>WarriorPlus IPN (Pending Sales & Webhook)</span>
+            <span>WarriorPlus IPN (License Fulfillment)</span>
             {pendingPurchases.length > 0 && (
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
                 {pendingPurchases.length}
@@ -560,25 +533,24 @@ export default function AdminDashboard() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-[#F8F5EE] border-b border-[#E3DDD1] text-stone-600 uppercase font-mono tracking-wider text-[10px]">
-                      <th className="py-3 px-4">User</th>
+                      <th className="py-3 px-4">Author Account</th>
                       <th className="py-3 px-4">License Tier</th>
-                      <th className="py-3 px-4">Credits</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Last Active</th>
-                      <th className="py-3 px-4 text-right">Quick Actions</th>
+                      <th className="py-3 px-4">Access Status</th>
+                      <th className="py-3 px-4">Last Activity</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#EFEAE1]">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-stone-500 font-serif">
+                        <td colSpan={5} className="py-12 text-center text-stone-500 font-serif">
                           <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#8C503C] mb-2" />
                           <span>Connecting to Firestore database...</span>
                         </td>
                       </tr>
                     ) : filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-stone-500 font-serif">
+                        <td colSpan={5} className="py-12 text-center text-stone-500 font-serif">
                           No users found matching current filters.
                         </td>
                       </tr>
@@ -626,7 +598,7 @@ export default function AdminDashboard() {
                                   </div>
                                   <div className="text-stone-500 truncate text-[11px]">{user.email}</div>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="font-mono text-[10px] text-stone-400 truncate max-w-[120px] sm:max-w-[180px]">
+                                    <span className="font-mono text-[10px] text-stone-400 truncate max-w-[140px] sm:max-w-[200px]">
                                       {user.uid}
                                     </span>
                                     <button
@@ -660,14 +632,6 @@ export default function AdminDashboard() {
                               </span>
                             </td>
 
-                            {/* Credits */}
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="flex items-center gap-1 font-mono font-bold text-stone-800">
-                                <Coins className="w-3.5 h-3.5 text-amber-600" />
-                                <span>{(user.credits || 0).toLocaleString()}</span>
-                              </div>
-                            </td>
-
                             {/* Status */}
                             <td className="py-3.5 px-4 whitespace-nowrap">
                               {user.isBanned ? (
@@ -699,23 +663,10 @@ export default function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => setSelectedUserForHistory(user)}
-                                  title="Purchase History & Invoices"
+                                  title="Purchase & IPN Transaction History"
                                   className="p-1.5 rounded-md border border-[#DCD5C9] bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 shadow-2xs cursor-pointer"
                                 >
                                   <History className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Adjust Credits */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUserForCredits(user);
-                                    setNewCreditAmount(user.credits || 1000);
-                                  }}
-                                  title="Adjust Credits Balance"
-                                  className="p-1.5 rounded-md border border-[#DCD5C9] bg-white hover:bg-stone-50 text-amber-700 shadow-2xs cursor-pointer"
-                                >
-                                  <Coins className="w-3.5 h-3.5" />
                                 </button>
 
                                 {/* Upgrade Tier */}
@@ -725,7 +676,7 @@ export default function AdminDashboard() {
                                     setSelectedUserForTier(user);
                                     setNewTierSelection(user.tier || "FrontEnd");
                                   }}
-                                  title="Upgrade / Downgrade Tier"
+                                  title="Change License Tier"
                                   className="p-1.5 rounded-md border border-[#DCD5C9] bg-white hover:bg-stone-50 text-[#8C503C] shadow-2xs cursor-pointer"
                                 >
                                   <Zap className="w-3.5 h-3.5" />
@@ -787,7 +738,7 @@ export default function AdminDashboard() {
                       WarriorPlus IPN Webhook Simulator
                     </h2>
                     <p className="text-[11px] text-stone-500 font-serif">
-                      Simulate Instant Payment Notification webhooks from WarriorPlus to test automated user fulfillment
+                      Simulate Instant Payment Notification webhooks from WarriorPlus to test automated license tier fulfillment
                     </p>
                   </div>
                 </div>
@@ -802,7 +753,7 @@ export default function AdminDashboard() {
                   <input
                     type="email"
                     required
-                    placeholder="buyer@example.com"
+                    placeholder="customer@example.com"
                     value={ipnEmail}
                     onChange={(e) => setIpnEmail(e.target.value)}
                     className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none"
@@ -821,13 +772,10 @@ export default function AdminDashboard() {
                       setIpnProduct(val);
                       if (val.includes("OTO2")) {
                         setIpnTier("OTO2");
-                        setIpnCredits(6000);
                       } else if (val.includes("OTO1")) {
                         setIpnTier("OTO1");
-                        setIpnCredits(3000);
                       } else {
                         setIpnTier("FrontEnd");
-                        setIpnCredits(1000);
                       }
                     }}
                     className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-medium cursor-pointer"
@@ -855,21 +803,8 @@ export default function AdminDashboard() {
                   </select>
                 </div>
 
-                {/* Credits */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                    Credits Assigned
-                  </label>
-                  <input
-                    type="number"
-                    value={ipnCredits}
-                    onChange={(e) => setIpnCredits(Number(e.target.value))}
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono"
-                  />
-                </div>
-
                 {/* Transaction ID */}
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
                     Transaction ID (Optional)
                   </label>
@@ -913,7 +848,7 @@ export default function AdminDashboard() {
                     </span>
                   </h3>
                   <p className="text-[11px] text-stone-500 font-serif mt-0.5">
-                    Stores orders paid through WarriorPlus where the buyer hasn't registered an account yet. As soon as the customer registers using their invoice email, their package and credits are immediately credited.
+                    Orders paid through WarriorPlus where the buyer hasn't signed up yet. As soon as the customer registers using their purchase email, their license tier will automatically activate.
                   </p>
                 </div>
               </div>
@@ -924,7 +859,7 @@ export default function AdminDashboard() {
                     <tr className="bg-[#F8F5EE] border-b border-[#E3DDD1] text-stone-600 uppercase font-mono tracking-wider text-[10px]">
                       <th className="py-3 px-4">Buyer Email</th>
                       <th className="py-3 px-4">Product Item</th>
-                      <th className="py-3 px-4">Credits Assigned</th>
+                      <th className="py-3 px-4">Amount</th>
                       <th className="py-3 px-4">Tier</th>
                       <th className="py-3 px-4">Date Received</th>
                       <th className="py-3 px-4 text-right">Action</th>
@@ -934,7 +869,7 @@ export default function AdminDashboard() {
                     {pendingPurchases.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-stone-400 font-serif">
-                          No pending purchases. All WarriorPlus orders have been reconciled!
+                          No pending purchases. All WarriorPlus orders have been fulfilled!
                         </td>
                       </tr>
                     ) : (
@@ -944,8 +879,8 @@ export default function AdminDashboard() {
                             {item.buyerEmail}
                           </td>
                           <td className="py-3 px-4 text-stone-700">{item.productItem}</td>
-                          <td className="py-3 px-4 font-mono font-bold text-amber-700">
-                            +{item.creditsAssigned.toLocaleString()}
+                          <td className="py-3 px-4 font-mono font-bold text-emerald-700">
+                            {item.amount || "$27.00"}
                           </td>
                           <td className="py-3 px-4">
                             <span className="px-2 py-0.5 rounded bg-stone-100 font-mono text-[10px] uppercase font-bold text-stone-700 border border-stone-200">
@@ -1020,7 +955,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-emerald-700">{rec.amount || "$27.00"}</div>
-                        <div className="text-[10px] font-mono text-amber-700">+{rec.credits} cr</div>
+                        <div className="text-[10px] font-mono text-stone-500 uppercase">{rec.tier}</div>
                       </div>
                     </div>
                   ))
@@ -1040,81 +975,7 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* MODAL 2: ADJUST CREDITS */}
-      <AnimatePresence>
-        {selectedUserForCredits && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#E3DDD1] space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-amber-600" />
-                  <h3 className="font-serif font-bold text-base text-[#2A1B14]">
-                    Adjust User Credits Balance
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setSelectedUserForCredits(null)}
-                  className="p-1 rounded-md text-stone-400 hover:text-stone-700 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-stone-600">
-                Specify new credits balance for account: <strong className="text-stone-900">{selectedUserForCredits.email}</strong>
-              </p>
-
-              <div className="space-y-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={newCreditAmount}
-                  onChange={(e) => setNewCreditAmount(Number(e.target.value))}
-                  className="w-full h-11 px-3.5 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] rounded-xl text-base font-mono font-bold text-stone-900 outline-none"
-                />
-
-                {/* Preset increment shortcuts */}
-                <div className="flex items-center gap-1.5 pt-1">
-                  {[500, 1000, 3000, 5000, 9999].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setNewCreditAmount(amt)}
-                      className="px-2 py-1 text-[10px] font-mono font-bold border border-[#DCD5C9] bg-stone-50 hover:bg-white rounded-md text-stone-700 cursor-pointer transition-colors"
-                    >
-                      {amt.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedUserForCredits(null)}
-                  className="px-4 py-2 border border-[#DCD5C9] text-stone-600 text-xs font-bold uppercase rounded-lg hover:bg-stone-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveCredits}
-                  className="px-4 py-2 bg-[#8C503C] hover:bg-[#733D2D] text-white text-xs font-bold uppercase rounded-lg shadow-xs cursor-pointer"
-                >
-                  Save Credits
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL 3: UPGRADE TIER */}
+      {/* MODAL 2: UPGRADE TIER */}
       <AnimatePresence>
         {selectedUserForTier && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -1196,7 +1057,7 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* MODAL 4: DELETE CONFIRMATION */}
+      {/* MODAL 3: DELETE CONFIRMATION */}
       <AnimatePresence>
         {userToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">

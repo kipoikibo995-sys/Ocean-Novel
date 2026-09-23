@@ -22,7 +22,6 @@ export interface PurchaseRecord {
   id: string;
   productItem: string;
   tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2';
-  credits: number;
   amount: string;
   date: number;
   txnId: string;
@@ -33,7 +32,6 @@ export interface RegisteredUser {
   email: string;
   displayName: string;
   tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2';
-  credits: number;
   isBanned: boolean;
   lastActive: number;
   createdAt: number;
@@ -44,8 +42,8 @@ export interface IpnPendingPurchase {
   id: string;
   buyerEmail: string;
   productItem: string;
-  creditsAssigned: number;
   tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2';
+  amount: string;
   dateReceived: number;
   txnId: string;
 }
@@ -71,7 +69,6 @@ export const adminService = {
 
       let isBanned = false;
       let currentTier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2' = isAdmin ? "OTO2" : "FrontEnd";
-      let currentCredits = isAdmin ? 99999 : 1000;
       let history: PurchaseRecord[] = [];
 
       const displayName = user.displayName || (isAdmin ? "Koji Academy Admin" : cleanEmail.split("@")[0] || "Author");
@@ -80,7 +77,6 @@ export const adminService = {
         const data = userSnap.data() as RegisteredUser;
         isBanned = isAdmin ? false : Boolean(data.isBanned);
         currentTier = isAdmin ? "OTO2" : (data.tier || "FrontEnd");
-        currentCredits = isAdmin ? Math.max(99999, data.credits || 99999) : (typeof data.credits === "number" ? data.credits : 1000);
         history = Array.isArray(data.purchaseHistory) ? data.purchaseHistory : [];
 
         await updateDoc(userDocRef, {
@@ -88,7 +84,6 @@ export const adminService = {
           email: cleanEmail || data.email,
           displayName: displayName || data.displayName,
           tier: currentTier,
-          credits: currentCredits,
           isBanned,
         });
       } else {
@@ -97,7 +92,6 @@ export const adminService = {
           email: cleanEmail,
           displayName,
           tier: currentTier,
-          credits: currentCredits,
           isBanned: false,
           lastActive: Date.now(),
           createdAt: Date.now(),
@@ -105,12 +99,11 @@ export const adminService = {
             ? [
                 {
                   id: "admin_grant_init",
-                  productItem: "Ocean Novel Studio - Super Admin License",
+                  productItem: "Ocean Novel Studio - Master License",
                   tier: "OTO2",
-                  credits: 99999,
-                  amount: "Unlimited",
+                  amount: "Lifetime Access",
                   date: Date.now(),
-                  txnId: "ADMIN-SUPER-PERM",
+                  txnId: "ADMIN-LIFETIME-PERM",
                 },
               ]
             : [],
@@ -131,7 +124,6 @@ export const adminService = {
             for (const docItem of snap.docs) {
               const pendingData = docItem.data() as IpnPendingPurchase;
               matchedPurchases++;
-              currentCredits += (pendingData.creditsAssigned || 0);
 
               if (pendingData.tier === "OTO2") {
                 currentTier = "OTO2";
@@ -145,8 +137,7 @@ export const adminService = {
                 id: "auto_" + docItem.id,
                 productItem: pendingData.productItem,
                 tier: pendingData.tier,
-                credits: pendingData.creditsAssigned,
-                amount: pendingData.tier === "OTO2" ? "$67.00" : pendingData.tier === "OTO1" ? "$47.00" : "$27.00",
+                amount: pendingData.amount || (pendingData.tier === "OTO2" ? "$67.00" : pendingData.tier === "OTO1" ? "$47.00" : "$27.00"),
                 date: Date.now(),
                 txnId: pendingData.txnId || "WP-AUTO-" + Date.now().toString(36).toUpperCase(),
               });
@@ -156,7 +147,6 @@ export const adminService = {
 
             await updateDoc(userDocRef, {
               tier: currentTier,
-              credits: currentCredits,
               purchaseHistory: history,
             });
           }
@@ -210,7 +200,6 @@ export const adminService = {
           email: cleanEmail,
           displayName: cur.displayName || (isAdmin ? "Koji Academy Admin" : "Author"),
           tier: isAdmin ? "OTO2" : "FrontEnd",
-          credits: isAdmin ? 99999 : 1000,
           isBanned: false,
           lastActive: Date.now(),
           createdAt: Date.now(),
@@ -218,12 +207,11 @@ export const adminService = {
             ? [
                 {
                   id: "admin_grant_init",
-                  productItem: "Ocean Novel Studio - Super Admin License",
+                  productItem: "Ocean Novel Studio - Master License",
                   tier: "OTO2",
-                  credits: 99999,
-                  amount: "Unlimited",
+                  amount: "Lifetime Access",
                   date: Date.now(),
-                  txnId: "ADMIN-SUPER-PERM",
+                  txnId: "ADMIN-LIFETIME-PERM",
                 },
               ]
             : [],
@@ -243,14 +231,6 @@ export const adminService = {
       console.warn("getAllUsers Firestore query notice:", err);
       return [];
     }
-  },
-
-  /**
-   * Adjust Credits for User in Firestore
-   */
-  updateCredits: async (uid: string, credits: number): Promise<void> => {
-    const userDocRef = doc(db, "registeredUsers", uid);
-    await updateDoc(userDocRef, { credits: Math.max(0, credits) });
   },
 
   /**
@@ -305,17 +285,18 @@ export const adminService = {
   },
 
   /**
-   * Simulate WarriorPlus IPN Webhook with English status responses
+   * Simulate WarriorPlus IPN Webhook (License Tier Fulfillment without credits)
    */
   simulateIpnWebhook: async (payload: {
     buyerEmail: string;
     productItem: string;
-    creditsAssigned: number;
     tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2';
+    amount?: string;
     txnId?: string;
   }): Promise<{ matchedUser: boolean; message: string; targetUser?: string }> => {
     const cleanEmail = payload.buyerEmail.toLowerCase().trim();
     const txnId = payload.txnId || "WP-TXN-" + Math.floor(100000 + Math.random() * 900000);
+    const amount = payload.amount || (payload.tier === "OTO2" ? "$67.00" : payload.tier === "OTO1" ? "$47.00" : "$27.00");
 
     try {
       const usersCol = collection(db, "registeredUsers");
@@ -323,19 +304,17 @@ export const adminService = {
       const querySnap = await getDocs(q);
 
       if (!querySnap.empty) {
-        // User account exists! Instantly upgrade tier and credit them
+        // User account exists! Instantly upgrade license tier
         const userDoc = querySnap.docs[0];
         const userData = userDoc.data() as RegisteredUser;
 
-        const currentCredits = (userData.credits || 0) + payload.creditsAssigned;
         const newHistory: PurchaseRecord[] = [
           ...(userData.purchaseHistory || []),
           {
             id: "ipn_" + Date.now(),
             productItem: payload.productItem,
             tier: payload.tier,
-            credits: payload.creditsAssigned,
-            amount: payload.tier === "OTO2" ? "$67.00" : payload.tier === "OTO1" ? "$47.00" : "$27.00",
+            amount,
             date: Date.now(),
             txnId,
           },
@@ -343,14 +322,13 @@ export const adminService = {
 
         await updateDoc(userDoc.ref, {
           tier: payload.tier,
-          credits: currentCredits,
           purchaseHistory: newHistory,
         });
 
         return {
           matchedUser: true,
           targetUser: userData.displayName || cleanEmail,
-          message: `IPN Reconciled: Matched active user account "${userData.displayName || cleanEmail}". Tier upgraded to ${payload.tier} and +${payload.creditsAssigned.toLocaleString()} credits added.`,
+          message: `IPN Reconciled: Matched user "${userData.displayName || cleanEmail}". Account license tier instantly unlocked to ${payload.tier}.`,
         };
       } else {
         // User has not registered yet. Store in Pending Purchases table in Firestore
@@ -359,8 +337,8 @@ export const adminService = {
           id: pendId,
           buyerEmail: cleanEmail,
           productItem: payload.productItem,
-          creditsAssigned: payload.creditsAssigned,
           tier: payload.tier,
+          amount,
           dateReceived: Date.now(),
           txnId,
         };
@@ -369,7 +347,7 @@ export const adminService = {
 
         return {
           matchedUser: false,
-          message: `IPN Logged: Buyer "${cleanEmail}" does not have an account yet. Recorded in Pending Purchases. The system will automatically fulfill their ${payload.tier} tier and credits once they sign up.`,
+          message: `IPN Logged: Buyer "${cleanEmail}" does not have an account yet. Recorded in Pending Purchases. The ${payload.tier} license tier will automatically be granted when they register.`,
         };
       }
     } catch (err: any) {
