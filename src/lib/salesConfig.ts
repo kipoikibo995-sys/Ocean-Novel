@@ -1,18 +1,18 @@
 /**
- * CẤU HÌNH ĐƯỜNG LINK SALES PAGE / CHECKOUT CHO CÁC GÓI NÂNG CẤP
- * Bạn có thể dán đường link Sales Page của mình vào các biến dưới đây:
+ * SALES PAGE & CHECKOUT URL CONFIGURATION FOR UPGRADE TIERS
+ * You can paste your WarriorPlus checkout / sales page links into the variables below:
  */
 
 export const SALES_PAGE_CONFIG = {
-  // Đường dẫn Sales Page cho gói Pro Edition (Unlimited Studio)
-  proSalesUrl: "https://example.com/pro-edition-sales-page", // <-- DÁN LINK SALES PAGE PRO VÀO ĐÂY
+  // Sales Page / Checkout URL for Pro Edition (Unlimited Studio)
+  proSalesUrl: "https://example.com/pro-edition-sales-page", // <-- PASTE PRO SALES PAGE LINK HERE
 
-  // Đường dẫn Sales Page cho gói Premium Edition (AI Ghostwriter & Continuity)
-  premiumSalesUrl: "https://example.com/premium-edition-sales-page", // <-- DÁN LINK SALES PAGE PREMIUM VÀO ĐÂY
+  // Sales Page / Checkout URL for Premium Edition (AI Ghostwriter & Continuity)
+  premiumSalesUrl: "https://example.com/premium-edition-sales-page", // <-- PASTE PREMIUM SALES PAGE LINK HERE
 };
 
 /**
- * Hàm mở trang Sales Page theo từng gói
+ * Open sales page in a new window/tab for the designated tier
  */
 export function openSalesPage(tier: 'pro' | 'premium'): void {
   const url = tier === 'pro' ? SALES_PAGE_CONFIG.proSalesUrl : SALES_PAGE_CONFIG.premiumSalesUrl;
@@ -20,3 +20,4 @@ export function openSalesPage(tier: 'pro' | 'premium'): void {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
+

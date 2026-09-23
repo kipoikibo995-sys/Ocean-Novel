@@ -8,6 +8,9 @@ export interface SearchResultItem {
   sourceSubtitle?: string;
   targetId: string; // sceneId, characterId, locationId, or field name
   field: string;
+  sectionLabel?: string;
+  paragraphNumber?: number;
+  lineNumber?: number;
   snippetBefore: string;
   matchText: string;
   snippetAfter: string;
@@ -104,6 +107,50 @@ export function searchProject(
       const prefix = start > 0 ? "…" : "";
       const suffix = end < plainText.length ? "…" : "";
 
+      // Determine human-readable section label and approximate line/paragraph
+      let sectionLabel = "Content";
+      if (sourceType === 'manuscript') {
+        sectionLabel = field === 'title' ? "Chapter Title" : "Manuscript Body";
+      } else if (sourceType === 'note') {
+        sectionLabel = "Scene Notes";
+      } else if (sourceType === 'character') {
+        sectionLabel = `Character Profile • ${field}`;
+      } else if (sourceType === 'location') {
+        sectionLabel = `World Location • ${field}`;
+      } else if (sourceType === 'bible') {
+        sectionLabel = `Story Bible • ${field}`;
+      }
+
+      // Calculate approximate paragraph & line number
+      let paragraphNumber: number | undefined;
+      let lineNumber: number | undefined;
+
+      if (field === 'content' || field === 'notes' || text.includes('<p>') || text.includes('\n')) {
+        const plainBefore = plainText.substring(0, matchIndex);
+        const lines = plainBefore.split(/\n+/);
+        lineNumber = Math.max(1, lines.length > 1 ? lines.length : Math.ceil(plainBefore.length / 75));
+
+        if (text.includes('<p>') || text.includes('</p>')) {
+          const parts = text.split(/<\/p>/i);
+          let accumulatedLen = 0;
+          let pIdx = 1;
+          for (let i = 0; i < parts.length; i++) {
+            const strippedPart = stripHtml(parts[i]);
+            if (accumulatedLen + strippedPart.length >= matchIndex) {
+              pIdx = i + 1;
+              break;
+            }
+            accumulatedLen += strippedPart.length + 1;
+          }
+          paragraphNumber = pIdx;
+        } else {
+          paragraphNumber = lines.length;
+        }
+      } else if (field === 'title') {
+        paragraphNumber = 1;
+        lineNumber = 1;
+      }
+
       results.push({
         id: `${sourceType}-${targetId}-${field}-${matchIndex}`,
         sourceType,
@@ -111,6 +158,9 @@ export function searchProject(
         sourceSubtitle,
         targetId,
         field,
+        sectionLabel,
+        paragraphNumber,
+        lineNumber,
         snippetBefore: prefix + before,
         matchText: matched,
         snippetAfter: after + suffix,

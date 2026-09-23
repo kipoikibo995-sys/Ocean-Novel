@@ -72,9 +72,17 @@ export default function WritingStudio() {
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sceneParam = searchParams.get('scene');
   const tabParam = searchParams.get('tab');
+  const highlightParam = searchParams.get('highlight');
+  const [highlightKeyword, setHighlightKeyword] = useState<string | null>(highlightParam || null);
+
+  useEffect(() => {
+    if (highlightParam) {
+      setHighlightKeyword(highlightParam);
+    }
+  }, [highlightParam]);
 
   useEffect(() => {
     if (tabParam === 'notes') {
@@ -219,16 +227,41 @@ export default function WritingStudio() {
     }
   }, [projectId, activeDocId, manuscript]);
 
-  // React to URL sceneParam changes
+  // Switch active scene cleanly without leaving sticky URL query params
+  const handleSelectScene = (sceneId: string, customHighlight?: string) => {
+    setActiveDocId(sceneId);
+    setActiveContent(findSceneContent(manuscript, sceneId));
+
+    if (customHighlight !== undefined) {
+      setHighlightKeyword(customHighlight);
+    } else {
+      // Clear highlight when user voluntarily switches to another scene
+      setHighlightKeyword(null);
+    }
+
+    // Always clear sticky scene and highlight from URL to prevent unwanted auto-reverting
+    if (searchParams.has('scene') || searchParams.has('highlight')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('scene');
+      nextParams.delete('highlight');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  // React to URL sceneParam changes (e.g. initial navigation from Global Search or external links)
   useEffect(() => {
-    if (sceneParam && sceneParam !== activeDocId && manuscript.length > 0) {
+    if (sceneParam && manuscript.length > 0) {
       const node = findNodeById(manuscript, sceneParam);
       if (node) {
         setActiveDocId(sceneParam);
         setActiveContent(findSceneContent(manuscript, sceneParam));
       }
+      // CRITICAL FIX: Clean up sceneParam from URL so switching chapters won't get yanked back
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('scene');
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [sceneParam, manuscript]);
+  }, [sceneParam, manuscript.length]);
   
 
   const [isSaving, setIsSaving] = useState(false);
@@ -738,7 +771,7 @@ export default function WritingStudio() {
               className={`group flex items-center justify-between py-1.5 px-2 rounded-sm cursor-pointer transition-colors ${activeDocId === item.id ? 'bg-[#8C503C] text-white shadow-sm' : 'hover:bg-[#E5E0D5] text-stone-600'} ${draggedNodeId === item.id ? 'opacity-50' : ''}`}
               style={{ paddingLeft: `${level * 12 + 8}px` }}
               onClick={() => {
-                if (item.type === 'scene') setActiveDocId(item.id);
+                if (item.type === 'scene') handleSelectScene(item.id);
                 else toggleExpand(item.id, { stopPropagation: () => {} } as any);
               }}
             >
@@ -1055,12 +1088,32 @@ export default function WritingStudio() {
               </div>
             ) : (
               <div className={`flex-1 py-16 ${isFocusMode ? 'pb-48' : 'pb-32'}`}>
+                {/* Search Match Banner if user navigated from Global Search */}
+                {highlightKeyword && (
+                  <div className="mb-6 p-2.5 bg-amber-50/90 border border-amber-300 rounded-md flex items-center justify-between text-xs text-amber-950 shadow-xs animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>
+                        Showing search match for: <strong className="bg-amber-200 px-1 py-0.5 rounded border border-amber-300 font-mono font-bold">"{highlightKeyword}"</strong> (Scrolled to text match)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setHighlightKeyword(null)}
+                      className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-200/80 hover:bg-amber-300 text-amber-950 rounded cursor-pointer transition-colors"
+                      title="Clear highlight"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
                 <MentionEditor 
-                  key={activeDocId}
+                  key={`${activeDocId}-${highlightKeyword || ''}`}
                   initialValue={activeContent}
                   mentionItems={[...characters, ...locations]}
                   onEntityClick={handleEntityClick}
                   onChange={handleContentChange}
+                  highlightText={highlightKeyword || undefined}
                   className={`${fontFamily} ${fontSize} leading-[1.8] text-[#332218]`}
                 />
               </div>
@@ -1572,8 +1625,8 @@ export default function WritingStudio() {
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         projectId={projectId || "1"}
-        onNavigateToScene={(sceneId) => {
-          setActiveDocId(sceneId);
+        onNavigateToScene={(sceneId, highlightWord) => {
+          handleSelectScene(sceneId, highlightWord);
         }}
       />
 

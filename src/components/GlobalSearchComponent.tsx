@@ -15,7 +15,7 @@ interface GlobalSearchProps {
   initialQuery?: string;
   isModal?: boolean;
   onClose?: () => void;
-  onNavigateToScene?: (sceneId: string) => void;
+  onNavigateToScene?: (sceneId: string, highlightWord?: string) => void;
 }
 
 export default function GlobalSearchComponent({
@@ -131,12 +131,13 @@ export default function GlobalSearchComponent({
 
   // Result navigation
   const handleResultClick = (res: SearchResultItem) => {
+    const highlightWord = res.matchText || query;
     if (res.sourceType === 'manuscript') {
       if (onNavigateToScene) {
-        onNavigateToScene(res.targetId);
+        onNavigateToScene(res.targetId, highlightWord);
         if (onClose) onClose();
       } else {
-        navigate(`/project/${projectId}/workspace/studio?scene=${res.targetId}`);
+        navigate(`/project/${projectId}/workspace/studio?scene=${res.targetId}&highlight=${encodeURIComponent(highlightWord)}`);
         if (onClose) onClose();
       }
     } else if (res.sourceType === 'character') {
@@ -146,7 +147,7 @@ export default function GlobalSearchComponent({
       navigate(`/project/${projectId}/workspace/locations`);
       if (onClose) onClose();
     } else if (res.sourceType === 'note') {
-      navigate(`/project/${projectId}/workspace/studio?scene=${res.targetId}&tab=notes`);
+      navigate(`/project/${projectId}/workspace/studio?scene=${res.targetId}&tab=notes&highlight=${encodeURIComponent(highlightWord)}`);
       if (onClose) onClose();
     } else if (res.sourceType === 'bible') {
       navigate(`/project/${projectId}/workspace/bible`);
@@ -487,8 +488,8 @@ export default function GlobalSearchComponent({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-stone-700">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-stone-800">
                           {getSourceIcon(item.sourceType)}
                           {item.sourceTitle}
                         </span>
@@ -497,6 +498,11 @@ export default function GlobalSearchComponent({
                             • {item.sourceSubtitle}
                           </span>
                         )}
+                        <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-amber-50 text-amber-900 border border-amber-200/90 rounded-xs flex items-center gap-1">
+                          <span className="font-bold">{item.sectionLabel || getSourceBadgeLabel(item.sourceType)}</span>
+                          {item.paragraphNumber ? <span>• Para {item.paragraphNumber}</span> : null}
+                          {item.lineNumber ? <span className="opacity-80">(Line ~{item.lineNumber})</span> : null}
+                        </span>
                         <span className="ml-auto text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-[#F4F1EA] text-stone-600 rounded">
                           {getSourceBadgeLabel(item.sourceType)}
                         </span>

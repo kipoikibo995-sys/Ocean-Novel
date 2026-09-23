@@ -6,7 +6,7 @@ interface GlobalSearchModalProps {
   onClose: () => void;
   projectId: string;
   initialQuery?: string;
-  onNavigateToScene?: (sceneId: string) => void;
+  onNavigateToScene?: (sceneId: string, highlightWord?: string) => void;
 }
 
 export default function GlobalSearchModal({

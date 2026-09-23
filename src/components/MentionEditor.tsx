@@ -177,9 +177,17 @@ interface MentionEditorProps {
   onChange?: (value: string) => void;
   className?: string;
   mentionItems?: any[];
+  highlightText?: string;
 }
 
-export default function MentionEditor({ initialValue, onEntityClick, onChange, className = '', mentionItems = [] }: MentionEditorProps) {
+export default function MentionEditor({ 
+  initialValue, 
+  onEntityClick, 
+  onChange, 
+  className = '', 
+  mentionItems = [],
+  highlightText 
+}: MentionEditorProps) {
   useEffect(() => {
     currentMentionItems = mentionItems;
   }, [mentionItems]);
@@ -232,6 +240,44 @@ export default function MentionEditor({ initialValue, onEntityClick, onChange, c
       editor.commands.setContent(initialValue);
     }
   }, [initialValue, editor]);
+
+  // Highlight and scroll to search query when requested
+  useEffect(() => {
+    if (!editor || editor.isDestroyed || !highlightText || !highlightText.trim()) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const term = highlightText.trim().toLowerCase();
+        const doc = editor.state.doc;
+        let foundPos = -1;
+
+        doc.descendants((node, pos) => {
+          if (foundPos !== -1) return false;
+          if (node.isText && node.text) {
+            const idx = node.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              foundPos = pos + idx;
+              return false;
+            }
+          }
+          return true;
+        });
+
+        if (foundPos !== -1) {
+          editor.commands.focus();
+          editor.commands.setTextSelection({
+            from: foundPos,
+            to: foundPos + term.length,
+          });
+          editor.commands.scrollIntoView();
+        }
+      } catch (err) {
+        console.warn("Could not scroll to search keyword:", err);
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [editor, highlightText, initialValue]);
 
   return (
     <div className={`flex flex-col h-full w-full bg-transparent overflow-hidden custom-editor-container ${className}`}>

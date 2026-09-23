@@ -178,11 +178,10 @@ export function parseChapterHeading(
   language: string = "en"
 ): ChapterHeadingInfo {
   const clean = cleanInternalMentionsAndTags(rawTitle);
-  const isVi = language?.toLowerCase().startsWith("vi") || /^(chương|hồi)\s*/i.test(clean);
-  const defaultPrefix = isVi ? "CHƯƠNG" : "CHAPTER";
-  const defaultFullPrefix = isVi ? "Chương" : "Chapter";
+  const defaultPrefix = "CHAPTER";
+  const defaultFullPrefix = "Chapter";
 
-  if (/^(prologue|epilogue|interlude|afterword|preface|introduction|mở đầu|lời mở đầu|kết thúc|vĩ thanh)/i.test(clean)) {
+  if (/^(prologue|epilogue|interlude|afterword|preface|introduction)/i.test(clean)) {
     return {
       numberText: "",
       titleText: clean.toUpperCase(),
@@ -191,7 +190,7 @@ export function parseChapterHeading(
   }
 
   // 1. "Chapter 1: The Arrival" or "Chapter 1 - The Arrival"
-  const matchWithSub = clean.match(/^(chapter|chương|hồi|chap|ch\.?)\s*([0-9ivxlcdm]+)\s*[:\-\u2013\u2014]\s*(.+)$/i);
+  const matchWithSub = clean.match(/^(chapter|chap|ch\.?)\s*([0-9ivxlcdm]+)\s*[:\-\u2013\u2014]\s*(.+)$/i);
   if (matchWithSub) {
     const prefix = matchWithSub[1].toUpperCase();
     const num = matchWithSub[2].trim();
@@ -204,7 +203,7 @@ export function parseChapterHeading(
   }
 
   // 2. "Chapter 1" without subtitle
-  const matchOnlyNum = clean.match(/^(chapter|chương|hồi|chap|ch\.?)\s*([0-9ivxlcdm]+)$/i);
+  const matchOnlyNum = clean.match(/^(chapter|chap|ch\.?)\s*([0-9ivxlcdm]+)$/i);
   if (matchOnlyNum) {
     const prefix = matchOnlyNum[1].toUpperCase();
     const num = matchOnlyNum[2].trim();

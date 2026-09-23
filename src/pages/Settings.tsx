@@ -751,16 +751,14 @@ export default function Settings() {
                 </div>
               )}
 
-              {/* Dynamic Plan Display: Chỉ hiển thị gói hiện tại và các gói chưa nâng cấp (không hiện giá tiền) */}
+              {/* Dynamic Plan Display: Shows current active plan and next funnel upgrade tier */}
               <div className={cn(
                 "grid gap-5 pt-2",
-                profile.plan === 'free'
-                  ? "grid-cols-1 md:grid-cols-3"
-                  : profile.plan === 'pro'
-                  ? "grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto"
-                  : "max-w-2xl mx-auto"
+                profile.plan === 'master'
+                  ? "max-w-2xl mx-auto"
+                  : "grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto"
               )}>
-                {/* 1. GÓI REGULAR (Chỉ hiển thị khi người dùng đang ở Regular) */}
+                {/* 1. REGULAR TIER (Displayed when user is on Regular) */}
                 {profile.plan === 'free' && (
                   <div className="p-5 rounded-md border-2 border-[#5D3F32] bg-white space-y-4 transition-all flex flex-col justify-between shadow-xs">
                     <div>
@@ -812,7 +810,7 @@ export default function Settings() {
                   </div>
                 )}
 
-                {/* 2. GÓI PRO (Hiển thị khi user đang là Free [gói nâng cấp] hoặc user đang là Pro [gói hiện tại]) */}
+                {/* 2. PRO TIER (Displayed when user is on Regular [as upgrade] or on Pro [as current plan]) */}
                 {(profile.plan === 'free' || profile.plan === 'pro') && (
                   <div className={cn(
                     "p-5 rounded-md border-2 space-y-4 relative overflow-hidden transition-all flex flex-col justify-between shadow-xs",
@@ -824,7 +822,7 @@ export default function Settings() {
                       <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
                         <div>
                           <span className="text-[10px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">
-                            {profile.plan === 'pro' ? 'Current Tier' : 'Upgrade Available'}
+                            {profile.plan === 'pro' ? 'Current Tier' : 'Next Upgrade Step'}
                           </span>
                           <h4 className="font-serif font-bold text-base text-[#8C503C]">Pro Edition</h4>
                         </div>
@@ -882,75 +880,77 @@ export default function Settings() {
                   </div>
                 )}
 
-                {/* 3. GÓI PREMIUM (Hiển thị như gói nâng cấp nếu đang là Free/Pro, hoặc hiển thị như gói hiện tại nếu đang là Master) */}
-                <div className={cn(
-                  "p-5 rounded-md border-2 space-y-4 relative overflow-hidden transition-all flex flex-col justify-between shadow-xs",
-                  profile.plan === 'master'
-                    ? "border-[#723F2F] bg-[#FDF9F3] ring-1 ring-[#723F2F]/30"
-                    : "border-[#723F2F]/40 bg-[#F9F5EC] hover:border-[#723F2F]"
-                )}>
-                  <div>
-                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
-                      <div>
-                        <span className="text-[10px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-[#723F2F]" />
-                          {profile.plan === 'master' ? 'Highest Tier Active' : 'Highest Tier Upgrade'}
+                {/* 3. PREMIUM TIER (Displayed when user is on Pro [to upgrade to Premium] or on Master/Premium [as current plan]) */}
+                {(profile.plan === 'pro' || profile.plan === 'master') && (
+                  <div className={cn(
+                    "p-5 rounded-md border-2 space-y-4 relative overflow-hidden transition-all flex flex-col justify-between shadow-xs",
+                    profile.plan === 'master'
+                      ? "border-[#723F2F] bg-[#FDF9F3] ring-1 ring-[#723F2F]/30"
+                      : "border-[#723F2F]/40 bg-[#F9F5EC] hover:border-[#723F2F]"
+                  )}>
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-[#723F2F]" />
+                            {profile.plan === 'master' ? 'Highest Tier Active' : 'Next Upgrade Step'}
+                          </span>
+                          <h4 className="font-serif font-bold text-base text-[#723F2F]">Premium Edition</h4>
+                        </div>
+                        <span className={cn(
+                          "text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider",
+                          profile.plan === 'master' ? "text-white bg-[#723F2F]" : "text-[#723F2F] bg-[#723F2F]/10 border border-[#723F2F]/20"
+                        )}>
+                          {profile.plan === 'master' ? 'Active' : 'Upgrade'}
                         </span>
-                        <h4 className="font-serif font-bold text-base text-[#723F2F]">Premium Edition</h4>
                       </div>
-                      <span className={cn(
-                        "text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider",
-                        profile.plan === 'master' ? "text-white bg-[#723F2F]" : "text-[#723F2F] bg-[#723F2F]/10 border border-[#723F2F]/20"
-                      )}>
-                        {profile.plan === 'master' ? 'Active' : 'Premium'}
-                      </span>
+
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                        {profile.plan === 'master' ? 'All Unrestricted Features Active' : 'Full Suite Unlocked'}
+                      </div>
+                      <ul className="space-y-2.5 text-xs font-serif text-stone-800">
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <span><strong>All Pro Unlimited Features</strong> included (unlimited books, art library & EPUB 3)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <span><strong>AI Ghostwriter Hub</strong>: Scene beats, dialogue tension & psychological prompts</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <span><strong>Story Context Bridge</strong>: Instant export into ChatGPT, Claude & Gemini</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <span><strong>Continuity Conflict Engine</strong>: Timeline paradoxes & character trait tracker</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <span><strong>Word Echoes & Prose Cadence</strong> monotony diagnostic scanner</span>
+                        </li>
+                      </ul>
                     </div>
 
-                    <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
-                      {profile.plan === 'master' ? 'All Unrestricted Features Active' : 'Full Suite Unlocked'}
+                    <div className="pt-4 border-t border-stone-200">
+                      {profile.plan === 'master' ? (
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#723F2F] py-2 bg-[#723F2F]/10 rounded-sm">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Full Unrestricted Access Active</span>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => openSalesPage('premium')}
+                          className="w-full text-xs font-bold uppercase tracking-wider text-white bg-[#723F2F] hover:bg-[#5D3326] shadow-sm py-2.5 h-10 rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Upgrade to Premium Edition</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
-                    <ul className="space-y-2.5 text-xs font-serif text-stone-800">
-                      <li className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <span><strong>All Pro Unlimited Features</strong> included (unlimited books, art library & EPUB 3)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <span><strong>AI Ghostwriter Hub</strong>: Scene beats, dialogue tension & psychological prompts</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <span><strong>Story Context Bridge</strong>: Instant export into ChatGPT, Claude & Gemini</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <span><strong>Continuity Conflict Engine</strong>: Timeline paradoxes & character trait tracker</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <span><strong>Word Echoes & Prose Cadence</strong> monotony diagnostic scanner</span>
-                      </li>
-                    </ul>
                   </div>
-
-                  <div className="pt-4 border-t border-stone-200">
-                    {profile.plan === 'master' ? (
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#723F2F] py-2 bg-[#723F2F]/10 rounded-sm">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Full Unrestricted Access Active</span>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => openSalesPage('premium')}
-                        className="w-full text-xs font-bold uppercase tracking-wider text-white bg-[#723F2F] hover:bg-[#5D3326] shadow-sm py-2.5 h-10 rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>Upgrade to Premium Edition</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
