@@ -556,21 +556,21 @@ export default function Dashboard() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="flex-1 h-[100dvh] w-full overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans"
+      className="flex-1 min-h-screen lg:h-[100dvh] w-full overflow-y-auto lg:overflow-hidden bg-[#F4F1EA] flex flex-col relative font-sans"
     >
-      <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-4 lg:py-6 h-full relative z-10 flex flex-col gap-4">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 lg:py-6 min-h-full lg:h-full relative z-10 flex flex-col gap-3 lg:gap-4">
         {/* SECTION 1: THE MANUSCRIPTS */}
-        <section className="shrink-0 flex flex-col gap-3 relative z-30">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fcfaf5] p-4 lg:p-6 rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.2)] border border-[#e5e0d5] relative z-30">
+        <section className="shrink-0 flex flex-col gap-2 sm:gap-3 relative z-30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fcfaf5] p-3.5 sm:p-4 lg:p-6 rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.15)] border border-[#e5e0d5] relative z-30">
             {/* Archive Folder Tab Decoration */}
             <div
-              className="absolute -top-4 left-4 w-32 h-5 bg-[#e5e0d5]"
+              className="absolute -top-3.5 left-4 w-28 sm:w-32 h-4 sm:h-5 bg-[#e5e0d5]"
               style={{ clipPath: "polygon(0 0, 85% 0, 100% 100%, 0 100%)" }}
             />
             <div className="absolute -top-1 left-4 right-4 h-2 bg-[#fcfaf5] rounded-t-sm z-0" />
             
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-6 relative z-30">
-              <h1 className="text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 lg:gap-6 relative z-30">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase">
                 Archive Projects
               </h1>
 
@@ -580,32 +580,32 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setIsStatsOpen((prev) => !prev)}
                   className={cn(
-                    "group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer shadow-xs select-none",
+                    "group flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border transition-all duration-200 cursor-pointer shadow-xs select-none",
                     isStatsOpen
                       ? "bg-[#8c503c] text-[#fcfaf5] border-[#4a3225] shadow-inner"
-                      : "bg-white/70 hover:bg-white text-stone-700 hover:text-[#4a3225] border-[#e5e0d5] hover:border-amber-400/80"
+                      : "bg-white/80 hover:bg-white text-stone-700 hover:text-[#4a3225] border-[#e5e0d5] hover:border-amber-400/80"
                   )}
                   title="Click to view full writing stats & timeline"
                 >
                   <div className={cn(
-                    "w-4 h-4 rounded-full flex items-center justify-center transition-colors",
+                    "w-4 h-4 rounded-full flex items-center justify-center transition-colors shrink-0",
                     isStatsOpen ? "bg-amber-400/30 text-amber-200" : "bg-orange-100 text-orange-600"
                   )}>
                     <Flame className="w-2.5 h-2.5" />
                   </div>
 
-                  <span className="text-[11px] font-bold tracking-tight">
+                  <span className="text-[10px] sm:text-[11px] font-bold tracking-tight whitespace-nowrap">
                     {displayStreak}
                   </span>
 
                   <span className={cn("text-[10px] opacity-40", isStatsOpen ? "text-white" : "text-stone-400")}>•</span>
 
-                  <span className="text-[11px] font-medium opacity-90">
+                  <span className="text-[10px] sm:text-[11px] font-medium opacity-90 whitespace-nowrap">
                     {totalWordsAcrossAll > 1000 ? `${(totalWordsAcrossAll / 1000).toFixed(1)}k W` : `${totalWordsAcrossAll} W`}
                   </span>
 
                   <ChevronDown className={cn(
-                    "w-3 h-3 transition-transform duration-200 ml-0.5",
+                    "w-3 h-3 transition-transform duration-200 ml-0.5 shrink-0",
                     isStatsOpen ? "rotate-180 text-[#fcfaf5]" : "text-stone-400 group-hover:text-stone-700"
                   )} />
                 </button>
@@ -625,7 +625,7 @@ export default function Dashboard() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 4, scale: 0.95 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute left-0 sm:left-auto sm:right-auto top-full mt-2 z-50 bg-[#fcfaf5] border border-[#d8d2c4] rounded-lg shadow-xl p-3.5 w-76 sm:w-84 flex flex-col gap-3"
+                        className="absolute left-0 sm:left-auto top-full mt-2 z-50 bg-[#fcfaf5] border border-[#d8d2c4] rounded-lg shadow-xl p-3.5 w-72 sm:w-84 max-w-[90vw] flex flex-col gap-3"
                       >
                         <div className="flex items-center justify-between pb-2 border-b border-[#e5e0d5]">
                           <span className="text-[11px] font-bold uppercase tracking-wider text-[#4a3225] flex items-center gap-1.5">
@@ -651,7 +651,7 @@ export default function Dashboard() {
                               <Flame className="w-3.5 h-3.5" />
                             </div>
                             <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Streak</p>
-                            <p className="text-[11px] font-bold text-stone-900 mt-0.5">{displayStreak}</p>
+                            <p className="text-[10px] sm:text-[11px] font-bold text-stone-900 mt-0.5 truncate max-w-full">{displayStreak}</p>
                           </div>
 
                           {/* Total Words */}
@@ -660,7 +660,7 @@ export default function Dashboard() {
                               <Type className="w-3.5 h-3.5" />
                             </div>
                             <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Total Words</p>
-                            <p className="text-[11px] font-bold text-stone-900 mt-0.5">{totalWordsAcrossAll.toLocaleString()} W</p>
+                            <p className="text-[10px] sm:text-[11px] font-bold text-stone-900 mt-0.5 truncate max-w-full">{totalWordsAcrossAll.toLocaleString()} W</p>
                           </div>
 
                           {/* Writing Time */}
@@ -669,7 +669,7 @@ export default function Dashboard() {
                               <Coffee className="w-3.5 h-3.5" />
                             </div>
                             <p className="text-[7px] font-bold uppercase tracking-wider text-stone-500">Writing Time</p>
-                            <p className="text-[11px] font-bold text-[#4a3225] mt-0.5">{displayWritingTime}</p>
+                            <p className="text-[10px] sm:text-[11px] font-bold text-[#4a3225] mt-0.5 truncate max-w-full">{displayWritingTime}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -679,43 +679,43 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10">
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10 pt-1 sm:pt-0">
               <button
                 onClick={() => navigate("/settings")}
-                className="flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3.5 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-sm text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer"
                 title={`Author Settings (${currentUser?.email || "Author"})`}
               >
                 <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <SettingsIcon className="w-3.5 h-3.5 text-[#8c503c] shrink-0" />
-                <span className="max-w-[130px] truncate">{currentUser?.displayName || currentUser?.email?.split('@')[0] || "Settings"}</span>
+                <span className="max-w-[85px] sm:max-w-[130px] truncate">{currentUser?.displayName || currentUser?.email?.split('@')[0] || "Settings"}</span>
               </button>
               <button
                 onClick={() => navigate("/create")}
-                className="flex items-center justify-center gap-2 bg-[#8c503c] text-[#fcfaf5] px-4 py-2 rounded-sm text-[10px] lg:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md w-full sm:w-auto border border-[#4a3225] cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 bg-[#8c503c] text-[#fcfaf5] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-sm text-[10px] sm:text-xs font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm hover:shadow-md border border-[#4a3225] cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                New Archive
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">New Archive</span>
               </button>
             </div>
           </div>
 
           {/* ARCHIVAL BOOKSHELF */}
-        <div className="relative pt-12 pb-0 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+        <div className="relative pt-8 sm:pt-12 pb-0 z-10 w-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x">
           {/* Bookshelf container */}
           <div className="relative flex flex-col shrink-0 min-w-full w-max">
             
             {/* Wooden Shelf Base */}
-            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-[#5c371d] to-[#3a2211] rounded-t-[2px] shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] z-0" />
+            <div className="absolute bottom-0 left-0 right-0 h-5 sm:h-6 bg-gradient-to-b from-[#5c371d] to-[#3a2211] rounded-t-[2px] shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] z-0" />
             <div className="absolute -bottom-1 left-0 right-0 h-2 bg-[#26150a] shadow-xl z-0" />
             
-            <div className="flex items-end h-[280px] gap-[2px] lg:gap-[3px] pb-6 relative z-10 px-4 lg:px-8 justify-start">
+            <div className="flex items-end h-[260px] sm:h-[280px] gap-[2px] lg:gap-[3px] pb-5 sm:pb-6 relative z-10 px-3 sm:px-4 lg:px-8 justify-start">
               
               {/* Left Bookend */}
-              <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-r border-[#5c3a21] rounded-t-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] mr-1 z-20" />
+              <div className="shrink-0 w-3 h-16 sm:h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-r border-[#5c3a21] rounded-t-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] mr-1 z-20" />
 
               {savedProjects.length === 0 && (
-                <div className="flex items-center justify-center w-full max-w-md h-[200px] border border-dashed border-[#e5e0d5] rounded-md bg-white/50 mb-4 mx-auto">
-                  <p className="text-stone-500 text-sm font-medium">No archives found. Start a new project.</p>
+                <div className="flex items-center justify-center w-full max-w-md h-[180px] sm:h-[200px] border border-dashed border-[#e5e0d5] rounded-md bg-white/50 mb-4 mx-auto p-4 text-center">
+                  <p className="text-stone-500 text-xs sm:text-sm font-medium">No archives found. Click "+ New Archive" to start your first novel.</p>
                 </div>
               )}
               {savedProjects.map((proj, index) => {
@@ -736,33 +736,89 @@ export default function Dashboard() {
                 const progressRatio = Math.min(1, Math.max(0, (proj.currentWords || 0) / (proj.wordGoal || 75000)));
                 const progressPercent = Math.round(progressRatio * 100);
                 
-                const spineWidth = 40 + Math.floor(progressRatio * 28); 
+                const titleLength = (proj.title || "").trim().length;
+
+                // Natural random variation in book spine thickness (cuốn dày cuốn mỏng ngẫu nhiên):
+                // Uses a deterministic seed from the project ID & index so each book retains its unique physical volume consistently.
+                // Maximum thickness is strictly capped at 60px per user request.
+                const pseudoRandom = (proj.id || "").split("").reduce((acc, char, i) => acc + char.charCodeAt(0) * (i + 1), index * 41);
+                const THICKNESS_VARIATIONS = [36, 52, 40, 60, 44, 56, 38, 58, 46, 50];
+                const baseRandomThickness = THICKNESS_VARIATIONS[Math.abs(pseudoRandom) % THICKNESS_VARIATIONS.length];
+                
+                // Add slight bulk based on manuscript progress (strictly capped at 60px max)
+                const progressBonus = Math.min(3, Math.floor(progressRatio * 3));
+                const spineWidth = Math.min(60, Math.max(36, baseRandomThickness + progressBonus));
                 const spineVariant = index % 4;
                 
                 // Varied but smooth skyline
-                const HEIGHT_MAP = [230, 245, 235, 225, 250];
+                const HEIGHT_MAP = [220, 235, 225, 215, 240];
                 const baseHeight = HEIGHT_MAP[index % HEIGHT_MAP.length];
-                const bookHeight = isSelected ? baseHeight + 20 : baseHeight;
+                const bookHeight = isSelected ? baseHeight + 18 : baseHeight;
                 
                 const isComplete = progressRatio >= 1 && (proj.wordGoal || 0) > 0;
                 
-                const calculateFont = (maxW: number, defaultSize: number, charRatio: number = 0.8) => {
-                  // Calculate required font size based on string length and available width.
-                  const estimatedCharWidthMultiplier = 0.6;
-                  const estimatedWidth = proj.title.length * (defaultSize * estimatedCharWidthMultiplier);
-                  let finalSize = defaultSize;
-                  let tracking = '0.15em';
+                // Dynamic font calculation (size chữ):
+                // Utilizes the full length of the book spine. Scales font size smoothly so the entire title fits.
+                // Truncates with '...' only if an exceptionally long title still exceeds the full spine length at minimum font size.
+                const getSpineTitleConfig = (title: string, availableHeight: number) => {
+                  const len = Math.max(1, title.length);
+                  // Calculate font size that ensures the title fills the available length gracefully:
+                  // For shorter titles (Dune, Hobbit), keep generous size (12px - 13px) with nice tracking.
+                  // For longer titles, scale down gradually so the entire title fits comfortably.
+                  let idealFontSize = Math.min(13, Math.floor((availableHeight / (len * 0.64)) * 2) / 2);
+                  let fontSize = Math.max(8.5, idealFontSize);
                   
-                  if (estimatedWidth > maxW) {
-                     finalSize = Math.max(7, Math.floor((maxW / proj.title.length) / estimatedCharWidthMultiplier));
-                     tracking = '0.05em';
-                  }
-                  
-                  if (finalSize < 8.5) tracking = '0em';
+                  let letterSpacing = '0.08em';
+                  if (fontSize <= 8.5) letterSpacing = '0.02em';
+                  else if (fontSize <= 9.5) letterSpacing = '0.04em';
+                  else if (fontSize <= 11) letterSpacing = '0.06em';
+                  else if (len < 12) letterSpacing = '0.14em'; // Short titles get spacious tracking
 
-                  return { fontSize: `${finalSize}px`, letterSpacing: tracking };
+                  return { fontSize, letterSpacing };
                 };
 
+                // Helper to render book spine title spanning the full vertical length of the spine
+                const renderSpineTitle = (availHeight: number, isParchment = false) => {
+                  const { fontSize, letterSpacing } = getSpineTitleConfig(proj.title, availHeight);
+                  return (
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10"
+                      style={{ width: `${spineWidth}px`, height: `${bookHeight}px` }}
+                    >
+                      <div 
+                        className="flex items-center justify-center"
+                        style={{
+                          width: `${availHeight}px`,
+                          height: `${spineWidth}px`,
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'center center',
+                        }}
+                      >
+                        <span 
+                          className={cn(
+                            "font-serif font-bold uppercase text-center block transition-opacity duration-300 px-1 whitespace-nowrap overflow-hidden text-ellipsis",
+                            isParchment
+                              ? "text-[#2c1b13]"
+                              : isComplete
+                                ? "text-[#e8c678] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                                : "text-[#ebdcd0] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]",
+                            isSelected ? "opacity-75" : "opacity-100"
+                          )}
+                          style={{
+                            width: `${availHeight}px`,
+                            maxWidth: `${availHeight}px`,
+                            fontSize: `${fontSize}px`,
+                            letterSpacing,
+                            lineHeight: 1,
+                          }}
+                          title={proj.title}
+                        >
+                          {proj.title}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                };
                 
                 // Ribbon indicator for most recently updated books
                 const recentProjectIds = [...savedProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0)).slice(0, 2).map(p => p.id);
@@ -776,11 +832,10 @@ export default function Dashboard() {
                       "group relative shrink-0 overflow-hidden cursor-pointer transition-all duration-500 ease-out select-none",
                       "rounded-l-[4px] rounded-r-md shadow-[-4px_0_12px_rgba(0,0,0,0.6)] border-y border-r border-black/40",
                       "hover:-translate-y-2 hover:shadow-[-6px_8px_16px_rgba(0,0,0,0.7)]", 
-                      theme.bg,
-                      ""
+                      theme.bg
                     )}
-                    style={{ width: isSelected ? '260px' : `${spineWidth}px`, height: `${bookHeight}px` }}
-                    title={`${proj.title} • ${proj.genre || 'Unknown Genre'}`}
+                    style={{ width: isSelected ? `${Math.max(260, spineWidth + 195)}px` : `${spineWidth}px`, height: `${bookHeight}px` }}
+                    title={`${proj.title} • ${proj.genre || 'Fantasy Archive'}`}
                   >
                     {/* Texture */}
                     <div
@@ -807,111 +862,82 @@ export default function Dashboard() {
                       {/* Style 0 */}
                       {spineVariant === 0 && (
                         <>
-                          <div className={cn("absolute top-[32px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
-                          <div className={cn("absolute top-[60px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
-                          <div className={cn("absolute bottom-[32px] w-full h-[3.5px] border-t shadow-[0_2px_3px_rgba(0,0,0,0.7)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className={cn(
-                              "font-serif font-bold uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                              isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
-                              isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 70}px`, minWidth: `${baseHeight - 70}px`, textAlign: 'center', ...calculateFont(baseHeight - 70, 12) }}>
-                              {proj.title}
-                            </span>
-                          </div>
+                          <div className={cn("absolute top-[16px] w-full h-[2.5px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.6)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
+                          <div className={cn("absolute top-[22px] w-full h-[2px] border-t", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/40 border-white/10")} />
+                          <div className={cn("absolute bottom-[22px] w-full h-[2px] border-t", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/40 border-white/10")} />
+                          <div className={cn("absolute bottom-[16px] w-full h-[2.5px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.6)]", isComplete ? "bg-[#c49a45] border-[#f4db89]" : "bg-black/60 border-white/15")} />
+                          {renderSpineTitle(baseHeight - 48)}
                         </>
                       )}
 
                       {/* Style 1 */}
                       {spineVariant === 1 && (
                         <>
-                          <div className="absolute top-[28px] bottom-[28px] left-[15%] right-[15%] bg-[#f4ebd8] rounded-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.6)] flex items-center justify-center border border-[#d6c7b0]">
-                            <span className={cn(
-                              "font-serif font-bold text-[#2c1b13] uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300",
-                              isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 64}px`, minWidth: `${baseHeight - 64}px`, textAlign: 'center', ...calculateFont(baseHeight - 64, 10, 0.75) }}>
-                              {proj.title}
-                            </span>
-                          </div>
+                          <div className="absolute top-[16px] bottom-[16px] left-[10%] right-[10%] bg-[#f4ebd8] rounded-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.6)] border border-[#d6c7b0]" />
                           {isComplete && (
                              <div className="absolute bottom-[10px] w-full h-[2px] bg-[#c49a45] border-t border-[#f4db89]" />
                           )}
+                          {renderSpineTitle(baseHeight - 44, true)}
                         </>
                       )}
 
                       {/* Style 2 */}
                       {spineVariant === 2 && (
                         <>
-                          <div className="absolute top-0 w-full h-[45px] bg-black/40 border-b border-black/80" />
-                          <div className="absolute bottom-0 w-full h-[45px] bg-black/40 border-t border-black/80" />
-                          <div className={cn("absolute top-[45px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
-                          <div className={cn("absolute bottom-[45px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className={cn(
-                              "font-serif font-medium uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                              isComplete ? "text-[#e8c678]" : "text-[#ebdcd0]",
-                              isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 100}px`, minWidth: `${baseHeight - 100}px`, textAlign: 'center', ...calculateFont(baseHeight - 100, 12, 0.75) }}>
-                              {proj.title}
-                            </span>
-                          </div>
+                          <div className="absolute top-0 w-full h-[18px] bg-black/40 border-b border-black/80" />
+                          <div className="absolute bottom-0 w-full h-[18px] bg-black/40 border-t border-black/80" />
+                          <div className={cn("absolute top-[18px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
+                          <div className={cn("absolute bottom-[18px] w-full h-[2px] border-t shadow-[0_1px_2px_rgba(0,0,0,0.5)]", isComplete ? "border-[#c49a45]" : "border-white/20")} />
+                          {renderSpineTitle(baseHeight - 46)}
                         </>
                       )}
 
                       {/* Style 3 */}
                       {spineVariant === 3 && (
                         <>
-                          <div className={cn("absolute top-[14px] bottom-[14px] left-[10%] right-[10%] border rounded-[2px]", isComplete ? "border-[#c49a45]" : "border-white/30")} />
-                          <div className={cn("absolute top-[18px] bottom-[18px] left-[20%] right-[20%] border", isComplete ? "border-[#c49a45] opacity-60" : "border-white/20")} />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className={cn(
-                              "font-serif font-bold uppercase transform -rotate-90 origin-center whitespace-nowrap overflow-visible transition-opacity inline-block duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                              isComplete ? "text-[#e8c678]" : "text-white/80",
-                              isSelected ? "opacity-0" : "opacity-100"
-                            )} style={{ width: `${baseHeight - 50}px`, minWidth: `${baseHeight - 50}px`, textAlign: 'center', ...calculateFont(baseHeight - 50, 11) }}>
-                              {proj.title}
-                            </span>
-                          </div>
+                          <div className={cn("absolute top-[12px] bottom-[12px] left-[10%] right-[10%] border rounded-[2px]", isComplete ? "border-[#c49a45]" : "border-white/30")} />
+                          <div className={cn("absolute top-[16px] bottom-[16px] left-[18%] right-[18%] border", isComplete ? "border-[#c49a45] opacity-60" : "border-white/20")} />
+                          {renderSpineTitle(baseHeight - 34)}
                         </>
                       )}
                     </div>
 
                     {/* 1. Cover Plate Content (Accordion expanded slideout) */}
                     <div className={cn(
-                      "absolute top-0 bottom-0 right-0 p-3 sm:p-4 transition-opacity duration-500 z-10 flex items-center justify-end overflow-hidden",
+                      "absolute top-0 bottom-0 right-0 p-2.5 sm:p-3 transition-opacity duration-500 z-10 flex items-center justify-end overflow-hidden",
                       isSelected ? "opacity-100 delay-150" : "opacity-0 pointer-events-none"
                     )} style={{ width: `calc(100% - ${spineWidth}px)` }}>
-                      <div className="w-full h-full bg-[#faf6ed] border border-[#dad1be] shadow-[inset_0_1px_3px_rgba(0,0,0,0.06),_1px_2px_8px_rgba(0,0,0,0.4)] rounded-[3px] p-4 flex flex-col justify-between relative overflow-hidden min-w-[180px]">
+                      <div className="w-full h-full bg-[#faf6ed] border border-[#dad1be] shadow-[inset_0_1px_3px_rgba(0,0,0,0.06),_1px_2px_8px_rgba(0,0,0,0.4)] rounded-[3px] p-3 sm:p-3.5 flex flex-col justify-between relative overflow-hidden min-w-[160px]">
                         
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-14 h-3.5 bg-white/60 border-t border-b border-black/5 rotate-[-0.5deg] pointer-events-none shadow-[0_1px_2px_rgba(0,0,0,0.06)]" />
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-12 sm:w-14 h-3 bg-white/60 border-t border-b border-black/5 rotate-[-0.5deg] pointer-events-none shadow-[0_1px_2px_rgba(0,0,0,0.06)]" />
 
                         {isRecent && (
-                          <div className="absolute top-0 right-3 w-3 h-8 bg-[#b83b3b] shadow-sm flex items-end justify-center rounded-b-sm pointer-events-none z-40">
-                             <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-black/20 opacity-30" />
+                          <div className="absolute top-0 right-2 w-2.5 h-6 bg-[#b83b3b] shadow-sm flex items-end justify-center rounded-b-sm pointer-events-none z-40">
+                             <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-b-[5px] border-l-transparent border-r-transparent border-b-black/20 opacity-30" />
                           </div>
                         )}
 
-                        <div>
-                          <div className="flex items-center justify-between border-b border-[#e8ded0] pb-1.5 mb-2.5 mt-1">
-                            <span className="block text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#8c503c]">
+                        <div className="min-w-0">
+                          <div className="flex items-center justify-between border-b border-[#e8ded0] pb-1 mb-1.5 mt-0.5">
+                            <span className="block text-[8px] sm:text-[9px] font-sans font-bold uppercase tracking-[0.15em] text-[#8c503c]">
                               Case File {index < 9 ? `· 0${index + 1}` : `· ${index + 1}`}
                             </span>
                           </div>
-                          <h2 className="text-[16px] sm:text-[18px] font-serif font-bold leading-[1.25] text-[#2c1b13] line-clamp-3 text-left tracking-tight mb-2">
+                          <h2 className="text-[14px] sm:text-[16px] font-serif font-bold leading-[1.2] text-[#2c1b13] line-clamp-2 text-left tracking-tight mb-1 break-words">
                             {proj.title}
                           </h2>
-                          <div className="w-8 h-[2px] bg-[#8c503c]/40 my-2" />
-                          <p className="text-[11px] font-serif italic text-[#745344] line-clamp-2 text-left leading-snug">
+                          <div className="w-6 h-[1.5px] bg-[#8c503c]/40 my-1" />
+                          <p className="text-[10px] sm:text-[11px] font-serif italic text-[#745344] line-clamp-2 text-left leading-tight break-words">
                             {proj.genre || "Fantasy Archive"}
                           </p>
                         </div>
 
-                        <div className="mt-auto pt-2.5 border-t border-[#ebdcd0]">
-                          <div className="flex items-baseline justify-between mb-1.5 gap-1">
-                            <span className="text-[9px] uppercase font-bold tracking-widest text-[#8c503c]/70 shrink-0">
+                        <div className="mt-auto pt-2 border-t border-[#ebdcd0]">
+                          <div className="flex items-baseline justify-between mb-1 gap-1">
+                            <span className="text-[8px] sm:text-[9px] uppercase font-bold tracking-widest text-[#8c503c]/70 shrink-0">
                               Words
                             </span>
-                            <span className="text-[11px] font-serif font-bold text-[#2c1b13] truncate">
+                            <span className="text-[10px] sm:text-[11px] font-serif font-bold text-[#2c1b13] truncate">
                               {(proj.currentWords || 0).toLocaleString()} {isComplete && "★"}
                             </span>
                           </div>
@@ -923,21 +949,21 @@ export default function Dashboard() {
                           </div>
                           
                           {/* Action Buttons */}
-                          <div className="mt-4 flex items-center justify-between gap-1.5">
+                          <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-1">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setProjectToDelete(proj);
                               }}
-                              className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors border border-transparent hover:border-rose-200 cursor-pointer"
+                              className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors border border-transparent hover:border-rose-200 cursor-pointer shrink-0"
                               title={`Delete "${proj.title}"`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </button>
                             <button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/project/${proj.id}`); }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-white bg-[#2c1b13] hover:bg-[#8c503c] transition-colors px-3 py-1.5 rounded-sm cursor-pointer"
+                              className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white bg-[#2c1b13] hover:bg-[#8c503c] transition-colors px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-sm cursor-pointer whitespace-nowrap"
                             >
                               Open Archive
                             </button>
@@ -951,19 +977,17 @@ export default function Dashboard() {
 
               {/* Right Bookend */}
               {savedProjects.length > 0 && (
-                <div className="shrink-0 w-3 h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-l border-[#2a1a0f] rounded-t-sm shadow-[-4px_0_8px_rgba(0,0,0,0.4)] ml-1 z-20" />
+                <div className="shrink-0 w-3 h-16 sm:h-20 bg-gradient-to-b from-[#4a2e1b] to-[#2a1a0f] border-l border-[#2a1a0f] rounded-t-sm shadow-[-4px_0_8px_rgba(0,0,0,0.4)] ml-1 z-20" />
               )}
             </div>
-            
-            
           </div>
         </div>
         </section>
 
         {/* SECTION 2: STUDIO INTELLIGENCE (Bento Grid) */}
-        <section className="flex-1 flex flex-col min-h-0 pb-2">
-          <div className="mb-2 shrink-0 flex items-center justify-between">
-            <h2 className="text-lg lg:text-xl font-sans font-bold text-[#4a3225] tracking-tight uppercase">
+        <section className="flex-1 flex flex-col min-h-fit lg:min-h-0 pb-4 lg:pb-2">
+          <div className="mb-2 shrink-0 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg lg:text-xl font-sans font-bold text-[#4a3225] tracking-tight uppercase">
               Investigation Board
             </h2>
             {savedProjects.length > 1 && (
@@ -972,7 +996,7 @@ export default function Dashboard() {
                 <select
                   value={selectedProjectId || ""}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="bg-white text-[#4a3225] text-[11px] font-sans font-bold border border-[#e5e0d5] rounded-sm px-2 py-0.5 focus:outline-none focus:border-[#d49a89]"
+                  className="bg-white text-[#4a3225] text-[10px] sm:text-[11px] font-sans font-bold border border-[#e5e0d5] rounded-sm px-2 py-0.5 focus:outline-none focus:border-[#d49a89] max-w-[160px] sm:max-w-xs truncate"
                 >
                   {savedProjects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -984,9 +1008,9 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-fit lg:min-h-0">
             {/* Task Notes (Left Col) */}
-            <div className="lg:col-span-8 bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex flex-col relative overflow-hidden group min-h-0 h-full">
+            <div className="lg:col-span-8 bg-[#fcfaf5] rounded-sm p-3.5 sm:p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.15)] flex flex-col relative overflow-hidden group min-h-[320px] lg:min-h-0 h-full">
               {/* Paper texture overlay */}
               <div 
                 className="absolute inset-0 pointer-events-none opacity-[0.03]" 
@@ -995,17 +1019,17 @@ export default function Dashboard() {
                 }}
               />
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 relative z-10 shrink-0 border-b border-[#e5e0d5] pb-2">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-sans text-base lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3 relative z-10 shrink-0 border-b border-[#e5e0d5] pb-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h3 className="font-sans text-sm sm:text-base lg:text-lg font-bold text-[#4a3225] uppercase tracking-wide">
                     Task Notes
                   </h3>
                   {/* Status filter pills */}
-                  <div className="flex items-center gap-1 bg-[#ede8dc] p-0.5 rounded-sm">
+                  <div className="flex items-center gap-0.5 sm:gap-1 bg-[#ede8dc] p-0.5 rounded-sm">
                     <button
                       onClick={() => setTaskFilter("all")}
                       className={cn(
-                        "px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
+                        "px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
                         taskFilter === "all" ? "bg-[#8c503c] text-white" : "text-[#5d3f32] hover:text-[#8c503c]"
                       )}
                     >
@@ -1014,7 +1038,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => setTaskFilter("pending")}
                       className={cn(
-                        "px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
+                        "px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
                         taskFilter === "pending" ? "bg-[#8c503c] text-white" : "text-[#5d3f32] hover:text-[#8c503c]"
                       )}
                     >
@@ -1023,7 +1047,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => setTaskFilter("completed")}
                       className={cn(
-                        "px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
+                        "px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider rounded-sm transition-colors",
                         taskFilter === "completed" ? "bg-[#8c503c] text-white" : "text-[#5d3f32] hover:text-[#8c503c]"
                       )}
                     >
@@ -1035,10 +1059,10 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsAddingTask(!isAddingTask)}
-                    className="flex items-center gap-1.5 bg-[#8c503c] text-white px-2.5 py-1 rounded-sm text-[9px] lg:text-[10px] font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 bg-[#8c503c] text-white px-2.5 py-1 rounded-sm text-[8px] sm:text-[9px] lg:text-[10px] font-bold tracking-widest uppercase hover:bg-[#b8785e] transition-colors shadow-sm cursor-pointer"
                   >
                     {isAddingTask ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                    {isAddingTask ? "Cancel" : "Add Task"}
+                    <span>{isAddingTask ? "Cancel" : "Add Task"}</span>
                   </button>
                 </div>
               </div>
@@ -1062,9 +1086,9 @@ export default function Dashboard() {
                       autoFocus
                     />
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {/* Type Picker */}
-                        <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-stone-500">
+                        <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-stone-500">
                           <span>Type:</span>
                           {(['writing', 'editing', 'worldbuilding', 'research'] as const).map((t) => (
                             <button
@@ -1072,7 +1096,7 @@ export default function Dashboard() {
                               type="button"
                               onClick={() => setNewTaskType(t)}
                               className={cn(
-                                "px-1.5 py-0.5 rounded-sm border transition-colors",
+                                "px-1.5 py-0.5 rounded-sm border transition-colors cursor-pointer",
                                 newTaskType === t
                                   ? "bg-[#8c503c] text-white border-[#8c503c]"
                                   : "bg-white text-stone-600 border-[#d8d2c4] hover:border-stone-400"
@@ -1084,7 +1108,7 @@ export default function Dashboard() {
                         </div>
 
                         {/* Urgency Picker */}
-                        <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-stone-500 ml-2">
+                        <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-stone-500">
                           <span>Urgency:</span>
                           {(['low', 'medium', 'high'] as const).map((u) => (
                             <button
@@ -1092,7 +1116,7 @@ export default function Dashboard() {
                               type="button"
                               onClick={() => setNewTaskUrgency(u)}
                               className={cn(
-                                "px-1.5 py-0.5 rounded-sm border transition-colors",
+                                "px-1.5 py-0.5 rounded-sm border transition-colors cursor-pointer",
                                 newTaskUrgency === u
                                   ? u === 'high'
                                     ? "bg-red-700 text-white border-red-700"
@@ -1109,7 +1133,7 @@ export default function Dashboard() {
                       <button
                         type="submit"
                         disabled={!newTaskTitle.trim()}
-                        className="bg-[#4a3225] hover:bg-[#8c503c] disabled:opacity-40 text-white text-[9px] font-bold tracking-widest uppercase px-3 py-1 rounded-sm transition-colors"
+                        className="bg-[#4a3225] hover:bg-[#8c503c] disabled:opacity-40 text-white text-[8px] sm:text-[9px] font-bold tracking-widest uppercase px-3 py-1 rounded-sm transition-colors cursor-pointer"
                       >
                         Save Task
                       </button>
@@ -1121,10 +1145,10 @@ export default function Dashboard() {
               {/* Tasks List */}
               <div className="flex-1 overflow-y-auto pr-1 lg:pr-2 custom-scrollbar relative z-10 min-h-0">
                 {filteredTasks.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-stone-400">
-                    <CheckCircle2 className="w-8 h-8 text-stone-300 mb-2 stroke-[1.5]" />
-                    <p className="font-serif text-sm font-medium text-stone-600">No tasks found</p>
-                    <p className="text-xs text-stone-400 mt-0.5">Click "+ Add Task" to set your writing priorities.</p>
+                  <div className="h-full min-h-[140px] flex flex-col items-center justify-center text-center p-4 sm:p-6 text-stone-400">
+                    <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8 text-stone-300 mb-2 stroke-[1.5]" />
+                    <p className="font-serif text-xs sm:text-sm font-medium text-stone-600">No tasks found</p>
+                    <p className="text-[11px] text-stone-400 mt-0.5">Click "+ Add Task" to set your writing priorities.</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5 lg:space-y-2">
@@ -1135,7 +1159,7 @@ export default function Dashboard() {
                           "group flex items-center gap-2 lg:gap-3 p-2 lg:p-2.5 rounded-sm border transition-all cursor-pointer relative",
                           task.completed
                             ? "bg-[#f4efe6]/50 border-transparent opacity-60"
-                            : "bg-[#fcfaf5] border-[#e5e0d5] hover:border-[#d49a89] hover:shadow-sm"
+                            : "bg-[#fcfaf5] border-[#e5e0d5] hover:border-[#d49a89] hover:shadow-xs"
                         )}
                         onClick={() => handleToggleTask(task.id)}
                       >
@@ -1144,23 +1168,23 @@ export default function Dashboard() {
                         )}
                         <button
                           type="button"
-                          className="shrink-0 focus:outline-none ml-1"
+                          className="shrink-0 focus:outline-none ml-1 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleTask(task.id);
                           }}
                         >
                           {task.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-[#8c503c]" />
+                            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#8c503c]" />
                           ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-[#d49a89] hover:border-[#8c503c] transition-colors" />
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-[#d49a89] hover:border-[#8c503c] transition-colors" />
                           )}
                         </button>
 
                         <div className="flex-1 min-w-0 flex items-center justify-between gap-2 lg:gap-4">
                           <p
                             className={cn(
-                              "text-xs lg:text-sm font-serif transition-colors truncate",
+                              "text-xs lg:text-sm font-serif transition-colors truncate break-words",
                               task.completed
                                 ? "text-stone-400 line-through"
                                 : "text-[#4a3225] font-medium"
@@ -1169,16 +1193,16 @@ export default function Dashboard() {
                             {task.title}
                           </p>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                             {task.urgency === "high" && !task.completed && (
-                              <span className="flex items-center gap-0.5 text-[8px] lg:text-[9px] uppercase tracking-widest font-bold text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded-sm" title="High Priority">
+                              <span className="flex items-center gap-0.5 text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-widest font-bold text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded-sm" title="High Priority">
                                 <AlertCircle className="w-2.5 h-2.5" />
                                 High
                               </span>
                             )}
                             <span
                               className={cn(
-                                "text-[8px] lg:text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded-sm border",
+                                "text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-widest font-bold px-1 sm:px-1.5 py-0.5 rounded-sm border",
                                 task.type === "writing"
                                   ? "bg-[#f4efe6] text-[#8c503c] border-[#e5e0d5]"
                                   : task.type === "editing"
@@ -1195,7 +1219,7 @@ export default function Dashboard() {
                             <button
                               type="button"
                               onClick={(e) => handleDeleteTask(task.id, e)}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 text-stone-400 hover:text-red-700 rounded-sm transition-all ml-1"
+                              className="opacity-60 sm:opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 text-stone-400 hover:text-red-700 rounded-sm transition-all ml-0.5 cursor-pointer"
                               title="Delete task"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -1210,11 +1234,11 @@ export default function Dashboard() {
             </div>
 
             {/* Right Column (Stacked on small, flex col on large) */}
-            <div className="lg:col-span-4 flex flex-row lg:flex-col gap-3 lg:gap-4 min-h-0 h-full">
+            <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3 lg:gap-4 min-h-fit lg:min-h-0 h-full">
               {/* Quick Jump (Vintage Journal style) */}
               {activeProject ? (
                 <div
-                  className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32]"
+                  className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-3.5 sm:p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32] min-h-[130px]"
                   onClick={() => {
                     const targetScene = activeProjectData?.lastActiveSceneId;
                     navigate(`/project/${activeProject.id}/workspace/studio${targetScene ? `?scene=${targetScene}` : ''}`);
@@ -1228,24 +1252,24 @@ export default function Dashboard() {
                     }}
                   />
                   {/* Leather binding */}
-                  <div className="absolute left-0 top-0 bottom-0 w-3 bg-black/50 border-r border-[#5d3f32]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-2.5 sm:w-3 bg-black/50 border-r border-[#5d3f32]" />
                   
                   <div className="absolute top-0 right-0 p-3 lg:p-4 opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700 text-[#d49a89]">
                     <PenTool className="w-10 h-10 lg:w-16 lg:h-16" />
                   </div>
                   <div className="relative z-10 ml-2">
-                    <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-[#d49a89]/70 mb-1">
+                    <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-[#d49a89]/70 mb-0.5">
                       Resume Drafting
                     </p>
-                    <h3 className="font-serif text-sm lg:text-lg font-bold line-clamp-1 text-[#fcfaf5]">
+                    <h3 className="font-serif text-sm lg:text-lg font-bold line-clamp-1 text-[#fcfaf5] break-words">
                       {activeProject.title}
                     </h3>
-                    <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-0.5 lg:mt-1 font-serif italic truncate">
+                    <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-0.5 font-serif italic truncate">
                       {activeProject.genre} • {resumeStats.currentSceneTitle} • Updated {resumeStats.timeAgo}
                     </p>
                   </div>
-                  <div className="relative z-10 mt-2 lg:mt-4 flex items-center justify-between ml-2">
-                    <div className="flex items-center gap-1 lg:gap-1.5 bg-[#fcfaf5]/10 px-1.5 py-1 lg:px-2 lg:py-1 rounded-sm text-[8px] lg:text-[10px] font-bold tracking-widest uppercase border border-[#fcfaf5]/20">
+                  <div className="relative z-10 mt-3 lg:mt-4 flex items-center justify-between ml-2">
+                    <div className="flex items-center gap-1 lg:gap-1.5 bg-[#fcfaf5]/10 px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-sm text-[8px] lg:text-[10px] font-bold tracking-widest uppercase border border-[#fcfaf5]/20">
                       <TrendingUp className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-[#d49a89]" />
                       {(activeProject.currentWords || 0).toLocaleString()} words
                     </div>
@@ -1256,22 +1280,22 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div
-                  className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32]"
+                  className="bg-[#2a1a14] text-[#fcfaf5] rounded-sm p-3.5 sm:p-4 lg:p-5 shadow-[4px_8px_16px_rgba(0,0,0,0.3)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform shrink-0 flex-1 lg:flex-none border border-[#5d3f32] min-h-[130px]"
                   onClick={() => navigate('/create')}
                 >
                   <div className="relative z-10">
-                    <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-[#d49a89]/70 mb-1">
+                    <p className="text-[7px] lg:text-[9px] uppercase tracking-widest font-bold text-[#d49a89]/70 mb-0.5">
                       Start Writing
                     </p>
                     <h3 className="font-serif text-sm lg:text-lg font-bold line-clamp-1 text-[#fcfaf5]">
                       Create New Archive
                     </h3>
-                    <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-1 font-serif italic">
-                      Begin your novel or story
+                    <p className="text-[#fcfaf5]/60 text-[10px] lg:text-xs mt-0.5 font-serif italic">
+                      Begin your fantasy novel or story
                     </p>
                   </div>
-                  <div className="relative z-10 mt-4 flex items-center justify-end">
-                    <div className="w-8 h-8 rounded-sm bg-[#8c503c] flex items-center justify-center text-white">
+                  <div className="relative z-10 mt-3 flex items-center justify-end">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm bg-[#8c503c] flex items-center justify-center text-white">
                       <Plus className="w-4 h-4" />
                     </div>
                   </div>
@@ -1280,30 +1304,30 @@ export default function Dashboard() {
 
               {/* World Radar (Polaroid style mini grid - clickable to expand) */}
               <div 
-                className="bg-[#fcfaf5] rounded-sm p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.2)] flex-1 flex flex-col min-h-0 relative group/card cursor-pointer hover:border-[#8c503c]/40 hover:shadow-[2px_6px_16px_rgba(0,0,0,0.25)] transition-all"
+                className="bg-[#fcfaf5] rounded-sm p-3.5 sm:p-4 lg:p-5 border border-[#e5e0d5] shadow-[2px_4px_12px_rgba(0,0,0,0.15)] flex-1 flex flex-col min-h-[180px] lg:min-h-0 relative group/card cursor-pointer hover:border-[#8c503c]/40 hover:shadow-[2px_6px_16px_rgba(0,0,0,0.2)] transition-all"
                 onClick={() => setIsRadarExpanded(true)}
                 title="Click to expand full World Radar"
               >
-                <div className="flex justify-between items-start mb-2 lg:mb-3 shrink-0 border-b border-[#e5e0d5] pb-2 mt-1">
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-sans text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide group-hover/card:text-[#8c503c] transition-colors">
+                <div className="flex justify-between items-start mb-2 lg:mb-3 shrink-0 border-b border-[#e5e0d5] pb-2 mt-0.5">
+                  <div className="min-w-0 pr-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3 className="font-sans text-xs sm:text-sm lg:text-base font-bold text-[#4a3225] uppercase tracking-wide group-hover/card:text-[#8c503c] transition-colors">
                         World Radar
                       </h3>
-                      <span className="text-[8px] lg:text-[9px] bg-[#8c503c]/10 text-[#8c503c] font-sans font-bold px-1.5 py-0.5 rounded-sm">
+                      <span className="text-[8px] lg:text-[9px] bg-[#8c503c]/10 text-[#8c503c] font-sans font-bold px-1.5 py-0.5 rounded-sm shrink-0">
                         {worldRadarStats.totalMentions} Mentions
                       </span>
                     </div>
                     {savedProjects.length > 1 ? (
                       <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                        <span className="text-[8px] text-stone-500 font-serif">Book:</span>
+                        <span className="text-[8px] text-stone-500 font-serif shrink-0">Book:</span>
                         <select
                           value={selectedProjectId || activeProject?.id || ""}
                           onChange={(e) => {
                             e.stopPropagation();
                             setSelectedProjectId(e.target.value);
                           }}
-                          className="text-[9px] text-[#8c503c] font-bold font-serif bg-white/80 border border-[#e5e0d5] rounded-xs px-1 py-0.2 focus:outline-none max-w-[130px] truncate"
+                          className="text-[8px] sm:text-[9px] text-[#8c503c] font-bold font-serif bg-white/80 border border-[#e5e0d5] rounded-xs px-1 py-0.2 focus:outline-none max-w-[110px] sm:max-w-[130px] truncate"
                           title="Switch active book for World Radar"
                         >
                           {savedProjects.map((p) => (
@@ -1314,16 +1338,16 @@ export default function Dashboard() {
                         </select>
                       </div>
                     ) : activeProject ? (
-                      <p className="text-[8px] lg:text-[9px] text-[#8c503c] font-medium truncate max-w-[140px]" title={activeProject.title}>
+                      <p className="text-[8px] lg:text-[9px] text-[#8c503c] font-medium truncate max-w-[120px] sm:max-w-[140px]" title={activeProject.title}>
                         Book: {activeProject.title}
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={handleManualScan}
-                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors"
+                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors cursor-pointer"
                       title="Re-scan manuscript text now"
                     >
                       <RefreshCw className={cn("w-3.5 h-3.5", isScanning && "animate-spin text-[#8c503c]")} />
@@ -1334,7 +1358,7 @@ export default function Dashboard() {
                         e.stopPropagation();
                         setIsRadarExpanded(true);
                       }}
-                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider"
+                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider cursor-pointer"
                       title="Expand World Radar to full screen"
                     >
                       <span className="hidden sm:inline">Expand</span>
@@ -1345,13 +1369,13 @@ export default function Dashboard() {
 
                 {/* Quick Entity Type Tabs in Mini Card */}
                 <div 
-                  className="flex items-center gap-1 mb-2 pb-1 text-[9px] font-bold uppercase tracking-wider border-b border-[#e5e0d5]/60"
+                  className="flex items-center gap-1 mb-2 pb-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border-b border-[#e5e0d5]/60 flex-wrap"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
                     onClick={() => setMiniRadarType('all')}
                     className={cn(
-                      "px-1.5 py-0.5 rounded-xs transition-colors",
+                      "px-1.5 py-0.5 rounded-xs transition-colors cursor-pointer",
                       miniRadarType === 'all'
                         ? "bg-[#8c503c] text-white"
                         : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
@@ -1362,7 +1386,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => setMiniRadarType('characters')}
                     className={cn(
-                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5",
+                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5 cursor-pointer",
                       miniRadarType === 'characters'
                         ? "bg-[#8c503c] text-white"
                         : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
@@ -1374,7 +1398,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => setMiniRadarType('locations')}
                     className={cn(
-                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5",
+                      "px-1.5 py-0.5 rounded-xs transition-colors flex items-center gap-0.5 cursor-pointer",
                       miniRadarType === 'locations'
                         ? "bg-[#8c503c] text-white"
                         : "text-stone-500 hover:text-stone-800 hover:bg-[#e5e0d5]/50"
@@ -1474,7 +1498,7 @@ export default function Dashboard() {
 
                 {/* Card footer prompt */}
                 {worldRadarStats.sortedMentions.length > 0 && (
-                  <div className="mt-2.5 pt-2.5 border-t border-[#e5e0d5] flex items-center justify-between text-[9px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-2.5 py-1.5 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
+                  <div className="mt-2.5 pt-2 border-t border-[#e5e0d5] flex items-center justify-between text-[8px] sm:text-[9px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
                     <span>View all {worldRadarStats.sortedMentions.length} entities</span>
                     <Maximize2 className="w-3 h-3 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
                   </div>
