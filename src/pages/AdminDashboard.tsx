@@ -22,6 +22,12 @@ import {
   Check,
   X,
   Lock,
+  Server,
+  Code,
+  Key,
+  Globe,
+  ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import {
@@ -41,6 +47,7 @@ export default function AdminDashboard() {
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<"crm" | "ipn">("crm");
+  const [ipnSubTab, setIpnSubTab] = useState<"simulator" | "production">("simulator");
 
   // Data states from Firestore
   const [users, setUsers] = useState<RegisteredUser[]>([]);
@@ -68,13 +75,53 @@ export default function AdminDashboard() {
   const [ipnTxnId, setIpnTxnId] = useState("");
   const [isSubmittingIpn, setIsSubmittingIpn] = useState(false);
 
-  // Copied UID helper
+  // Copied helpers
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
 
   const handleCopyUid = (uid: string) => {
     navigator.clipboard.writeText(uid);
     setCopiedUid(uid);
     setTimeout(() => setCopiedUid(null), 2000);
+  };
+
+  const handleCopyWebhookUrl = () => {
+    const url = `${window.location.origin}/api/ipn/warriorplus`;
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2500);
+  };
+
+  const sampleWebhookCode = `// Production WarriorPlus IPN Webhook Receiver (Node.js / Express or Cloud Function)
+import express from 'express';
+import { handleWarriorPlusWebhook } from '@/lib/warriorplusIpnHandler';
+
+const app = express();
+// WarriorPlus sends application/x-www-form-urlencoded payloads
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/api/ipn/warriorplus', async (req, res) => {
+  try {
+    const expectedSecretKey = process.env.WARRIORPLUS_SECURITY_KEY || 'YOUR_WPLUS_SECRET_KEY';
+    
+    // Automatically parses WP_ACTION, WP_BUYER_EMAIL, WP_ITEM_NAME, WP_TXNID
+    // and unlocks the corresponding Tier (FrontEnd, OTO1, OTO2) directly in Firestore!
+    const result = await handleWarriorPlusWebhook(req.body, expectedSecretKey);
+    
+    console.log('[WarriorPlus IPN Success]', result.message);
+    // Respond HTTP 200 OK so WarriorPlus knows delivery succeeded
+    return res.status(200).send('OK');
+  } catch (error) {
+    console.error('[WarriorPlus IPN Error]', error.message);
+    return res.status(400).send('IPN Verification Failed: ' + error.message);
+  }
+});`;
+
+  const handleCopySnippet = () => {
+    navigator.clipboard.writeText(sampleWebhookCode);
+    setCopiedSnippet(true);
+    setTimeout(() => setCopiedSnippet(false), 2500);
   };
 
   // Load real Firestore data
@@ -446,7 +493,7 @@ export default function AdminDashboard() {
             )}
           >
             <Zap className="w-4 h-4" />
-            <span>WarriorPlus IPN (License Fulfillment)</span>
+            <span>WarriorPlus IPN (Fulfillment Engine)</span>
             {pendingPurchases.length > 0 && (
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
                 {pendingPurchases.length}
@@ -726,186 +773,351 @@ export default function AdminDashboard() {
         {/* TAB 2: WARRIORPLUS IPN */}
         {activeTab === "ipn" && (
           <div className="space-y-6">
-            {/* IPN Simulation Test Tool */}
-            <div className="bg-white p-5 rounded-xl border border-[#E3DDD1] shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#8C503C]/10 text-[#8C503C] flex items-center justify-center font-bold">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-[#2A1B14] uppercase tracking-wide">
-                      WarriorPlus IPN Webhook Simulator
-                    </h2>
-                    <p className="text-[11px] text-stone-500 font-serif">
-                      Simulate Instant Payment Notification webhooks from WarriorPlus to test automated license tier fulfillment
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* Sub-navigation Switcher */}
+            <div className="flex items-center gap-2 p-1.5 bg-[#EAE4D7] rounded-xl w-fit border border-[#DCD5C9]">
+              <button
+                type="button"
+                onClick={() => setIpnSubTab("simulator")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+                  ipnSubTab === "simulator"
+                    ? "bg-white text-[#8C503C] shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Live Sandbox Simulator</span>
+              </button>
 
-              <form onSubmit={handleSimulateIpn} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Buyer Email */}
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                    Buyer Invoice Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="customer@example.com"
-                    value={ipnEmail}
-                    onChange={(e) => setIpnEmail(e.target.value)}
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none"
-                  />
-                </div>
-
-                {/* Product Item */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                    Product Item *
-                  </label>
-                  <select
-                    value={ipnProduct}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setIpnProduct(val);
-                      if (val.includes("OTO2")) {
-                        setIpnTier("OTO2");
-                      } else if (val.includes("OTO1")) {
-                        setIpnTier("OTO1");
-                      } else {
-                        setIpnTier("FrontEnd");
-                      }
-                    }}
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-medium cursor-pointer"
-                  >
-                    <option value="FrontEnd: Ocean Novel Studio ($27)">FrontEnd: Ocean Novel Studio ($27)</option>
-                    <option value="OTO1: Unlimited Studio Edition ($47)">OTO1: Unlimited Studio Edition ($47)</option>
-                    <option value="OTO2: AI Ghostwriter & Lore Generator ($67)">OTO2: AI Ghostwriter & Lore ($67)</option>
-                  </select>
-                </div>
-
-                {/* Tier Selection */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                    License Tier
-                  </label>
-                  <select
-                    value={ipnTier}
-                    onChange={(e) => setIpnTier(e.target.value as any)}
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono cursor-pointer"
-                  >
-                    <option value="FrontEnd">FrontEnd</option>
-                    <option value="OTO1">OTO1 (Unlimited)</option>
-                    <option value="OTO2">OTO2 (AI Ghostwriter)</option>
-                    <option value="Free">Free</option>
-                  </select>
-                </div>
-
-                {/* Transaction ID */}
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                    Transaction ID (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. WP-TXN-88410"
-                    value={ipnTxnId}
-                    onChange={(e) => setIpnTxnId(e.target.value)}
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono"
-                  />
-                </div>
-
-                {/* Submit Action */}
-                <div className="sm:col-span-2 flex items-end">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingIpn}
-                    className="w-full h-10 bg-[#8C503C] hover:bg-[#733D2D] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingIpn ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Simulate IPN Webhook</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+              <button
+                type="button"
+                onClick={() => setIpnSubTab("production")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+                  ipnSubTab === "production"
+                    ? "bg-white text-[#8C503C] shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                <Server className="w-3.5 h-3.5" />
+                <span>Production Webhook Specs & Setup</span>
+              </button>
             </div>
 
-            {/* Pending Purchases Ledger Table */}
-            <div className="bg-white rounded-xl border border-[#E3DDD1] shadow-xs overflow-hidden space-y-3 p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-[#2A1B14] uppercase tracking-wide flex items-center gap-2">
-                    <span>Pending Purchases (Unmatched Sales Ledger)</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
-                      {pendingPurchases.length} Pending
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-stone-500 font-serif mt-0.5">
-                    Orders paid through WarriorPlus where the buyer hasn't signed up yet. As soon as the customer registers using their purchase email, their license tier will automatically activate.
-                  </p>
-                </div>
-              </div>
+            {/* SUB-VIEW 1: SIMULATOR & PENDING LEDGER */}
+            {ipnSubTab === "simulator" && (
+              <div className="space-y-6">
+                {/* IPN Simulation Test Tool */}
+                <div className="bg-white p-5 rounded-xl border border-[#E3DDD1] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#8C503C]/10 text-[#8C503C] flex items-center justify-center font-bold">
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-bold text-[#2A1B14] uppercase tracking-wide">
+                          WarriorPlus IPN Webhook Simulator (Sandbox)
+                        </h2>
+                        <p className="text-[11px] text-stone-500 font-serif">
+                          Simulates real Instant Payment Notification webhooks from WarriorPlus to test automated license tier fulfillment directly in Firestore
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#F8F5EE] border-b border-[#E3DDD1] text-stone-600 uppercase font-mono tracking-wider text-[10px]">
-                      <th className="py-3 px-4">Buyer Email</th>
-                      <th className="py-3 px-4">Product Item</th>
-                      <th className="py-3 px-4">Amount</th>
-                      <th className="py-3 px-4">Tier</th>
-                      <th className="py-3 px-4">Date Received</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EFEAE1]">
-                    {pendingPurchases.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-stone-400 font-serif">
-                          No pending purchases. All WarriorPlus orders have been fulfilled!
-                        </td>
-                      </tr>
-                    ) : (
-                      pendingPurchases.map((item) => (
-                        <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
-                          <td className="py-3 px-4 font-bold text-stone-900 font-mono">
-                            {item.buyerEmail}
-                          </td>
-                          <td className="py-3 px-4 text-stone-700">{item.productItem}</td>
-                          <td className="py-3 px-4 font-mono font-bold text-emerald-700">
-                            {item.amount || "$27.00"}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded bg-stone-100 font-mono text-[10px] uppercase font-bold text-stone-700 border border-stone-200">
-                              {item.tier}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-stone-500 font-serif">
-                            {new Date(item.dateReceived).toLocaleString()}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => handleDeletePendingPurchase(item.id, item.buyerEmail)}
-                              title="Delete / Refund record"
-                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md text-[11px] font-bold transition-colors cursor-pointer"
-                            >
-                              Refund / Remove
-                            </button>
-                          </td>
+                  <form onSubmit={handleSimulateIpn} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Buyer Email */}
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        Buyer Invoice Email *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="customer@example.com"
+                        value={ipnEmail}
+                        onChange={(e) => setIpnEmail(e.target.value)}
+                        className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none"
+                      />
+                    </div>
+
+                    {/* Product Item */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        Product Item *
+                      </label>
+                      <select
+                        value={ipnProduct}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setIpnProduct(val);
+                          if (val.includes("OTO2")) {
+                            setIpnTier("OTO2");
+                          } else if (val.includes("OTO1")) {
+                            setIpnTier("OTO1");
+                          } else {
+                            setIpnTier("FrontEnd");
+                          }
+                        }}
+                        className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="FrontEnd: Ocean Novel Studio ($27)">FrontEnd: Ocean Novel Studio ($27)</option>
+                        <option value="OTO1: Unlimited Studio Edition ($47)">OTO1: Unlimited Studio Edition ($47)</option>
+                        <option value="OTO2: AI Ghostwriter & Lore Generator ($67)">OTO2: AI Ghostwriter & Lore ($67)</option>
+                      </select>
+                    </div>
+
+                    {/* Tier Selection */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        License Tier
+                      </label>
+                      <select
+                        value={ipnTier}
+                        onChange={(e) => setIpnTier(e.target.value as any)}
+                        className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono cursor-pointer"
+                      >
+                        <option value="FrontEnd">FrontEnd</option>
+                        <option value="OTO1">OTO1 (Unlimited)</option>
+                        <option value="OTO2">OTO2 (AI Ghostwriter)</option>
+                        <option value="Free">Free</option>
+                      </select>
+                    </div>
+
+                    {/* Transaction ID */}
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        Transaction ID (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. WP-TXN-88410"
+                        value={ipnTxnId}
+                        onChange={(e) => setIpnTxnId(e.target.value)}
+                        className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono"
+                      />
+                    </div>
+
+                    {/* Submit Action */}
+                    <div className="sm:col-span-2 flex items-end">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingIpn}
+                        className="w-full h-10 bg-[#8C503C] hover:bg-[#733D2D] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingIpn ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Dispatch Test IPN Webhook</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Pending Purchases Ledger Table */}
+                <div className="bg-white rounded-xl border border-[#E3DDD1] shadow-xs overflow-hidden space-y-3 p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#2A1B14] uppercase tracking-wide flex items-center gap-2">
+                        <span>Pending Purchases (Unmatched Sales Ledger)</span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
+                          {pendingPurchases.length} Pending
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-stone-500 font-serif mt-0.5">
+                        Orders paid through WarriorPlus where the buyer hasn't signed up yet. As soon as the customer registers using their purchase email, their license tier will automatically activate.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F8F5EE] border-b border-[#E3DDD1] text-stone-600 uppercase font-mono tracking-wider text-[10px]">
+                          <th className="py-3 px-4">Buyer Email</th>
+                          <th className="py-3 px-4">Product Item</th>
+                          <th className="py-3 px-4">Amount</th>
+                          <th className="py-3 px-4">Tier</th>
+                          <th className="py-3 px-4">Date Received</th>
+                          <th className="py-3 px-4 text-right">Action</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFEAE1]">
+                        {pendingPurchases.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-stone-400 font-serif">
+                              No pending purchases. All WarriorPlus orders have been fulfilled!
+                            </td>
+                          </tr>
+                        ) : (
+                          pendingPurchases.map((item) => (
+                            <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
+                              <td className="py-3 px-4 font-bold text-stone-900 font-mono">
+                                {item.buyerEmail}
+                              </td>
+                              <td className="py-3 px-4 text-stone-700">{item.productItem}</td>
+                              <td className="py-3 px-4 font-mono font-bold text-emerald-700">
+                                {item.amount || "$27.00"}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 rounded bg-stone-100 font-mono text-[10px] uppercase font-bold text-stone-700 border border-stone-200">
+                                  {item.tier}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-stone-500 font-serif">
+                                {new Date(item.dateReceived).toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button
+                                  onClick={() => handleDeletePendingPurchase(item.id, item.buyerEmail)}
+                                  title="Delete / Refund record"
+                                  className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md text-[11px] font-bold transition-colors cursor-pointer"
+                                >
+                                  Refund / Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SUB-VIEW 2: PRODUCTION SETUP & SPECIFICATION */}
+            {ipnSubTab === "production" && (
+              <div className="space-y-6">
+                {/* Endpoint Information Card */}
+                <div className="bg-white p-6 rounded-2xl border border-[#E3DDD1] shadow-xs space-y-4">
+                  <div className="flex items-center gap-3 border-b border-stone-100 pb-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#8C503C]/10 text-[#8C503C] flex items-center justify-center shrink-0">
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif font-bold text-base text-stone-900">
+                        WarriorPlus Live Webhook URL & Configuration
+                      </h3>
+                      <p className="text-xs text-stone-500 font-serif">
+                        Enter this Webhook URL into your WarriorPlus Vendor Dashboard under <strong className="text-stone-800">Products &gt; Advanced Integration &gt; IPN URL</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                      Your Live IPN Webhook URL
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${window.location.origin}/api/ipn/warriorplus`}
+                        className="flex-1 h-11 px-3.5 bg-[#FAF8F5] border border-[#DCD5C9] rounded-xl font-mono text-xs text-stone-800 outline-none select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyWebhookUrl}
+                        className="h-11 px-4 bg-[#8C503C] hover:bg-[#733D2D] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer shrink-0"
+                      >
+                        {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <span>{copiedUrl ? "Copied" : "Copy URL"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E3DDD1]">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500">HTTP Method</div>
+                      <div className="font-mono font-bold text-xs text-stone-900 mt-0.5">POST (Form Urlencoded)</div>
+                    </div>
+                    <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E3DDD1]">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Security Verification</div>
+                      <div className="font-mono font-bold text-xs text-stone-900 mt-0.5">WP_SECURITYKEY</div>
+                    </div>
+                    <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E3DDD1]">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Auto Reconcile</div>
+                      <div className="font-mono font-bold text-xs text-emerald-700 mt-0.5">Active (Instant)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Mapping Reference Table */}
+                <div className="bg-white p-6 rounded-2xl border border-[#E3DDD1] shadow-xs space-y-4">
+                  <div className="flex items-center gap-2.5 border-b border-stone-100 pb-3">
+                    <ShieldCheck className="w-5 h-5 text-[#8C503C]" />
+                    <h3 className="font-serif font-bold text-sm text-stone-900 uppercase tracking-wide">
+                      WarriorPlus Product Mapping Matrix
+                    </h3>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F8F5EE] border-b border-[#E3DDD1] text-stone-600 font-mono uppercase text-[10px]">
+                          <th className="py-2.5 px-3">Offer Tier</th>
+                          <th className="py-2.5 px-3">Product Name in W+</th>
+                          <th className="py-2.5 px-3">Suggested Price</th>
+                          <th className="py-2.5 px-3">Unlocked Features</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFEAE1]">
+                        <tr>
+                          <td className="py-3 px-3 font-mono font-bold text-amber-800">FrontEnd</td>
+                          <td className="py-3 px-3 font-serif">Ocean Novel Studio - Standard</td>
+                          <td className="py-3 px-3 font-mono font-bold text-stone-900">$27.00</td>
+                          <td className="py-3 px-3 text-stone-600">Standard Story Bible, Manuscript binder, Word/PDF export</td>
+                        </tr>
+                        <tr>
+                          <td className="py-3 px-3 font-mono font-bold text-blue-700">OTO1</td>
+                          <td className="py-3 px-3 font-serif">Ocean Novel Studio - Unlimited Edition</td>
+                          <td className="py-3 px-3 font-mono font-bold text-stone-900">$47.00</td>
+                          <td className="py-3 px-3 text-stone-600">Unlimited books, full EPUB KDP export, advanced relationship matrix</td>
+                        </tr>
+                        <tr>
+                          <td className="py-3 px-3 font-mono font-bold text-purple-700">OTO2</td>
+                          <td className="py-3 px-3 font-serif">Ocean Novel Studio - AI Lore & Ghostwriter</td>
+                          <td className="py-3 px-3 font-mono font-bold text-stone-900">$67.00</td>
+                          <td className="py-3 px-3 text-stone-600">Full AI Lore generation, plot suggestions, deep world radar</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Production Code Snippet */}
+                <div className="bg-[#1F1916] text-[#E0D8D0] p-6 rounded-2xl shadow-lg border border-stone-800 space-y-3">
+                  <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-[#C89D66]" />
+                      <span className="font-mono text-xs font-bold text-[#E0D8D0]">
+                        src/lib/warriorplusIpnHandler.ts (Production Webhook Receiver)
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCopySnippet}
+                      className="px-3 py-1 bg-[#3A2B23] hover:bg-[#4E392F] text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedSnippet ? "Copied" : "Copy Code"}</span>
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-stone-400 font-serif leading-relaxed">
+                    The handler module has already been compiled in <code className="text-[#C89D66] font-mono">src/lib/warriorplusIpnHandler.ts</code>. It parses raw form data, verifies the security key, and persists users or pending queues in Firestore immediately.
+                  </p>
+
+                  <pre className="p-4 bg-black/40 rounded-xl font-mono text-[11px] text-stone-300 overflow-x-auto leading-relaxed border border-stone-800/60">
+                    {sampleWebhookCode}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
