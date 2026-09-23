@@ -45,84 +45,84 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
     name: "High & Epic Fantasy",
     icon: Crown,
     tagline: "Ancient dynastic oaths, world-shattering magic & forgotten empires",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #18112C 0%, #100C1F 45%, #08060E 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(168, 85, 247, 0.18), rgba(217, 119, 6, 0.12), transparent 75%)",
-    accent: "bg-[#9353D3] hover:bg-[#7828C8]",
-    accentBorder: "border-[#A855F7]/40 focus-within:border-[#C084FC]",
-    accentText: "text-[#E9D5FF]",
-    particleColor: "rgba(234, 179, 8, 0.75)",
-    cardBg: "bg-[#140F24]/70 backdrop-blur-xl",
-    cardBorder: "border-[#A855F7]/20",
-    defaultBindingName: "Midnight",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F4F1EA 0%, #EFE9DE 50%, #E3D9C8 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(140, 80, 60, 0.12), rgba(217, 119, 6, 0.08), transparent 75%)",
+    accent: "bg-[#8C503C] hover:bg-[#723E2E]",
+    accentBorder: "border-[#8C503C]/40 focus-within:border-[#8C503C]",
+    accentText: "text-[#8C503C]",
+    particleColor: "rgba(140, 80, 60, 0.45)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
+    defaultBindingName: "Obsidian",
   },
   "Dark Fantasy & Grimdark": {
     name: "Dark Fantasy & Grimdark",
     icon: Moon,
     tagline: "Forbidden blood sorcery, cursed relics & unforgiving realms",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #1C1316 0%, #141012 45%, #090708 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(239, 68, 68, 0.18), rgba(120, 113, 108, 0.1), transparent 75%)",
-    accent: "bg-[#DC2626] hover:bg-[#B91C1C]",
-    accentBorder: "border-[#EF4444]/40 focus-within:border-[#F87171]",
-    accentText: "text-[#FEE2E2]",
-    particleColor: "rgba(248, 113, 113, 0.75)",
-    cardBg: "bg-[#160E11]/70 backdrop-blur-xl",
-    cardBorder: "border-[#EF4444]/20",
-    defaultBindingName: "Obsidian",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F0EAE1 0%, #E6DDCE 50%, #DACFBD 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(68, 46, 35, 0.15), rgba(140, 80, 60, 0.1), transparent 75%)",
+    accent: "bg-[#442E23] hover:bg-[#2C1D16]",
+    accentBorder: "border-[#442E23]/40 focus-within:border-[#442E23]",
+    accentText: "text-[#442E23]",
+    particleColor: "rgba(68, 46, 35, 0.45)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
+    defaultBindingName: "Mahogany",
   },
   "Gothic & Coastal Fantasy": {
     name: "Gothic & Coastal Fantasy",
     icon: Waves,
     tagline: "Salt-stained codices, drowned archives & mist-bound archipelagoes",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #0E1A18 0%, #091312 45%, #040808 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(20, 184, 166, 0.18), rgba(217, 119, 6, 0.1), transparent 75%)",
-    accent: "bg-[#0D9488] hover:bg-[#0F766E]",
-    accentBorder: "border-[#2DD4BF]/40 focus-within:border-[#5EEAD4]",
-    accentText: "text-[#CCFBF1]",
-    particleColor: "rgba(45, 212, 191, 0.7)",
-    cardBg: "bg-[#0B1514]/70 backdrop-blur-xl",
-    cardBorder: "border-[#2DD4BF]/20",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F2EFE8 0%, #E8E5DC 50%, #D8D4C8 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(44, 29, 22, 0.12), rgba(140, 80, 60, 0.08), transparent 75%)",
+    accent: "bg-[#334D43] hover:bg-[#23352E]",
+    accentBorder: "border-[#334D43]/40 focus-within:border-[#334D43]",
+    accentText: "text-[#334D43]",
+    particleColor: "rgba(51, 77, 67, 0.4)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
     defaultBindingName: "Forest",
   },
   "Mythic & Folklore Fantasy": {
     name: "Mythic & Folklore Fantasy",
     icon: Compass,
     tagline: "Primeval pantheons, world trees & ancestral folklore",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #221811 0%, #18100B 45%, #0B0705 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(217, 119, 6, 0.2), rgba(180, 83, 9, 0.12), transparent 75%)",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F6F2EA 0%, #EDE5D6 50%, #DFD5C2 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(217, 119, 6, 0.15), rgba(140, 80, 60, 0.1), transparent 75%)",
     accent: "bg-[#B45309] hover:bg-[#92400E]",
-    accentBorder: "border-[#F59E0B]/40 focus-within:border-[#FBBF24]",
-    accentText: "text-[#FEF3C7]",
-    particleColor: "rgba(245, 158, 11, 0.75)",
-    cardBg: "bg-[#1A120D]/70 backdrop-blur-xl",
-    cardBorder: "border-[#F59E0B]/20",
+    accentBorder: "border-[#D97706]/40 focus-within:border-[#B45309]",
+    accentText: "text-[#92400E]",
+    particleColor: "rgba(217, 119, 6, 0.45)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
     defaultBindingName: "Parchment",
   },
   "Arcane & Gaslamp Fantasy": {
     name: "Arcane & Gaslamp Fantasy",
     icon: Wand2,
     tagline: "Alchemical colleges, secret mage guilds & clockwork mysteries",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #071927 0%, #06111C 45%, #03080E 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(6, 182, 212, 0.22), rgba(14, 116, 144, 0.12), transparent 75%)",
-    accent: "bg-[#0EA5E9] hover:bg-[#0284C7]",
-    accentBorder: "border-[#38BDF8]/40 focus-within:border-[#7DD3FC]",
-    accentText: "text-[#BAE6FD]",
-    particleColor: "rgba(56, 189, 248, 0.75)",
-    cardBg: "bg-[#0A1622]/70 backdrop-blur-xl",
-    cardBorder: "border-[#38BDF8]/20",
-    defaultBindingName: "Obsidian",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F3F1EC 0%, #E9E6DE 50%, #DAD5C9 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(140, 80, 60, 0.15), rgba(180, 83, 9, 0.1), transparent 75%)",
+    accent: "bg-[#8C503C] hover:bg-[#723E2E]",
+    accentBorder: "border-[#8C503C]/40 focus-within:border-[#8C503C]",
+    accentText: "text-[#8C503C]",
+    particleColor: "rgba(140, 80, 60, 0.4)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
+    defaultBindingName: "Midnight",
   },
   "Sword & Sorcery": {
     name: "Sword & Sorcery",
     icon: Shield,
     tagline: "Heroic wanderers, forbidden catacombs & daring escapades",
-    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #24111B 0%, #1A0B13 45%, #0C0509 100%)",
-    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(244, 114, 182, 0.18), rgba(251, 146, 60, 0.1), transparent 75%)",
-    accent: "bg-[#E11D48] hover:bg-[#BE123C]",
-    accentBorder: "border-[#FB7185]/40 focus-within:border-[#FDA4AF]",
-    accentText: "text-[#FFE4E6]",
-    particleColor: "rgba(251, 113, 133, 0.75)",
-    cardBg: "bg-[#1E0D16]/70 backdrop-blur-xl",
-    cardBorder: "border-[#FB7185]/20",
+    bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F5EFEB 0%, #EADFD9 50%, #DCCEC6 100%)",
+    spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(140, 80, 60, 0.18), rgba(68, 46, 35, 0.1), transparent 75%)",
+    accent: "bg-[#8C503C] hover:bg-[#723E2E]",
+    accentBorder: "border-[#8C503C]/40 focus-within:border-[#8C503C]",
+    accentText: "text-[#8C503C]",
+    particleColor: "rgba(140, 80, 60, 0.45)",
+    cardBg: "bg-[#FCFAF5]/90 backdrop-blur-xl",
+    cardBorder: "border-[#E5E0D5]",
     defaultBindingName: "Mahogany",
   },
 };
@@ -271,10 +271,10 @@ function AmbientParticles({ color }: { color: string }) {
 // Fantasy Constellation Graphic
 function ConstellationOverlay() {
   return (
-    <div className="absolute inset-0 pointer-events-none z-5 opacity-40 mix-blend-screen transition-opacity duration-1000">
+    <div className="absolute inset-0 pointer-events-none z-5 opacity-25 mix-blend-multiply transition-opacity duration-1000">
       {/* Top Right Constellation */}
       <svg
-        className="absolute top-4 right-6 w-72 h-72 text-amber-200/30"
+        className="absolute top-4 right-6 w-72 h-72 text-[#8C503C]/40"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -292,12 +292,12 @@ function ConstellationOverlay() {
         <line x1="120" y1="160" x2="65" y2="130" stroke="currentColor" strokeWidth="0.6" strokeDasharray="3 3" />
         <line x1="65" y1="130" x2="30" y2="40" stroke="currentColor" strokeWidth="0.6" />
         {/* Star glow */}
-        <circle cx="140" cy="55" r="7" fill="currentColor" opacity="0.25" />
+        <circle cx="140" cy="55" r="7" fill="currentColor" opacity="0.15" />
       </svg>
 
       {/* Bottom Left Celestial Arc */}
       <svg
-        className="absolute bottom-6 left-12 w-64 h-64 text-indigo-200/20"
+        className="absolute bottom-6 left-12 w-64 h-64 text-[#442E23]/30"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -309,7 +309,7 @@ function ConstellationOverlay() {
         <line x1="50" y1="150" x2="90" y2="110" stroke="currentColor" strokeWidth="0.6" />
         <line x1="90" y1="110" x2="145" y2="95" stroke="currentColor" strokeWidth="0.6" strokeDasharray="2 2" />
         <line x1="145" y1="95" x2="180" y2="60" stroke="currentColor" strokeWidth="0.6" />
-        <circle cx="180" cy="60" r="8" fill="currentColor" opacity="0.3" />
+        <circle cx="180" cy="60" r="8" fill="currentColor" opacity="0.15" />
       </svg>
     </div>
   );
@@ -321,7 +321,7 @@ function CornerFiligree() {
     <div className="absolute inset-0 pointer-events-none z-5">
       {/* Top-Left Corner */}
       <svg
-        className="absolute top-3 left-3 w-14 h-14 text-amber-500/25 transition-all duration-700"
+        className="absolute top-3 left-3 w-14 h-14 text-[#8C503C]/20 transition-all duration-700"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -335,7 +335,7 @@ function CornerFiligree() {
 
       {/* Top-Right Corner */}
       <svg
-        className="absolute top-3 right-3 w-14 h-14 text-amber-500/25 transition-all duration-700"
+        className="absolute top-3 right-3 w-14 h-14 text-[#8C503C]/20 transition-all duration-700"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -349,7 +349,7 @@ function CornerFiligree() {
 
       {/* Bottom-Left Corner */}
       <svg
-        className="absolute bottom-3 left-3 w-14 h-14 text-amber-500/25 transition-all duration-700"
+        className="absolute bottom-3 left-3 w-14 h-14 text-[#8C503C]/20 transition-all duration-700"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -363,7 +363,7 @@ function CornerFiligree() {
 
       {/* Bottom-Right Corner */}
       <svg
-        className="absolute bottom-3 right-3 w-14 h-14 text-amber-500/25 transition-all duration-700"
+        className="absolute bottom-3 right-3 w-14 h-14 text-[#8C503C]/20 transition-all duration-700"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -544,16 +544,16 @@ export default function CreateProject() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2.5 text-stone-300/80 hover:text-white transition-all group"
+            className="flex items-center gap-2.5 text-stone-700 hover:text-[#4A3225] transition-all group"
           >
-            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center group-hover:bg-white/20 group-hover:scale-105 transition-all shadow-sm">
-              <ChevronLeft className="w-4 h-4 text-stone-200 group-hover:text-white" />
+            <div className="w-8 h-8 rounded-full bg-white/80 border border-[#DCD5C9] flex items-center justify-center group-hover:bg-white group-hover:scale-105 transition-all shadow-xs">
+              <ChevronLeft className="w-4 h-4 text-[#8C503C] group-hover:text-[#723E2E]" />
             </div>
             <div className="flex flex-col text-left">
-              <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-400 group-hover:text-stone-200">
+              <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-500 group-hover:text-[#8C503C]">
                 Back to Archives
               </span>
-              <span className="text-[10px] text-stone-500 font-serif italic hidden sm:inline">
+              <span className="text-[10px] text-stone-600 font-serif italic hidden sm:inline">
                 Author Dashboard
               </span>
             </div>
@@ -563,7 +563,7 @@ export default function CreateProject() {
           <button
             type="button"
             onClick={() => setIsHelpOpen(true)}
-            className="w-7 h-7 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 hover:border-amber-400/60 text-amber-300 flex items-center justify-center transition-all shadow-sm group hover:scale-105"
+            className="w-7 h-7 rounded-full bg-[#8C503C]/10 hover:bg-[#8C503C]/20 border border-[#8C503C]/30 text-[#8C503C] flex items-center justify-center transition-all shadow-xs group hover:scale-105"
             title="Manuscript Setup Guide & AI Prompt"
             aria-label="Manuscript Setup Guide & AI Prompt"
           >
@@ -572,9 +572,9 @@ export default function CreateProject() {
         </div>
 
         {/* Case File Metadata Stamp */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-          <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
-          <span className="text-[9px] font-mono tracking-widest text-stone-300/80 uppercase">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/70 border border-[#E5E0D5] shadow-xs">
+          <div className="w-2 h-2 rounded-full bg-[#8C503C] animate-pulse shadow-[0_0_8px_rgba(140,80,60,0.5)]" />
+          <span className="text-[9px] font-mono tracking-widest text-[#6B5344] uppercase font-bold">
             DOSSIER REGISTRY // FORM-7B
           </span>
         </div>
@@ -593,14 +593,14 @@ export default function CreateProject() {
           {/* Spotlight Pedestal aura */}
           <div className="relative w-[210px] h-[300px] lg:w-[260px] lg:h-[380px] group [perspective:1400px]">
             {/* Soft shadow below book */}
-            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[90%] h-12 bg-black/60 blur-xl rounded-full transition-transform duration-700 group-hover:scale-105" />
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[90%] h-12 bg-stone-900/35 blur-xl rounded-full transition-transform duration-700 group-hover:scale-105" />
 
             {/* 3D Book Container */}
             <div
               className={cn(
                 "relative w-full h-full rounded-r-lg rounded-l-[4px] shadow-2xl transition-all duration-700 [transform-style:preserve-3d]",
                 "rotate-y-[-14deg] rotate-x-[4deg] hover:rotate-y-[-4deg] hover:rotate-x-[1deg]",
-                "border-r border-t border-b border-white/10",
+                "border-r border-t border-b border-white/20",
                 colorStyle.bg
               )}
             >
@@ -694,7 +694,7 @@ export default function CreateProject() {
             transition={{ duration: 0.3 }}
             className="mt-8 text-center max-w-xs"
           >
-            <p className="font-serif italic text-xs lg:text-sm text-stone-300/80 leading-relaxed">
+            <p className="font-serif italic text-xs lg:text-sm text-stone-600 leading-relaxed">
               "{currentTheme.tagline}"
             </p>
           </motion.div>
@@ -710,31 +710,30 @@ export default function CreateProject() {
           {/* Dossier Card Container */}
           <div
             className={cn(
-              "rounded-xl border p-6 lg:p-8 shadow-2xl transition-all duration-700 relative overflow-hidden",
-              currentTheme.cardBg,
+              "rounded-xl border p-6 lg:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-700 relative overflow-hidden bg-[#FCFAF5]",
               currentTheme.cardBorder
             )}
           >
             {/* Header / Case Title */}
-            <div className="mb-5 shrink-0 flex items-start justify-between border-b border-white/10 pb-4">
+            <div className="mb-5 shrink-0 flex items-start justify-between border-b border-[#E5E0D5] pb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[9px] font-mono tracking-widest text-amber-400 uppercase font-semibold">
+                  <span className="text-[9px] font-mono tracking-widest text-[#8C503C] uppercase font-bold">
                     PROJECT REGISTRATION
                   </span>
-                  <span className="text-stone-500">•</span>
-                  <span className="text-[9px] font-mono tracking-wider text-stone-400 uppercase">
+                  <span className="text-stone-300">•</span>
+                  <span className="text-[9px] font-mono tracking-wider text-stone-500 uppercase">
                     ARCHIVE INITIATION
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+                  <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#4A3225] tracking-tight">
                     New Manuscript
                   </h1>
                   <button
                     type="button"
                     onClick={() => setIsHelpOpen(true)}
-                    className="w-5 h-5 rounded-full bg-amber-400/10 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 flex items-center justify-center transition-all hover:scale-110"
+                    className="w-5 h-5 rounded-full bg-[#8C503C]/10 hover:bg-[#8C503C]/20 border border-[#8C503C]/30 text-[#8C503C] flex items-center justify-center transition-all hover:scale-110"
                     title="View Setup Guide & AI Architect Prompt"
                     aria-label="View Setup Guide & AI Architect Prompt"
                   >
@@ -743,7 +742,7 @@ export default function CreateProject() {
                 </div>
               </div>
 
-              <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-amber-300/80 shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-[#F4F1EA] border border-[#E5E0D5] flex items-center justify-center text-[#8C503C] shrink-0 shadow-xs">
                 <Feather className="w-5 h-5" />
               </div>
             </div>
@@ -752,16 +751,16 @@ export default function CreateProject() {
             <div className="space-y-4">
               {/* 1. Title Input */}
               <div>
-                <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-1.5 flex items-center justify-between">
+                <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-1.5 flex items-center justify-between">
                   <span>Manuscript Title</span>
-                  <span className="text-[8px] font-mono text-stone-500 lowercase">required</span>
+                  <span className="text-[8px] font-mono text-stone-400 lowercase">required</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Whispers of the Astral Spire..."
-                  className="w-full bg-white/5 border border-white/15 focus:border-amber-400/70 focus:bg-white/10 rounded-md outline-none px-3.5 py-2.5 text-lg font-serif text-white placeholder:text-stone-500 transition-all shadow-inner"
+                  className="w-full bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-md outline-none px-3.5 py-2.5 text-lg font-serif text-[#4A3225] placeholder:text-stone-400 transition-all shadow-xs"
                   autoFocus
                 />
               </div>
@@ -769,7 +768,7 @@ export default function CreateProject() {
               {/* 2. Row: Author & Word Count Goal */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-1.5 block">
+                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-1.5 block">
                     Author / Pen Name
                   </label>
                   <input
@@ -777,15 +776,15 @@ export default function CreateProject() {
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
                     placeholder="Your writer name..."
-                    className="w-full bg-white/5 border border-white/15 focus:border-amber-400/70 focus:bg-white/10 rounded-md outline-none px-3.5 py-2 text-sm font-serif text-stone-200 placeholder:text-stone-500 transition-all"
+                    className="w-full bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-md outline-none px-3.5 py-2 text-sm font-serif text-[#4A3225] placeholder:text-stone-400 transition-all shadow-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-1.5 block">
+                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-1.5 block">
                     Word Count Target
                   </label>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/15 focus-within:border-amber-400/70 focus-within:bg-white/10 rounded-md px-3.5 py-2 transition-all">
+                  <div className="flex items-center gap-2 bg-white border border-[#DCD5C9] focus-within:border-[#8C503C] focus-within:ring-1 focus-within:ring-[#8C503C] rounded-md px-3.5 py-2 transition-all shadow-xs">
                     <input
                       type="number"
                       value={wordCount}
@@ -793,16 +792,16 @@ export default function CreateProject() {
                         setWordCount(e.target.value ? Number(e.target.value) : "")
                       }
                       step={5000}
-                      className="w-full bg-transparent outline-none text-sm font-mono text-amber-200 text-left"
+                      className="w-full bg-transparent outline-none text-sm font-mono text-[#8C503C] font-semibold text-left"
                     />
-                    <span className="text-[10px] text-stone-400 font-mono shrink-0">words</span>
+                    <span className="text-[10px] text-stone-500 font-mono shrink-0">words</span>
                   </div>
                 </div>
               </div>
 
               {/* 3. Logline / Premise */}
               <div>
-                <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-1.5 block">
+                <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-1.5 block">
                   Logline / Central Premise
                 </label>
                 <textarea
@@ -810,17 +809,17 @@ export default function CreateProject() {
                   onChange={(e) => setLogline(e.target.value)}
                   placeholder="In one or two sentences, what is the core conflict and mystery of your story?..."
                   rows={2}
-                  className="w-full bg-white/5 border border-white/15 focus:border-amber-400/70 focus:bg-white/10 rounded-md outline-none p-3 text-xs font-serif text-stone-200 placeholder:text-stone-500 transition-all resize-none shadow-inner leading-relaxed"
+                  className="w-full bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-md outline-none p-3 text-xs font-serif text-[#4A3225] placeholder:text-stone-400 transition-all resize-none shadow-xs leading-relaxed"
                 />
               </div>
 
               {/* 4. Primary Genre Selector (Interactive Dynamic Mood Trigger) */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70">
+                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600">
                     Primary Genre (Sets Atmosphere & Mood)
                   </label>
-                  <span className="text-[9px] font-mono text-amber-300/90 font-medium">
+                  <span className="text-[9px] font-mono text-[#8C503C] font-bold">
                     {genre}
                   </span>
                 </div>
@@ -835,10 +834,10 @@ export default function CreateProject() {
                         type="button"
                         onClick={() => handleGenreChange(g)}
                         className={cn(
-                          "px-3 py-1.5 rounded-md text-[10px] font-bold tracking-wider uppercase transition-all duration-300 border text-center",
+                          "px-3 py-1.5 rounded-md text-[10px] font-bold tracking-wider uppercase transition-all duration-300 border text-center cursor-pointer",
                           isSelected
-                            ? "bg-amber-500/20 text-amber-200 border-amber-400/80 shadow-[0_0_12px_rgba(251,191,36,0.25)] scale-102"
-                            : "bg-white/5 text-stone-400 border-white/10 hover:bg-white/10 hover:text-stone-200 hover:border-white/20"
+                            ? "bg-[#8C503C] text-white border-[#8C503C] shadow-sm scale-102"
+                            : "bg-[#F4F1EA] text-stone-700 border-[#E5E0D5] hover:bg-stone-200/70 hover:text-stone-900"
                         )}
                       >
                         {g}
@@ -851,7 +850,7 @@ export default function CreateProject() {
               {/* 5. Audience & Cover Binding Palette */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
                 <div>
-                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-2 block">
+                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-2 block">
                     Target Audience
                   </label>
                   <div className="flex flex-wrap gap-1">
@@ -861,10 +860,10 @@ export default function CreateProject() {
                         type="button"
                         onClick={() => setAudience(a)}
                         className={cn(
-                          "px-2 py-1 rounded text-[9px] font-medium tracking-wide transition-all border",
+                          "px-2 py-1 rounded text-[9px] font-medium tracking-wide transition-all border cursor-pointer",
                           audience === a
-                            ? "bg-white/20 text-white border-white/40 shadow-xs"
-                            : "bg-white/5 text-stone-400 border-white/10 hover:bg-white/10 hover:text-stone-200"
+                            ? "bg-[#4A3225] text-[#FAF7F2] border-[#4A3225] shadow-xs font-semibold"
+                            : "bg-[#F4F1EA] text-stone-700 border-[#E5E0D5] hover:bg-stone-200/70"
                         )}
                       >
                         {a}
@@ -874,7 +873,7 @@ export default function CreateProject() {
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-300/70 mb-2 block">
+                  <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-stone-600 mb-2 block">
                     Cover Binding
                   </label>
                   <div className="flex items-center gap-2">
@@ -888,16 +887,16 @@ export default function CreateProject() {
                         }}
                         title={c.name}
                         className={cn(
-                          "w-7 h-7 rounded-full border-2 transition-all duration-300 flex items-center justify-center p-0.5",
+                          "w-7 h-7 rounded-full border-2 transition-all duration-300 flex items-center justify-center p-0.5 cursor-pointer",
                           colorStyle.name === c.name
-                            ? "border-amber-400 scale-110 shadow-[0_0_8px_rgba(251,191,36,0.4)]"
-                            : "border-transparent hover:scale-105 opacity-70 hover:opacity-100"
+                            ? "border-[#8C503C] scale-110 shadow-sm"
+                            : "border-transparent hover:scale-105 opacity-80 hover:opacity-100"
                         )}
                       >
                         <div className={cn("w-full h-full rounded-full shadow-inner", c.bg)} />
                       </button>
                     ))}
-                    <span className="text-[9px] font-mono text-stone-400 ml-1">
+                    <span className="text-[9px] font-mono text-stone-600 ml-1 font-medium">
                       {colorStyle.name}
                     </span>
                   </div>
@@ -911,9 +910,9 @@ export default function CreateProject() {
                   onClick={handleCreate}
                   disabled={isSubmitting || !title.trim()}
                   className={cn(
-                    "w-full py-3.5 rounded-lg text-xs font-bold uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2.5",
-                    "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-500 text-stone-950 font-serif font-bold",
-                    "disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:shadow-amber-500/20 active:scale-[0.99]"
+                    "w-full py-3.5 rounded-lg text-xs font-bold uppercase tracking-[0.2em] shadow-md transition-all flex items-center justify-center gap-2.5",
+                    "bg-[#8C503C] hover:bg-[#723E2E] text-white font-serif font-bold",
+                    "disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:shadow-lg active:scale-[0.99]"
                   )}
                 >
                   <Feather className="w-4 h-4" />
@@ -935,7 +934,7 @@ export default function CreateProject() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsHelpOpen(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             />
 
             {/* Modal Dialog */}
@@ -944,19 +943,19 @@ export default function CreateProject() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="relative w-full max-w-2xl bg-[#14121a] border border-amber-500/30 rounded-xl shadow-2xl overflow-hidden z-10 my-8 flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-2xl bg-[#FCFAF5] border border-[#E5E0D5] rounded-xl shadow-2xl overflow-hidden z-10 my-8 flex flex-col max-h-[90vh]"
             >
               {/* Header */}
-              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
+              <div className="px-6 py-4 border-b border-[#E5E0D5] flex items-center justify-between bg-[#F4F1EA]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-300">
+                  <div className="w-8 h-8 rounded-lg bg-[#8C503C]/10 border border-[#8C503C]/20 flex items-center justify-center text-[#8C503C]">
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-serif font-bold text-white flex items-center gap-2">
+                    <h2 className="text-base font-serif font-bold text-[#4A3225] flex items-center gap-2">
                       New Manuscript Setup Guide
                     </h2>
-                    <p className="text-[11px] text-stone-400 font-sans">
+                    <p className="text-[11px] text-stone-500 font-sans">
                       Form requirements, best practices, and AI setup assistance
                     </p>
                   </div>
@@ -964,42 +963,42 @@ export default function CreateProject() {
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(false)}
-                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-stone-400 hover:text-white flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-stone-200/50 hover:bg-stone-300 text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Body */}
-              <div className="p-6 overflow-y-auto space-y-6 text-sm text-stone-300">
+              <div className="p-6 overflow-y-auto space-y-6 text-sm text-stone-700">
                 {/* Section 1: Form field descriptions */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-2">
                     <BookOpen className="w-3.5 h-3.5" />
                     What to fill out on this page?
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
-                      <span className="font-bold text-stone-200">1. Manuscript Title</span>
-                      <p className="text-stone-400 leading-relaxed">
+                    <div className="p-3 rounded-lg bg-white border border-[#E5E0D5] space-y-1 shadow-2xs">
+                      <span className="font-bold text-[#4A3225]">1. Manuscript Title</span>
+                      <p className="text-stone-600 leading-relaxed">
                         A memorable, evocative working title (2–7 words). Displayed prominently across your book cover, spines, and studio.
                       </p>
                     </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
-                      <span className="font-bold text-stone-200">2. Author / Pen Name</span>
-                      <p className="text-stone-400 leading-relaxed">
+                    <div className="p-3 rounded-lg bg-white border border-[#E5E0D5] space-y-1 shadow-2xs">
+                      <span className="font-bold text-[#4A3225]">2. Author / Pen Name</span>
+                      <p className="text-stone-600 leading-relaxed">
                         Author byline stamped on the book cover and title page (can be your real name or pen name).
                       </p>
                     </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
-                      <span className="font-bold text-stone-200">3. Genre & Audience</span>
-                      <p className="text-stone-400 leading-relaxed">
+                    <div className="p-3 rounded-lg bg-white border border-[#E5E0D5] space-y-1 shadow-2xs">
+                      <span className="font-bold text-[#4A3225]">3. Genre & Audience</span>
+                      <p className="text-stone-600 leading-relaxed">
                         Select the primary genre (Fantasy, Sci-Fi, Romance, Thriller, etc.) and reading maturity target (Middle Grade, YA, Adult).
                       </p>
                     </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
-                      <span className="font-bold text-stone-200">4. Central Logline & Word Target</span>
-                      <p className="text-stone-400 leading-relaxed">
+                    <div className="p-3 rounded-lg bg-white border border-[#E5E0D5] space-y-1 shadow-2xs">
+                      <span className="font-bold text-[#4A3225]">4. Central Logline & Word Target</span>
+                      <p className="text-stone-600 leading-relaxed">
                         A concise 1–2 sentence premise hook (35–70 words) and your overall target word count milestone.
                       </p>
                     </div>
@@ -1007,14 +1006,14 @@ export default function CreateProject() {
                 </div>
 
                 {/* Section 2: AI setup prompt suggestion */}
-                <div className="space-y-3 pt-2 border-t border-white/10">
+                <div className="space-y-3 pt-2 border-t border-[#E5E0D5]">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-2">
                         <Feather className="w-3.5 h-3.5" />
                         Unsure what to write? Copy this AI Architect Prompt
                       </h3>
-                      <p className="text-[11px] text-stone-400 mt-0.5">
+                      <p className="text-[11px] text-stone-500 mt-0.5">
                         Send this prompt to ChatGPT, Claude, or Gemini along with your raw idea to generate a calibrated setup configuration:
                       </p>
                     </div>
@@ -1022,10 +1021,10 @@ export default function CreateProject() {
                       type="button"
                       onClick={handleCopyArchitectPrompt}
                       className={cn(
-                        "px-3.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm",
+                        "px-3.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs cursor-pointer",
                         isPromptCopied
-                          ? "bg-emerald-600 text-white shadow-emerald-500/20"
-                          : "bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold"
+                          ? "bg-emerald-700 text-white shadow-emerald-500/20"
+                          : "bg-[#8C503C] hover:bg-[#723E2E] text-white font-semibold"
                       )}
                     >
                       {isPromptCopied ? (
@@ -1044,13 +1043,13 @@ export default function CreateProject() {
 
                   {/* Prompt Code Block Preview */}
                   <div className="relative">
-                    <pre className="p-4 rounded-lg bg-black/60 border border-white/10 text-[11px] font-mono leading-relaxed text-stone-300 max-h-60 overflow-y-auto whitespace-pre-wrap select-all selection:bg-amber-500/30">
+                    <pre className="p-4 rounded-lg bg-[#2C1D16] text-[#FAF7F2] border border-[#3E291F] text-[11px] font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap select-all selection:bg-[#8C503C]/40">
 {NEW_MANUSCRIPT_ARCHITECT_PROMPT}
                     </pre>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 flex items-start gap-2">
-                    <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-lg bg-[#FAF8F5] border border-[#E5E0D5] text-xs text-stone-700 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
                     <p className="leading-relaxed">
                       <strong>Tip:</strong> Once the AI responds with your details, copy and paste the generated title, logline, genre, and word count target into the form below, then click <em>"Open Studio & Begin Writing"</em> to start composing immediately.
                     </p>
@@ -1059,14 +1058,14 @@ export default function CreateProject() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between">
-                <span className="text-[11px] text-stone-500">
+              <div className="px-6 py-3 border-t border-[#E5E0D5] bg-[#F4F1EA] flex items-center justify-between">
+                <span className="text-[11px] text-stone-500 font-serif">
                   Ocean Novel • Project Setup Architect
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(false)}
-                  className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white font-medium transition-colors"
+                  className="px-4 py-1.5 rounded-lg bg-white border border-[#DCD5C9] hover:bg-stone-50 text-xs text-stone-800 font-medium transition-colors cursor-pointer"
                 >
                   Got it, return to form
                 </button>
