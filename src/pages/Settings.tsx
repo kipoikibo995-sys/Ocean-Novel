@@ -30,7 +30,9 @@ import {
   LogIn,
   Zap,
   Lock,
+  ExternalLink,
 } from "lucide-react";
+import { openSalesPage } from "@/lib/salesConfig";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
@@ -711,7 +713,7 @@ export default function Settings() {
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-serif text-lg font-bold text-[#4A3225]">
-                        Current License: {profile.plan === 'master' ? 'Premium Edition ($67)' : profile.plan === 'pro' ? 'Pro Edition ($47)' : 'Regular Edition ($27)'}
+                        Current License: {profile.plan === 'master' ? 'Premium Edition' : profile.plan === 'pro' ? 'Pro Edition' : 'Regular Edition'}
                       </span>
                       <span className={cn(
                         "px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono",
@@ -736,215 +738,215 @@ export default function Settings() {
                   {profile.plan !== 'master' && (
                     <Button
                       onClick={() => {
-                        setUpgradeModalFeature(profile.plan === 'free' ? 'projects' : 'ai_hub');
-                        setShowUpgradeModal(true);
+                        const target = profile.plan === 'free' ? 'pro' : 'premium';
+                        openSalesPage(target);
                       }}
                       className="bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 h-9 rounded-sm shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
                     >
                       <Lock className="w-3.5 h-3.5" />
-                      <span>Upgrade Tier</span>
+                      <span>{profile.plan === 'free' ? 'Upgrade to Pro' : 'Upgrade to Premium'}</span>
+                      <ExternalLink className="w-3 h-3 ml-0.5" />
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* 3-Tier Breakdown: Regular -> Pro -> Premium */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                {/* TIER 1: REGULAR */}
-                <div className={cn(
-                  "p-4 rounded-sm border bg-white space-y-3 transition-all flex flex-col justify-between",
-                  profile.plan === 'free' ? "ring-2 ring-[#5D3F32] border-[#5D3F32]" : "border-[#E5E0D5]"
-                )}>
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-widest font-mono text-stone-500 font-bold block">Regular</span>
-                        <h4 className="font-serif font-bold text-sm text-[#4A3225]">Regular Edition</h4>
-                      </div>
-                      <span className="text-xs font-mono font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-xs">$27</span>
-                    </div>
-                    <ul className="space-y-2 text-xs font-serif text-stone-600">
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                        <span><strong>Max 3 Novel Projects</strong> simultaneously</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                        <span><strong>25 Characters & 15 Locations</strong> per novel</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                        <span><strong>Smart @Mentions</strong> throughout all chapters</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-[#5A9672] shrink-0" />
-                        <span>Custom image file upload & web URL links</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-stone-400">
-                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                        <span>50+ Preset Fantasy Art Library (Pro)</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-stone-400">
-                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                        <span>AI Prompt Hub & Continuity Engine (Premium)</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200">
-                    {profile.plan === 'free' ? (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#5D3F32] py-1">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Current Active Plan</span>
-                      </div>
-                    ) : isAdmin ? (
-                      <Button
-                        onClick={() => handleSetPlan('free')}
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs font-bold uppercase cursor-pointer"
-                      >
-                        Simulate Regular Quota
-                      </Button>
-                    ) : (
-                      <div className="text-[11px] text-stone-400 font-serif py-1">Included in your license</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* TIER 2: PRO */}
-                <div className={cn(
-                  "p-4 rounded-sm border bg-[#FAF8F5] space-y-3 relative overflow-hidden transition-all flex flex-col justify-between",
-                  profile.plan === 'pro' ? "ring-2 ring-[#8C503C] border-[#8C503C]" : "border-[#E5E0D5]"
-                )}>
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">Pro</span>
-                        <h4 className="font-serif font-bold text-sm text-[#8C503C]">Pro — Unlimited Studio</h4>
-                      </div>
-                      <span className="text-xs font-mono font-bold text-[#8C503C] bg-[#8C503C]/10 px-2 py-0.5 rounded-xs">$47</span>
-                    </div>
-                    <ul className="space-y-2 text-xs font-serif text-stone-700">
-                      <li className="flex items-center gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                        <span><strong>Unlimited Novel Archives</strong> & Series Shelves</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                        <span><strong>Unlimited Characters</strong> & World Locations</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                        <span><strong>50+ Curated Fantasy Art Library</strong> (Portraits & Locations)</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C503C] shrink-0" />
-                        <span><strong>EPUB 3 Amazon KDP</strong> publication exporter</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-stone-400">
-                        <span className="w-3.5 h-3.5 flex items-center justify-center font-bold text-stone-400">✕</span>
-                        <span>AI Prompt Hub & Continuity Engine (Premium)</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200">
-                    {profile.plan === 'pro' ? (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C503C] py-1">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Current Active Plan</span>
-                      </div>
-                    ) : isAdmin ? (
-                      <Button
-                        onClick={() => handleSetPlan('pro')}
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs font-bold uppercase cursor-pointer"
-                      >
-                        Simulate Pro Quota
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => {
-                          setUpgradeModalFeature('projects');
-                          setShowUpgradeModal(true);
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs font-bold text-[#8C503C] border-[#8C503C]/30 hover:bg-[#8C503C]/10 flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Requires Pro Upgrade</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* TIER 3: PREMIUM */}
-                <div className={cn(
-                  "p-4 rounded-sm border-2 bg-[#F9F5EC] space-y-3 relative overflow-hidden transition-all shadow-xs flex flex-col justify-between",
-                  profile.plan === 'master' ? "ring-2 ring-[#723F2F] border-[#723F2F]" : "border-[#8C503C]/40"
-                )}>
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
-                          <Zap className="w-2.5 h-2.5 text-[#723F2F]" /> Premium
+              {/* Dynamic Plan Display: Chỉ hiển thị gói hiện tại và các gói chưa nâng cấp (không hiện giá tiền) */}
+              <div className={cn(
+                "grid gap-5 pt-2",
+                profile.plan === 'free'
+                  ? "grid-cols-1 md:grid-cols-3"
+                  : profile.plan === 'pro'
+                  ? "grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto"
+                  : "max-w-2xl mx-auto"
+              )}>
+                {/* 1. GÓI REGULAR (Chỉ hiển thị khi người dùng đang ở Regular) */}
+                {profile.plan === 'free' && (
+                  <div className="p-5 rounded-md border-2 border-[#5D3F32] bg-white space-y-4 transition-all flex flex-col justify-between shadow-xs">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-100">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-stone-500 font-bold block">
+                            Current Tier
+                          </span>
+                          <h4 className="font-serif font-bold text-base text-[#4A3225]">Regular Edition</h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-white bg-[#5D3F32] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Active
                         </span>
-                        <h4 className="font-serif font-bold text-sm text-[#723F2F]">Premium — Ocean Novel</h4>
                       </div>
-                      <span className="text-xs font-mono font-bold text-white bg-[#723F2F] px-2 py-0.5 rounded-xs">$67</span>
+
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                        Included Features
+                      </div>
+                      <ul className="space-y-2.5 text-xs font-serif text-stone-700">
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                          <span><strong>Up to 3 Active Projects</strong> simultaneously</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                          <span><strong>25 Characters & 15 Locations</strong> per novel</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                          <span><strong>Smart @Mentions</strong> in chapters</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                          <span>Custom image uploads & web URL image support</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                          <span>Standard Word (.docx) & Plain Text export</span>
+                        </li>
+                      </ul>
                     </div>
-                    <ul className="space-y-2 text-xs font-serif text-stone-800">
-                      <li className="flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                        <span><strong>All Pro Unlimited Features</strong> Included</span>
+
+                    <div className="pt-4 border-t border-stone-200">
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#5D3F32] py-2 bg-stone-100 rounded-sm">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Current Active Plan</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. GÓI PRO (Hiển thị khi user đang là Free [gói nâng cấp] hoặc user đang là Pro [gói hiện tại]) */}
+                {(profile.plan === 'free' || profile.plan === 'pro') && (
+                  <div className={cn(
+                    "p-5 rounded-md border-2 space-y-4 relative overflow-hidden transition-all flex flex-col justify-between shadow-xs",
+                    profile.plan === 'pro'
+                      ? "border-[#8C503C] bg-[#FAF8F5] ring-1 ring-[#8C503C]/30"
+                      : "border-[#8C503C]/40 bg-[#FAF8F5] hover:border-[#8C503C]"
+                  )}>
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">
+                            {profile.plan === 'pro' ? 'Current Tier' : 'Upgrade Available'}
+                          </span>
+                          <h4 className="font-serif font-bold text-base text-[#8C503C]">Pro Edition</h4>
+                        </div>
+                        <span className={cn(
+                          "text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider",
+                          profile.plan === 'pro' ? "text-white bg-[#8C503C]" : "text-[#8C503C] bg-[#8C503C]/10 border border-[#8C503C]/20"
+                        )}>
+                          {profile.plan === 'pro' ? 'Active' : 'Upgrade'}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                        {profile.plan === 'pro' ? 'Active Pro Capabilities' : 'Unlocked Features'}
+                      </div>
+                      <ul className="space-y-2.5 text-xs font-serif text-stone-700">
+                        <li className="flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                          <span><strong>Unlimited Novel Archives</strong> & multi-book series shelves</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                          <span><strong>Unlimited Characters</strong> & world locations</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                          <span><strong>50+ Curated Fantasy Art Library</strong> (Portraits & Landscapes)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                          <span><strong>EPUB 3 Amazon KDP</strong> gold standard publication exporter</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                          <span>Advanced relationship matrix & cast mapping</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="pt-4 border-t border-stone-200">
+                      {profile.plan === 'pro' ? (
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#8C503C] py-2 bg-[#8C503C]/10 rounded-sm">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Current Active Plan</span>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => openSalesPage('pro')}
+                          className="w-full text-xs font-bold uppercase tracking-wider text-white bg-[#8C503C] hover:bg-[#723F2F] shadow-sm py-2.5 h-10 rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                        >
+                          <span>Upgrade to Pro Edition</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. GÓI PREMIUM (Hiển thị như gói nâng cấp nếu đang là Free/Pro, hoặc hiển thị như gói hiện tại nếu đang là Master) */}
+                <div className={cn(
+                  "p-5 rounded-md border-2 space-y-4 relative overflow-hidden transition-all flex flex-col justify-between shadow-xs",
+                  profile.plan === 'master'
+                    ? "border-[#723F2F] bg-[#FDF9F3] ring-1 ring-[#723F2F]/30"
+                    : "border-[#723F2F]/40 bg-[#F9F5EC] hover:border-[#723F2F]"
+                )}>
+                  <div>
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest font-mono text-[#723F2F] font-bold block flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-[#723F2F]" />
+                          {profile.plan === 'master' ? 'Highest Tier Active' : 'Highest Tier Upgrade'}
+                        </span>
+                        <h4 className="font-serif font-bold text-base text-[#723F2F]">Premium Edition</h4>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider",
+                        profile.plan === 'master' ? "text-white bg-[#723F2F]" : "text-[#723F2F] bg-[#723F2F]/10 border border-[#723F2F]/20"
+                      )}>
+                        {profile.plan === 'master' ? 'Active' : 'Premium'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                      {profile.plan === 'master' ? 'All Unrestricted Features Active' : 'Full Suite Unlocked'}
+                    </div>
+                    <ul className="space-y-2.5 text-xs font-serif text-stone-800">
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                        <span><strong>All Pro Unlimited Features</strong> included (unlimited books, art library & EPUB 3)</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                        <span><strong>AI Ghostwriter Hub</strong>: High-tension prompt generator</span>
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                        <span><strong>AI Ghostwriter Hub</strong>: Scene beats, dialogue tension & psychological prompts</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                        <span><strong>Story Context Bridge</strong> into ChatGPT/Gemini</span>
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                        <span><strong>Story Context Bridge</strong>: Instant export into ChatGPT, Claude & Gemini</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                        <span><strong>Continuity Conflict Engine</strong>: Timeline & logic checks</span>
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                        <span><strong>Continuity Conflict Engine</strong>: Timeline paradoxes & character trait tracker</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F] shrink-0" />
-                        <span><strong>Word Echoes & Prose Cadence</strong> monotony scanner</span>
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                        <span><strong>Word Echoes & Prose Cadence</strong> monotony diagnostic scanner</span>
                       </li>
                     </ul>
                   </div>
 
-                  <div className="pt-3 border-t border-stone-200">
+                  <div className="pt-4 border-t border-stone-200">
                     {profile.plan === 'master' ? (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#723F2F] py-1">
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#723F2F] py-2 bg-[#723F2F]/10 rounded-sm">
                         <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Current Active Plan</span>
+                        <span>Full Unrestricted Access Active</span>
                       </div>
-                    ) : isAdmin ? (
-                      <Button
-                        onClick={() => handleSetPlan('master')}
-                        size="sm"
-                        className="w-full text-xs font-bold text-white bg-[#723F2F] hover:bg-[#5D3326] cursor-pointer"
-                      >
-                        Reset to Master Premium
-                      </Button>
                     ) : (
                       <Button
-                        onClick={() => {
-                          setUpgradeModalFeature('ai_hub');
-                          setShowUpgradeModal(true);
-                        }}
-                        size="sm"
-                        className="w-full text-xs font-bold text-white bg-[#723F2F] hover:bg-[#5D3326] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        onClick={() => openSalesPage('premium')}
+                        className="w-full text-xs font-bold uppercase tracking-wider text-white bg-[#723F2F] hover:bg-[#5D3326] shadow-sm py-2.5 h-10 rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
                       >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Requires Premium Upgrade</span>
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Upgrade to Premium Edition</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </div>

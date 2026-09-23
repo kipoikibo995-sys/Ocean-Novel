@@ -1,6 +1,7 @@
 import React from "react";
-import { X, Lock, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { X, Lock, ArrowRight, ShieldCheck, CheckCircle2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { openSalesPage } from "@/lib/salesConfig";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -115,10 +116,12 @@ export default function UpgradeModal({
   };
 
   const details = getFeatureDetails();
+  const isPremiumFeature = feature === 'ai_hub' || feature === 'continuity';
+  const targetTier = isPremiumFeature ? 'premium' : 'pro';
 
   const handleGoToUpgrade = () => {
     onClose();
-    navigate("/settings");
+    openSalesPage(targetTier);
   };
 
   return (
@@ -167,7 +170,7 @@ export default function UpgradeModal({
 
           <div className="bg-[#F4F1EA] border border-[#E5E0D5] rounded-md p-4 space-y-2.5">
             <span className="text-[10px] font-bold tracking-widest uppercase text-[#8C503C] block">
-              What you get in Ocean Novel Pro:
+              {isPremiumFeature ? "What you unlock in Ocean Novel Premium:" : "What you unlock in Ocean Novel Pro:"}
             </span>
             <ul className="space-y-2">
               {details.perks.map((perk, i) => (
@@ -185,7 +188,7 @@ export default function UpgradeModal({
               onClick={onClose}
               className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
             >
-              Keep Author Edition (FE)
+              Keep Current Plan
             </button>
 
             <button
@@ -193,8 +196,8 @@ export default function UpgradeModal({
               onClick={handleGoToUpgrade}
               className="px-5 py-2.5 bg-[#8C503C] hover:bg-[#723E2E] text-white text-xs font-bold uppercase tracking-wider rounded-sm shadow-md transition-all flex items-center gap-2 cursor-pointer hover:shadow-lg"
             >
-              <span>Upgrade to Pro</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>{isPremiumFeature ? "Upgrade to Premium" : "Upgrade to Pro"}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
