@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
-import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
+import { storage, ProjectMeta, StudioTask, UserProfile } from "@/lib/storage";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
@@ -49,9 +49,34 @@ export default function Dashboard() {
   const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Check quota for projects
-  const profile = storage.getUserProfile();
-  const maxAllowedProjects = PLAN_LIMITS[profile?.plan || 'free'].maxProjects;
+  // Check quota & license edition for projects
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => storage.getUserProfile());
+  const currentPlan = userProfile?.plan || 'free';
+  const maxAllowedProjects = PLAN_LIMITS[currentPlan].maxProjects;
+
+  const versionBadge = useMemo(() => {
+    switch (currentPlan) {
+      case 'master':
+        return {
+          label: 'PREMIUM',
+          style: 'bg-[#241711] text-[#E5BF7C] border-[#5A3C28] ring-1 ring-[#D4A359]/40 shadow-xs hover:bg-[#1A100B]',
+          tooltip: 'Premium Edition (OTO2) — Full Unrestricted Access',
+        };
+      case 'pro':
+        return {
+          label: 'PRO',
+          style: 'bg-[#8C503C] text-[#FFF9F2] border-[#723F2F] shadow-xs hover:bg-[#773E2E]',
+          tooltip: 'Pro Edition (OTO1) — Unlimited Manuscripts & 50+ Art Library',
+        };
+      case 'free':
+      default:
+        return {
+          label: 'REGULAR',
+          style: 'bg-[#EAE4D8] text-[#5C4738] border-[#D4CCBE] hover:bg-[#DFD8CB] hover:border-[#8C503C]/40',
+          tooltip: 'Regular Edition (FE) — Max 3 Active Projects',
+        };
+    }
+  }, [currentPlan]);
 
   const handleNewProjectClick = () => {
     if (savedProjects.length >= maxAllowedProjects) {
@@ -76,6 +101,7 @@ export default function Dashboard() {
       if (u && !u.isAnonymous) {
         storage.switchUser(u.uid, u.email, u.displayName);
         await storage.syncFromCloud(u.uid);
+        setUserProfile(storage.getUserProfile());
         const projs = storage.getProjects().sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
         setSavedProjects(projs);
         if (projs.length > 0) {
@@ -84,11 +110,24 @@ export default function Dashboard() {
         setTasks(storage.getTasks());
       } else {
         storage.clearCache();
+        setUserProfile(storage.getUserProfile());
         setSavedProjects([]);
         setTasks([]);
       }
     });
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const handleProfileSync = () => {
+      setUserProfile(storage.getUserProfile());
+    };
+    window.addEventListener('storage', handleProfileSync);
+    window.addEventListener('focus', handleProfileSync);
+    return () => {
+      window.removeEventListener('storage', handleProfileSync);
+      window.removeEventListener('focus', handleProfileSync);
+    };
   }, []);
 
   // World Radar Expand Modal State
@@ -585,9 +624,28 @@ export default function Dashboard() {
             <div className="absolute -top-1 left-4 right-4 h-2 bg-[#fcfaf5] rounded-t-sm z-0" />
             
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 lg:gap-6 relative z-30">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase">
-                Archive Projects
-              </h1>
+              <div className="relative inline-flex items-start">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-sans font-bold text-[#4a3225] tracking-tight leading-none uppercase pr-0.5">
+                  Archive Projects
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentPlan !== 'master') {
+                      setShowUpgradeModal(true);
+                    } else {
+                      navigate("/settings?tab=billing");
+                    }
+                  }}
+                  className={cn(
+                    "relative -top-1.5 sm:-top-2 ml-1.5 px-1.5 sm:px-2 py-0.5 rounded-[3px] text-[8px] sm:text-[9.5px] font-mono font-bold uppercase tracking-wider border leading-none transition-all duration-200 cursor-pointer select-none",
+                    versionBadge.style
+                  )}
+                  title={`${versionBadge.tooltip} • Click to view license status`}
+                >
+                  {versionBadge.label}
+                </button>
+              </div>
 
               {/* COMPACT COLLAPSIBLE AUTHOR STATS */}
               <div className="relative z-50">
