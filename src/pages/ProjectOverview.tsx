@@ -412,7 +412,7 @@ export default function ProjectOverview() {
                     navigate(`/project/${(id || '1')}/workspace/consistency`)
                   }
                   className="bg-white/60 hover:bg-white border border-[#E5E0D5] shadow-sm rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] group cursor-pointer"
-                  title="Consistency & Continuity Checker (OTO2)"
+                  title="Consistency & Continuity Checker (Premium)"
                 >
                   <ShieldCheck className="w-5 h-5 text-stone-400 group-hover:text-[#965A5A] transition-colors" />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500 transition-colors">

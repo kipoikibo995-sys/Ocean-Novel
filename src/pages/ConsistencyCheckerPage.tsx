@@ -305,7 +305,7 @@ export default function ConsistencyCheckerPage() {
             <span>Logic & Continuity Conflicts</span>
             {!hasContinuityEngine && (
               <span className="text-[9px] bg-[#8C503C] text-white px-1.5 py-0.2 rounded-xs font-mono font-bold flex items-center gap-0.5">
-                <Lock className="w-2.5 h-2.5" /> OTO2
+                <Lock className="w-2.5 h-2.5" /> Premium
               </span>
             )}
             {analysisResult && hasContinuityEngine && (
@@ -329,7 +329,7 @@ export default function ConsistencyCheckerPage() {
             <span>Repetition & Prose Cadence</span>
             {!hasContinuityEngine && (
               <span className="text-[9px] bg-[#8C503C] text-white px-1.5 py-0.2 rounded-xs font-mono font-bold flex items-center gap-0.5">
-                <Lock className="w-2.5 h-2.5" /> OTO2
+                <Lock className="w-2.5 h-2.5" /> Premium
               </span>
             )}
             {analysisResult && hasContinuityEngine && (
@@ -372,19 +372,19 @@ export default function ConsistencyCheckerPage() {
             </div>
             <div className="space-y-2">
               <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#8C503C] text-white">
-                Tier 3: OTO2 — Ocean Novel Premium
+                Premium Edition
               </span>
               <h2 className="font-serif text-2xl font-bold text-[#4A3225]">
                 Logic & Continuity Conflict Engine
               </h2>
               <p className="text-xs font-serif text-stone-600 leading-relaxed max-w-md mx-auto">
-                Deep narrative analysis, location paradox detection, character appearance consistency tracking, and prose monotony rhythm scanning are exclusive features of <strong>OTO2 — Ocean Novel Premium ($67)</strong>.
+                Deep narrative analysis, location paradox detection, character appearance consistency tracking, and prose monotony rhythm scanning are exclusive features of <strong>Premium Edition ($67)</strong>.
               </p>
             </div>
 
             <div className="bg-white border border-[#E5E0D5] p-4 rounded-xl text-left space-y-2 text-xs font-serif text-stone-700">
               <div className="font-bold text-[#8C503C] text-[11px] uppercase tracking-wider mb-1">
-                Included in OTO2 Premium:
+                Included in Premium Edition:
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#5A9672] shrink-0" />
@@ -409,7 +409,7 @@ export default function ConsistencyCheckerPage() {
                 onClick={() => setShowUpgradeModal(true)}
                 className="px-6 py-2.5 bg-[#8C503C] hover:bg-[#723F2F] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm transition-all cursor-pointer"
               >
-                Upgrade to OTO2: Ocean Novel Premium ($67)
+                Upgrade to Premium Edition ($67)
               </button>
             </div>
           </div>

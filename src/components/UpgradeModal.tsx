@@ -29,9 +29,9 @@ export default function UpgradeModal({
     switch (feature) {
       case "ai_hub":
         return {
-          badge: "OTO2 — Ocean Novel Premium",
+          badge: "Premium Edition — Ocean Novel",
           heading: "Unlock AI Ghostwriter & Lore Generator",
-          desc: description || "The AI Prompt Hub and Ghostwriter Generation Suite are exclusively unlocked in Tier 3: OTO2 — Ocean Novel Premium ($67). Generate high-yield scene beats, character psychology prompts, and prose polish instructions instantly.",
+          desc: description || "The AI Prompt Hub and Ghostwriter Generation Suite are exclusively unlocked in Premium Edition ($67). Generate high-yield scene beats, character psychology prompts, and prose polish instructions instantly.",
           perks: [
             "AI Scene Drafting Prompts with custom tension, POV, and pacing controls",
             "Master Story System setup instructions for ChatGPT, Claude, and Gemini",
@@ -41,9 +41,9 @@ export default function UpgradeModal({
         };
       case "continuity":
         return {
-          badge: "OTO2 — Ocean Novel Premium",
+          badge: "Premium Edition — Ocean Novel",
           heading: "Unlock Logic & Continuity Conflict Engine",
-          desc: description || "Deep narrative consistency scanning (character appearance inconsistencies, timeline paradoxes, alias misspellings, and prose monotony warnings) is powered by OTO2 — Ocean Novel Premium.",
+          desc: description || "Deep narrative consistency scanning (character appearance inconsistencies, timeline paradoxes, alias misspellings, and prose monotony warnings) is powered by Premium Edition.",
           perks: [
             "Timeline chronology & scene timestamp paradox scanner",
             "Character physical appearance and trait consistency tracker",
@@ -55,7 +55,7 @@ export default function UpgradeModal({
         return {
           badge: "Manuscript Limit Reached",
           heading: "You've Reached the 3 Manuscripts Quota",
-          desc: description || "The Author Edition (FE) includes up to 3 active novel archives. Upgrade to OTO1 Unlimited Edition to unlock unlimited manuscripts and series shelves.",
+          desc: description || "The Regular Edition includes up to 3 active novel archives. Upgrade to Pro Edition to unlock unlimited manuscripts and series shelves.",
           perks: [
             "Unlimited novel archives & multi-book series",
             "Full EPUB 3 Amazon KDP export engine with ISBN formatting",
@@ -67,7 +67,7 @@ export default function UpgradeModal({
         return {
           badge: "Character Registry Quota",
           heading: `Story Bible Limit Reached (${currentCount || 25}/${maxLimit || 25})`,
-          desc: description || "The Author Edition (FE) provides 25 deep character dossiers per novel. Upgrade to OTO1 Unlimited for infinite characters, clan hierarchies, and divine pantheons.",
+          desc: description || "The Regular Edition provides 25 deep character dossiers per novel. Upgrade to Pro Edition for infinite characters, clan hierarchies, and divine pantheons.",
           perks: [
             "Unlimited character dossiers per manuscript",
             "Access to the complete 25+ high-res fantasy portrait presets",
@@ -79,7 +79,7 @@ export default function UpgradeModal({
         return {
           badge: "World Atlas Quota",
           heading: `Atlas Landmark Limit Reached (${currentCount || 15}/${maxLimit || 15})`,
-          desc: description || "The Author Edition (FE) provides 15 landmark dossiers per project. Upgrade to OTO1 Unlimited to map infinite kingdoms, realms, routes, and secret archives.",
+          desc: description || "The Regular Edition provides 15 landmark dossiers per project. Upgrade to Pro Edition to map infinite kingdoms, realms, routes, and secret archives.",
           perks: [
             "Unlimited locations, kingdoms, and landmarks",
             "Interactive fantasy world map & route connecting canvas",
@@ -89,9 +89,9 @@ export default function UpgradeModal({
         };
       case "image_library":
         return {
-          badge: "OTO1 Studio Asset Library",
+          badge: "Pro Studio Asset Library",
           heading: "Exclusive Fantasy Art & Portrait Library",
-          desc: description || "The curated 50+ high-res Fantasy Portrait and Location Art Library is exclusively available in OTO1: Unlimited Studio Edition. In the Author Edition (FE), you can still upload your own images from your device or paste web image links freely!",
+          desc: description || "The curated 50+ high-res Fantasy Portrait and Location Art Library is exclusively available in Pro Edition. In the Regular Edition, you can still upload your own images from your device or paste web image links freely!",
           perks: [
             "Instant access to 25+ curated fantasy character portraits",
             "25+ atmospheric fantasy location backgrounds and landscape art",
@@ -105,10 +105,10 @@ export default function UpgradeModal({
           heading: "Unlock Advanced Writing Architecture",
           desc: description || "Upgrade your studio license to unleash the full power of Ocean Novel.",
           perks: [
-            "Unlimited novel archives & multi-book series (OTO1)",
-            "Full EPUB 3 Amazon KDP export engine (OTO1)",
-            "AI Ghostwriter & Lore Generator Hub (OTO2)",
-            "Deep Narrative Continuity & Logic Conflict Engine (OTO2)",
+            "Unlimited novel archives & multi-book series (Pro)",
+            "Full EPUB 3 Amazon KDP export engine (Pro)",
+            "AI Ghostwriter & Lore Generator Hub (Premium)",
+            "Deep Narrative Continuity & Logic Conflict Engine (Premium)",
           ],
         };
     }

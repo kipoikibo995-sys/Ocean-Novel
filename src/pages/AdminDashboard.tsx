@@ -669,13 +669,19 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                               <span
                                 className={cn(
                                   "px-2.5 py-1 rounded-md text-[11px] font-bold font-mono border uppercase tracking-wider inline-block",
-                                  user.tier === "OTO2" && "bg-purple-50 text-purple-700 border-purple-200",
-                                  user.tier === "OTO1" && "bg-blue-50 text-blue-700 border-blue-200",
-                                  user.tier === "FrontEnd" && "bg-amber-50 text-amber-800 border-amber-200",
+                                  (user.tier === "OTO2" || (user.tier as string) === "Premium") && "bg-purple-50 text-purple-700 border-purple-200",
+                                  (user.tier === "OTO1" || (user.tier as string) === "Pro") && "bg-blue-50 text-blue-700 border-blue-200",
+                                  (user.tier === "FrontEnd" || (user.tier as string) === "Regular") && "bg-amber-50 text-amber-800 border-amber-200",
                                   user.tier === "Free" && "bg-stone-100 text-stone-600 border-stone-200"
                                 )}
                               >
-                                {user.tier || "FrontEnd"}
+                                {user.tier === "OTO2" || (user.tier as string) === "Premium"
+                                  ? "Premium"
+                                  : user.tier === "OTO1" || (user.tier as string) === "Pro"
+                                  ? "Pro"
+                                  : user.tier === "FrontEnd" || (user.tier as string) === "Regular"
+                                  ? "Regular"
+                                  : user.tier || "Regular"}
                               </span>
                             </td>
 
@@ -851,9 +857,9 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                         onChange={(e) => {
                           const val = e.target.value;
                           setIpnProduct(val);
-                          if (val.includes("OTO2")) {
+                          if (val.includes("Premium") || val.includes("OTO2")) {
                             setIpnTier("OTO2");
-                          } else if (val.includes("OTO1")) {
+                          } else if (val.includes("Pro") || val.includes("OTO1")) {
                             setIpnTier("OTO1");
                           } else {
                             setIpnTier("FrontEnd");
@@ -861,9 +867,9 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                         }}
                         className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-medium cursor-pointer"
                       >
-                        <option value="FrontEnd: Ocean Novel Studio ($27)">FrontEnd: Ocean Novel Studio ($27)</option>
-                        <option value="OTO1: Unlimited Studio Edition ($47)">OTO1: Unlimited Studio Edition ($47)</option>
-                        <option value="OTO2: AI Ghostwriter & Lore Generator ($67)">OTO2: AI Ghostwriter & Lore ($67)</option>
+                        <option value="Regular: Ocean Novel Studio ($27)">Regular: Ocean Novel Studio ($27)</option>
+                        <option value="Pro: Unlimited Studio Edition ($47)">Pro: Unlimited Studio Edition ($47)</option>
+                        <option value="Premium: AI Ghostwriter & Lore Generator ($67)">Premium: AI Ghostwriter & Lore ($67)</option>
                       </select>
                     </div>
 
@@ -877,9 +883,9 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                         onChange={(e) => setIpnTier(e.target.value as any)}
                         className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs text-stone-800 outline-none font-mono cursor-pointer"
                       >
-                        <option value="FrontEnd">FrontEnd</option>
-                        <option value="OTO1">OTO1 (Unlimited)</option>
-                        <option value="OTO2">OTO2 (AI Ghostwriter)</option>
+                        <option value="FrontEnd">Regular</option>
+                        <option value="OTO1">Pro (Unlimited)</option>
+                        <option value="OTO2">Premium (AI Ghostwriter)</option>
                         <option value="Free">Free</option>
                       </select>
                     </div>
@@ -1068,22 +1074,22 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                       </thead>
                       <tbody className="divide-y divide-[#EFEAE1]">
                         <tr>
-                          <td className="py-3 px-3 font-mono font-bold text-amber-800">FrontEnd</td>
+                          <td className="py-3 px-3 font-mono font-bold text-amber-800">Regular</td>
                           <td className="py-3 px-3 font-serif">Ocean Novel Studio - Standard</td>
                           <td className="py-3 px-3 font-mono font-bold text-stone-900">$27.00</td>
                           <td className="py-3 px-3 text-stone-600">Standard Story Bible, Manuscript binder, Word/TXT export</td>
                         </tr>
                         <tr>
-                          <td className="py-3 px-3 font-mono font-bold text-blue-700">OTO1</td>
+                          <td className="py-3 px-3 font-mono font-bold text-blue-700">Pro</td>
                           <td className="py-3 px-3 font-serif">Ocean Novel Studio - Unlimited Edition</td>
                           <td className="py-3 px-3 font-mono font-bold text-stone-900">$47.00</td>
-                          <td className="py-3 px-3 text-stone-600">Unlimited books, full EPUB KDP export, advanced relationship matrix</td>
+                          <td className="py-3 px-3 text-stone-600">Unlimited books, full EPUB KDP export, 50+ fantasy art assets</td>
                         </tr>
                         <tr>
-                          <td className="py-3 px-3 font-mono font-bold text-purple-700">OTO2</td>
+                          <td className="py-3 px-3 font-mono font-bold text-purple-700">Premium</td>
                           <td className="py-3 px-3 font-serif">Ocean Novel Studio - AI Lore & Ghostwriter</td>
                           <td className="py-3 px-3 font-mono font-bold text-stone-900">$67.00</td>
-                          <td className="py-3 px-3 text-stone-600">Full AI Lore generation, plot suggestions, deep world radar</td>
+                          <td className="py-3 px-3 text-stone-600">Full AI Lore generation, plot suggestions, deep continuity engine</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1218,9 +1224,9 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
 
               <div className="space-y-2">
                 {[
-                  { id: "FrontEnd", label: "FrontEnd Edition ($27)", desc: "Standard manuscript & story bible features" },
-                  { id: "OTO1", label: "OTO1: Unlimited Studio ($47)", desc: "Unlimited projects & advanced exports" },
-                  { id: "OTO2", label: "OTO2: AI Ghostwriter ($67)", desc: "Full AI lore generation & plotting tools" },
+                  { id: "FrontEnd", label: "Regular Edition ($27)", desc: "Standard manuscript & story bible features" },
+                  { id: "OTO1", label: "Pro Edition ($47)", desc: "Unlimited projects & advanced exports" },
+                  { id: "OTO2", label: "Premium Edition ($67)", desc: "Full AI lore generation & plotting tools" },
                   { id: "Free", label: "Free Demo Tier", desc: "Restricted evaluation access" },
                 ].map((tierOpt) => (
                   <label

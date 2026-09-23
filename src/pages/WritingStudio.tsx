@@ -1085,12 +1085,12 @@ export default function WritingStudio() {
           <button
             onClick={handleOpenAiPromptHub}
             className="px-3.5 py-1 text-[11px] font-bold tracking-wider uppercase text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/20 hover:border-[#8C503C] rounded-sm transition-all duration-200 cursor-pointer select-none active:scale-95 flex items-center gap-1.5"
-            title="Open Ocean Novel AI Prompt Hub (OTO2)"
+            title="Open Ocean Novel AI Prompt Hub (Premium)"
           >
             <span>AI Prompt Hub</span>
             {!hasAiGhostwriter && (
               <span className="text-[8px] bg-[#8C503C] text-white px-1 py-0.2 rounded-xs font-mono font-bold">
-                OTO2
+                Premium
               </span>
             )}
           </button>

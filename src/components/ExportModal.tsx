@@ -627,14 +627,14 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                     >
                       <span className="absolute -top-2 right-1.5 bg-[#8C503C] text-white text-[8px] font-bold font-mono px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-2xs flex items-center gap-0.5">
                         {!hasEpub3Export && <Lock className="w-2 h-2 inline-block mr-0.5" />}
-                        {hasEpub3Export ? "Gold KDP" : "OTO1 Tier"}
+                        {hasEpub3Export ? "Gold KDP" : "Pro Tier"}
                       </span>
                       <BookOpen className="w-5 h-5 mt-1" />
                       <span className="text-xs font-bold font-mono uppercase flex items-center gap-1">
                         <span>EPUB 3</span>
                         {!hasEpub3Export && <Lock className="w-3 h-3 text-[#8C503C]" />}
                       </span>
-                      <span className="text-[9px] text-stone-500 font-sans">{hasEpub3Export ? "Kindle & E-book" : "Requires OTO1"}</span>
+                      <span className="text-[9px] text-stone-500 font-sans">{hasEpub3Export ? "Kindle & E-book" : "Requires Pro"}</span>
                     </button>
 
                     {/* DOCX Option */}
@@ -1167,7 +1167,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
         onClose={() => setShowUpgradeModal(false)}
         feature="projects"
         title="Amazon KDP EPUB 3 Export Locked"
-        description="Gold Standard EPUB 3.3 Amazon KDP export package (dual NCX/EPUB 3 navigation, Landmarked start-reading offsets, and Kindle typography) is unlocked in OTO1: Unlimited Studio Edition ($47)."
+        description="Gold Standard EPUB 3.3 Amazon KDP export package (dual NCX/EPUB 3 navigation, Landmarked start-reading offsets, and Kindle typography) is unlocked in Pro Edition ($47)."
       />
     </AnimatePresence>
   );

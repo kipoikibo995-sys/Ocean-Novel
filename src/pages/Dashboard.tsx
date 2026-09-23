@@ -60,20 +60,20 @@ export default function Dashboard() {
         return {
           label: 'PREMIUM',
           style: 'bg-[#241711] text-[#E5BF7C] border-[#5A3C28] ring-1 ring-[#D4A359]/40 shadow-xs hover:bg-[#1A100B]',
-          tooltip: 'Premium Edition (OTO2) — Full Unrestricted Access',
+          tooltip: 'Premium Edition — Full Unrestricted Access',
         };
       case 'pro':
         return {
           label: 'PRO',
           style: 'bg-[#8C503C] text-[#FFF9F2] border-[#723F2F] shadow-xs hover:bg-[#773E2E]',
-          tooltip: 'Pro Edition (OTO1) — Unlimited Manuscripts & 50+ Art Library',
+          tooltip: 'Pro Edition — Unlimited Manuscripts & 50+ Art Library',
         };
       case 'free':
       default:
         return {
           label: 'REGULAR',
           style: 'bg-[#EAE4D8] text-[#5C4738] border-[#D4CCBE] hover:bg-[#DFD8CB] hover:border-[#8C503C]/40',
-          tooltip: 'Regular Edition (FE) — Max 3 Active Projects',
+          tooltip: 'Regular Edition — Max 3 Active Projects',
         };
     }
   }, [currentPlan]);
@@ -1406,30 +1406,6 @@ export default function Dashboard() {
                         {worldRadarStats.totalMentions} Mentions
                       </span>
                     </div>
-                    {savedProjects.length > 1 ? (
-                      <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                        <span className="text-[8px] text-stone-500 font-serif shrink-0">Book:</span>
-                        <select
-                          value={selectedProjectId || activeProject?.id || ""}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setSelectedProjectId(e.target.value);
-                          }}
-                          className="text-[8px] sm:text-[9px] text-[#8c503c] font-bold font-serif bg-white/80 border border-[#e5e0d5] rounded-xs px-1 py-0.2 focus:outline-none max-w-[110px] sm:max-w-[130px] truncate"
-                          title="Switch active book for World Radar"
-                        >
-                          {savedProjects.map((p) => (
-                            <option key={p.id} value={p.id} className="text-stone-800 bg-[#fcfaf5]">
-                              {p.title}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : activeProject ? (
-                      <p className="text-[8px] lg:text-[9px] text-[#8c503c] font-medium truncate max-w-[120px] sm:max-w-[140px]" title={activeProject.title}>
-                        Book: {activeProject.title}
-                      </p>
-                    ) : null}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
@@ -1446,10 +1422,10 @@ export default function Dashboard() {
                         e.stopPropagation();
                         setIsRadarExpanded(true);
                       }}
-                      className="p-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                      className="px-1.5 py-1 rounded-sm text-[#8c503c] hover:bg-[#e5e0d5] hover:text-[#4a3225] transition-colors flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider cursor-pointer border border-[#8c503c]/30 bg-white/60"
                       title="Expand World Radar to full screen"
                     >
-                      <span className="hidden sm:inline">Expand</span>
+                      <span>Expand</span>
                       <Maximize2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1583,14 +1559,6 @@ export default function Dashboard() {
                     </div>
                   );
                 })()}
-
-                {/* Card footer prompt */}
-                {worldRadarStats.sortedMentions.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-[#e5e0d5] flex items-center justify-between text-[8px] sm:text-[9px] font-sans font-bold text-[#8c503c] shrink-0 uppercase tracking-widest bg-[#f4efe6] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-sm group-hover/card:bg-[#e5e0d5] transition-colors">
-                    <span>View all {worldRadarStats.sortedMentions.length} entities</span>
-                    <Maximize2 className="w-3 h-3 text-[#8c503c] group-hover/card:scale-110 transition-transform" />
-                  </div>
-                )}
               </div>
             </div>
           </div>

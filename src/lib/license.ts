@@ -1,27 +1,27 @@
 // Ocean Novel License Tiers & Funnel Packages
-// FE: FrontEnd (Author Edition - $27)
-// OTO1: Unlimited Studio Edition ($47)
-// OTO2: Ocean Novel Premium - AI Ghostwriter & Lore Architecture ($67)
+// Regular: Author Edition ($27)
+// Pro: Unlimited Studio Edition ($47)
+// Premium: Ocean Novel Premium - AI Ghostwriter & Lore Architecture ($67)
 
 export type LicensePlan = 'free' | 'pro' | 'master' | 'commercial';
 
 export interface PlanLimits {
-  tierCode: 'FE' | 'OTO1' | 'OTO2' | 'COMMERCIAL';
+  tierCode: 'REGULAR' | 'PRO' | 'PREMIUM' | 'COMMERCIAL' | 'FE' | 'OTO1' | 'OTO2';
   tierName: string;
-  maxProjects: number;             // FE: 3, OTO1/OTO2: unlimited
-  maxCharactersPerProject: number;    // FE: 25, OTO1/OTO2: unlimited
-  maxLocationsPerProject: number;     // FE: 15, OTO1/OTO2: unlimited
-  hasImageLibrary: boolean;         // FE: false, OTO1+: true (50+ preset portraits & locations)
-  hasEpub3Export: boolean;          // FE: false, OTO1+: true (Amazon KDP EPUB 3 export)
-  hasAiGhostwriterHub: boolean;     // FE/OTO1: false, OTO2+: true (AI Prompt Hub & Ghostwriter generator)
-  hasContinuityEngine: boolean;     // FE/OTO1: false, OTO2+: true (Deep Logic & Continuity Conflict Engine)
+  maxProjects: number;             // Regular: 3, Pro/Premium: unlimited
+  maxCharactersPerProject: number;    // Regular: 25, Pro/Premium: unlimited
+  maxLocationsPerProject: number;     // Regular: 15, Pro/Premium: unlimited
+  hasImageLibrary: boolean;         // Regular: false, Pro+: true (50+ preset portraits & locations)
+  hasEpub3Export: boolean;          // Regular: false, Pro+: true (Amazon KDP EPUB 3 export)
+  hasAiGhostwriterHub: boolean;     // Regular/Pro: false, Premium: true (AI Prompt Hub & Ghostwriter generator)
+  hasContinuityEngine: boolean;     // Regular/Pro: false, Premium: true (Deep Logic & Continuity Conflict Engine)
   hasCommercialKit: boolean;        // Commercial: true
 }
 
 export const PLAN_LIMITS: Record<LicensePlan, PlanLimits> = {
   free: {
-    tierCode: 'FE',
-    tierName: 'FrontEnd: Author Edition',
+    tierCode: 'REGULAR',
+    tierName: 'Regular Edition',
     maxProjects: 3,
     maxCharactersPerProject: 25,
     maxLocationsPerProject: 15,
@@ -32,8 +32,8 @@ export const PLAN_LIMITS: Record<LicensePlan, PlanLimits> = {
     hasCommercialKit: false,
   },
   pro: {
-    tierCode: 'OTO1',
-    tierName: 'OTO1: Unlimited Studio Edition',
+    tierCode: 'PRO',
+    tierName: 'Pro Edition',
     maxProjects: Infinity,
     maxCharactersPerProject: Infinity,
     maxLocationsPerProject: Infinity,
@@ -44,8 +44,8 @@ export const PLAN_LIMITS: Record<LicensePlan, PlanLimits> = {
     hasCommercialKit: false,
   },
   master: {
-    tierCode: 'OTO2',
-    tierName: 'OTO2: Ocean Novel Premium (AI & Lore)',
+    tierCode: 'PREMIUM',
+    tierName: 'Premium Edition',
     maxProjects: Infinity,
     maxCharactersPerProject: Infinity,
     maxLocationsPerProject: Infinity,
@@ -78,8 +78,8 @@ export const FE_QUOTAS = {
 export function tierToPlan(tier?: string | null): LicensePlan {
   if (!tier) return 'free';
   const clean = tier.trim().toUpperCase();
-  if (clean === 'OTO2' || clean === 'MASTER') return 'master';
-  if (clean === 'OTO1' || clean === 'PRO') return 'pro';
+  if (clean === 'PREMIUM' || clean === 'OTO2' || clean === 'MASTER') return 'master';
+  if (clean === 'PRO' || clean === 'OTO1') return 'pro';
   if (clean === 'COMMERCIAL') return 'commercial';
   return 'free';
 }

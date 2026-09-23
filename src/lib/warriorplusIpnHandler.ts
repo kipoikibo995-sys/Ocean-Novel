@@ -48,10 +48,10 @@ export function mapProductToTier(
 ): { tier: 'Free' | 'FrontEnd' | 'OTO1' | 'OTO2'; defaultPrice: string } {
   const combined = (itemName + ' ' + itemNumber).toLowerCase();
 
-  if (combined.includes('oto2') || combined.includes('ai') || combined.includes('ghostwriter') || combined.includes('lore')) {
+  if (combined.includes('premium') || combined.includes('oto2') || combined.includes('ai') || combined.includes('ghostwriter') || combined.includes('lore')) {
     return { tier: 'OTO2', defaultPrice: '$67.00' };
   }
-  if (combined.includes('oto1') || combined.includes('unlimited') || combined.includes('pro')) {
+  if (combined.includes('pro') || combined.includes('oto1') || combined.includes('unlimited')) {
     return { tier: 'OTO1', defaultPrice: '$47.00' };
   }
   return { tier: 'FrontEnd', defaultPrice: '$27.00' };
