@@ -30,6 +30,38 @@
         "plot": { "type": "object" }
       },
       "required": ["id", "userId"]
+    },
+    "RegisteredUser": {
+      "title": "RegisteredUser",
+      "description": "System user account for CRM and admin dashboard",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "tier": { "type": "string" },
+        "credits": { "type": "number" },
+        "isBanned": { "type": "boolean" },
+        "lastActive": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "purchaseHistory": { "type": "array" }
+      },
+      "required": ["uid", "email"]
+    },
+    "IpnPendingPurchase": {
+      "title": "IpnPendingPurchase",
+      "description": "WarriorPlus pending purchase awaiting registration match",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "buyerEmail": { "type": "string" },
+        "productItem": { "type": "string" },
+        "creditsAssigned": { "type": "number" },
+        "tier": { "type": "string" },
+        "dateReceived": { "type": "number" },
+        "txnId": { "type": "string" }
+      },
+      "required": ["id", "buyerEmail", "productItem", "tier"]
     }
   },
   "firestore": {
@@ -40,6 +72,14 @@
     "users/{userId}/projectData/{projectId}": {
       "schema": { "$ref": "#/entities/ProjectData" },
       "description": "Stores the heavy content of the projects"
+    },
+    "registeredUsers/{userId}": {
+      "schema": { "$ref": "#/entities/RegisteredUser" },
+      "description": "Stores CRM account data for all registered users"
+    },
+    "ipnPendingPurchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/IpnPendingPurchase" },
+      "description": "Stores pending WarriorPlus purchases for automatic fulfillment"
     }
   }
 }

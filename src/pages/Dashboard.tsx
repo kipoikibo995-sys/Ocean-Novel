@@ -26,6 +26,7 @@ import {
   ChevronDown,
   User as UserIcon,
   Cloud,
+  ShieldCheck,
 } from "lucide-react";
 import { ManuscriptItem } from "@/mockData";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
 
 import { runFantasySeed } from "@/lib/seed";
+import { isUserAdmin } from "@/lib/adminService";
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
@@ -680,6 +682,16 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 relative z-10 pt-1 sm:pt-0">
+              {currentUser?.email && isUserAdmin(currentUser.email) && (
+                <button
+                  onClick={() => navigate("/admin")}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-[#2c1b13] text-[#FAF8F5] hover:bg-[#4a3225] border border-[#5a3a29] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-sm text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer"
+                  title="Master Admin Dashboard (CRM & WarriorPlus IPN)"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#C89D66] shrink-0" />
+                  <span className="whitespace-nowrap">Admin Dashboard</span>
+                </button>
+              )}
               <button
                 onClick={() => navigate("/settings")}
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-[#f4efe6] text-[#4a3225] hover:bg-[#e5e0d5] border border-[#d8d2c4] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-sm text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer"

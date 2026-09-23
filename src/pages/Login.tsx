@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Feather,
   Mail,
   Lock,
   User,
@@ -13,6 +12,7 @@ import {
   CheckCircle2,
   RefreshCw,
   KeyRound,
+  BookOpen,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import {
@@ -25,6 +25,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { storage } from "@/lib/storage";
+import { adminService } from "@/lib/adminService";
 import { cn } from "@/lib/utils";
 
 export default function Login() {
@@ -36,9 +37,26 @@ export default function Login() {
   // Form fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [penName, setPenName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Security Math Captcha (For Register)
+  const [captchaQuestion, setCaptchaQuestion] = useState(() => {
+    const n1 = Math.floor(Math.random() * 8) + 3;
+    const n2 = Math.floor(Math.random() * 7) + 2;
+    return { num1: n1, num2: n2, answer: n1 + n2 };
+  });
+  const [captchaInput, setCaptchaInput] = useState("");
+
+  const refreshCaptcha = () => {
+    const n1 = Math.floor(Math.random() * 8) + 3;
+    const n2 = Math.floor(Math.random() * 7) + 2;
+    setCaptchaQuestion({ num1: n1, num2: n2, answer: n1 + n2 });
+    setCaptchaInput("");
+  };
 
   // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
@@ -68,12 +86,17 @@ export default function Login() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Post-login data sync and redirection to Archive Projects
+  // Post-login data sync and redirection
   const handlePostAuthSync = async (user: any, customPenName?: string) => {
     const authorName = customPenName || user.displayName || user.email?.split("@")[0] || "Author";
     storage.switchUser(user.uid, user.email, authorName);
-    
+
     try {
+      await adminService.trackUserActivity({
+        uid: user.uid,
+        email: user.email,
+        displayName: authorName,
+      });
       await storage.syncFromCloud(user.uid);
       await storage.syncAllLocalDataToCloud(user.uid);
     } catch (e) {
@@ -99,6 +122,23 @@ export default function Login() {
       return;
     }
 
+    if (mode === "signup") {
+      if (!confirmPassword) {
+        setErrorMsg("Please confirm your password.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg("Passwords do not match. Please verify your password confirmation.");
+        return;
+      }
+      const parsedCaptcha = parseInt(captchaInput.trim(), 10);
+      if (isNaN(parsedCaptcha) || parsedCaptcha !== captchaQuestion.answer) {
+        setErrorMsg("Incorrect math verification. Please solve the calculation to continue.");
+        refreshCaptcha();
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
@@ -112,19 +152,19 @@ export default function Login() {
           } catch (err) {
             console.warn("Profile update note:", err);
           }
-          setSuccessMsg("Account created. Entering your Studio...");
+          setSuccessMsg("Author profile created. Entering your Studio...");
           await handlePostAuthSync(userCred.user, nameToUse);
         }
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
         if (userCred.user) {
-          setSuccessMsg("Welcome back. Loading your archives...");
+          setSuccessMsg("Welcome back, Storyteller. Loading your archives...");
           await handlePostAuthSync(userCred.user);
         }
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      let message = "Authentication failed. Please check your credentials.";
+      let message = "Authentication failed. Please verify your credentials.";
       const code = err?.code;
 
       if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
@@ -132,9 +172,9 @@ export default function Login() {
       } else if (code === "auth/email-already-in-use") {
         message = "This email is already registered. Please sign in instead.";
       } else if (code === "auth/weak-password") {
-        message = "Password should be at least 6 characters.";
+        message = "Password must be at least 6 characters long.";
       } else if (code === "auth/too-many-requests") {
-        message = "Temporarily locked due to multiple attempts. Please try again shortly.";
+        message = "Too many attempts. Access temporarily paused for your security.";
       } else if (err?.message) {
         message = err.message;
       }
@@ -156,7 +196,7 @@ export default function Login() {
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
-        setSuccessMsg("Signed in with Google. Entering Studio...");
+        setSuccessMsg("Google verified. Synchronizing author archives...");
         await handlePostAuthSync(result.user);
       }
     } catch (err: any) {
@@ -179,11 +219,11 @@ export default function Login() {
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail.trim());
-      setResetStatus("Password reset link dispatched to your inbox.");
+      setResetStatus("A password reset link has been dispatched to your inbox.");
       setTimeout(() => {
         setIsForgotModalOpen(false);
         setResetStatus(null);
-      }, 3000);
+      }, 2500);
     } catch (err: any) {
       setResetStatus(err?.message || "Unable to send reset email. Please verify the address.");
     } finally {
@@ -192,76 +232,94 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#FCFAF6] font-sans selection:bg-[#8C503C] selection:text-white">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#FAF8F5] font-sans selection:bg-[#8C503C] selection:text-white overflow-x-hidden">
       
-      {/* ================= LEFT COLUMN: EDITORIAL STUDIO SHOWCASE ================= */}
-      <div className="w-full lg:w-[46%] xl:w-[42%] bg-[#1C110A] text-[#F4EFE6] p-8 sm:p-12 lg:p-16 xl:p-20 flex flex-col justify-between relative overflow-hidden border-b lg:border-b-0 lg:border-r border-[#331E12] min-h-[380px] lg:min-h-screen shrink-0">
+      {/* ================= LEFT COLUMN: CLEAN EDITORIAL SHOWCASE ================= */}
+      <div className="w-full lg:w-[46%] xl:w-[42%] bg-[#17100B] text-[#F4EFE6] p-8 sm:p-12 lg:p-16 xl:p-20 flex flex-col justify-between relative overflow-hidden border-b lg:border-b-0 lg:border-r border-[#2C1C13] min-h-[420px] lg:min-h-screen shrink-0">
         
-        {/* Subtle background atmosphere */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#8C503C]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#C89D66]/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -right-16 -bottom-16 opacity-5 pointer-events-none text-white select-none">
-          <Feather className="w-80 h-80" />
+        {/* Atmospheric ambient glows */}
+        <div className="absolute top-0 right-0 w-[420px] h-[420px] bg-[#8C503C]/12 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[360px] h-[360px] bg-[#C89D66]/8 rounded-full blur-[90px] pointer-events-none" />
+        
+        {/* 1. Header & Brand Identity */}
+        <div className="relative z-10">
+          <span className="font-serif text-2xl font-bold tracking-tight text-[#FAF7F2] block leading-none">
+            Ocean Novel
+          </span>
+          <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C89D66] mt-1.5 block">
+            Novel Architecture Studio
+          </span>
         </div>
 
-        {/* Brand Header */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#8C503C] flex items-center justify-center text-[#FCFAF6] shadow-sm border border-[#A6634E]/30">
-              <Feather className="w-5 h-5" />
+        {/* 2. Focused Editorial Narrative */}
+        <div className="relative z-10 my-8 lg:my-0 space-y-6 max-w-md">
+          <div className="space-y-3">
+            <h1 className="font-serif text-3xl sm:text-4xl xl:text-[44px] font-bold text-[#FCFAF5] leading-[1.15] tracking-tight">
+              Build characters.<br />Architect universes.
+            </h1>
+
+            <p className="font-serif text-sm sm:text-base text-[#C8B8A6] leading-relaxed">
+              Design deep character arcs, plot dynamic relationship webs, and write with seamless cloud sync.
+            </p>
+          </div>
+
+          {/* Clean typographic highlights without any icons */}
+          <div className="grid grid-cols-3 gap-3 pt-5 border-t border-[#2A1B12]">
+            <div>
+              <span className="text-[11px] uppercase font-bold tracking-wider text-[#C89D66] block">
+                Characters
+              </span>
+              <p className="text-xs text-stone-400 mt-1 font-serif leading-snug">
+                Flaws, desires & relationship webs
+              </p>
             </div>
             <div>
-              <span className="font-serif text-2xl font-bold tracking-tight text-[#FAF7F2] block leading-none">
-                Ocean Novel
+              <span className="text-[11px] uppercase font-bold tracking-wider text-[#C89D66] block">
+                Story Bible
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest text-[#C89D66] mt-1.5 block">
-                Novel Architecture Studio
+              <p className="text-xs text-stone-400 mt-1 font-serif leading-snug">
+                Lore, factions & world rules
+              </p>
+            </div>
+            <div>
+              <span className="text-[11px] uppercase font-bold tracking-wider text-[#C89D66] block">
+                Cloud Vault
               </span>
+              <p className="text-xs text-stone-400 mt-1 font-serif leading-snug">
+                Private, real-time synchronization
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Editorial Headline & Statement */}
-        <div className="relative z-10 my-10 lg:my-0 space-y-6 max-w-lg">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-[#2E1A10] border border-[#482819] text-[11px] font-semibold text-[#D4A373] tracking-wide">
-            <span>Dedicated Workspace for Authors</span>
-          </div>
-
-          <h1 className="font-serif text-3xl sm:text-4xl xl:text-5xl font-bold text-[#FCFAF5] leading-[1.18] tracking-tight">
-            Where epic sagas find their true form.
-          </h1>
-
-          <p className="font-serif text-sm sm:text-base text-[#C8B8A6] leading-relaxed">
-            Architect intricate multi-volume manuscripts, track character networks, map fantasy worlds, and write distraction-free with seamless cloud synchronization.
-          </p>
-        </div>
-
-        {/* Footer Editorial Quote */}
-        <div className="relative z-10 pt-6 border-t border-[#331E12] flex items-center justify-between text-xs text-[#A69584] font-serif">
+        {/* 3. Footer Editorial Quote */}
+        <div className="relative z-10 pt-6 border-t border-[#2C1C13] flex items-center justify-between text-xs text-[#A69584] font-serif">
           <span>&ldquo;A novel is a world born from words.&rdquo;</span>
-          <span className="font-mono text-[10px] text-[#C89D66] tracking-wider uppercase">Cloud Synced</span>
+          <span className="font-mono text-[10px] text-[#C89D66] tracking-wider uppercase">
+            Encrypted & Synced
+          </span>
         </div>
       </div>
 
-      {/* ================= RIGHT COLUMN: EXPANSIVE AUTHENTICATION PANE ================= */}
-      <div className="flex-1 bg-[#FCFAF6] p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-center items-center relative overflow-y-auto">
-        <div className="w-full max-w-md space-y-7">
+      {/* ================= RIGHT COLUMN: FLUID AUTHENTICATION PANE ================= */}
+      <div className="flex-1 bg-[#FAF8F5] p-6 sm:p-10 lg:p-14 xl:p-20 flex flex-col justify-center items-center relative overflow-y-auto">
+        <div className="w-full max-w-md space-y-6">
           
-          {/* Header & Mode Switcher */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Header & Mode Switcher with Smooth Sliding Indicator */}
+          <div className="space-y-4">
             <div>
               <h2 className="font-serif text-3xl font-bold text-[#2A1B14] tracking-tight">
-                {mode === "signin" ? "Welcome Back" : "Create Account"}
+                {mode === "signin" ? "Welcome Back" : "Create Author Profile"}
               </h2>
               <p className="text-xs sm:text-sm font-serif text-stone-500 mt-1">
                 {mode === "signin"
-                  ? "Sign in to access your manuscript archives"
-                  : "Begin your author journey with Ocean Novel"}
+                  ? "Sign in to access your manuscript archives and story bible"
+                  : "Begin crafting your characters and story universe today"}
               </p>
             </div>
 
-            {/* Mode Switcher Tabs */}
-            <div className="p-1 bg-[#EFE9DE] rounded-lg flex items-center border border-[#E2DAD0] shrink-0 self-start sm:self-auto">
+            {/* Fluid Mode Switcher */}
+            <div className="p-1 bg-[#ECE5D8] rounded-xl flex items-center border border-[#DFD6C7] relative">
               <button
                 type="button"
                 onClick={() => {
@@ -270,10 +328,8 @@ export default function Login() {
                   setSuccessMsg(null);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold tracking-wider rounded-md transition-all cursor-pointer",
-                  mode === "signin"
-                    ? "bg-white text-[#2A1B14] shadow-xs"
-                    : "text-stone-500 hover:text-[#2A1B14]"
+                  "flex-1 py-2 text-xs font-bold tracking-wider rounded-lg transition-colors duration-200 cursor-pointer text-center relative z-10",
+                  mode === "signin" ? "text-[#2A1B14]" : "text-stone-500 hover:text-stone-800"
                 )}
               >
                 Sign In
@@ -284,27 +340,39 @@ export default function Login() {
                   setMode("signup");
                   setErrorMsg(null);
                   setSuccessMsg(null);
+                  refreshCaptcha();
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold tracking-wider rounded-md transition-all cursor-pointer",
-                  mode === "signup"
-                    ? "bg-white text-[#2A1B14] shadow-xs"
-                    : "text-stone-500 hover:text-[#2A1B14]"
+                  "flex-1 py-2 text-xs font-bold tracking-wider rounded-lg transition-colors duration-200 cursor-pointer text-center relative z-10",
+                  mode === "signup" ? "text-[#2A1B14]" : "text-stone-500 hover:text-stone-800"
                 )}
               >
                 Register
               </button>
+
+              {/* Smooth Animated Indicator */}
+              <motion.div
+                className="absolute top-1 bottom-1 bg-white rounded-lg shadow-sm border border-[#D8CEBE]"
+                layoutId="authTabIndicator"
+                initial={false}
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                style={{
+                  width: "calc(50% - 4px)",
+                  left: mode === "signin" ? "4px" : "calc(50%)",
+                }}
+              />
             </div>
           </div>
 
-          {/* Feedback Alerts */}
+          {/* Feedback Alerts with Smooth Motion */}
           <AnimatePresence mode="wait">
             {errorMsg && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2.5 text-xs text-rose-800 shadow-2xs"
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="p-3.5 bg-rose-50/90 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800 shadow-sm"
               >
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                 <span className="leading-relaxed">{errorMsg}</span>
@@ -313,10 +381,11 @@ export default function Login() {
 
             {successMsg && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 0 }}
-                className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2.5 text-xs text-emerald-800 shadow-2xs"
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800 shadow-sm"
               >
                 <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
                 <span className="leading-relaxed">{successMsg}</span>
@@ -325,11 +394,13 @@ export default function Login() {
           </AnimatePresence>
 
           {/* One-Click Google Authentication */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading || isLoading}
-            className="w-full h-11 px-4 bg-white hover:bg-stone-50 text-stone-700 border border-[#DCD5C9] hover:border-[#C5BBAA] rounded-lg font-medium text-xs sm:text-sm flex items-center justify-center gap-3 shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-60"
+            className="w-full h-11 px-4 bg-white hover:bg-stone-50 text-stone-700 border border-[#DCD5C9] hover:border-[#BFAF9C] rounded-xl font-medium text-xs sm:text-sm flex items-center justify-center gap-3 shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-60"
           >
             {isGoogleLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin text-[#8C503C]" />
@@ -353,43 +424,47 @@ export default function Login() {
                 />
               </svg>
             )}
-            <span>{isGoogleLoading ? "Connecting..." : "Continue with Google (Gmail)"}</span>
-          </button>
+            <span>{isGoogleLoading ? "Connecting to Author Cloud..." : "Continue with Google"}</span>
+          </motion.button>
 
           {/* Divider */}
           <div className="relative flex items-center justify-center">
             <div className="border-t border-[#EAE3D6] w-full" />
-            <span className="bg-[#FCFAF6] px-3.5 text-[10px] font-mono text-stone-400 uppercase tracking-widest relative">
+            <span className="bg-[#FAF8F5] px-3.5 text-[10px] font-mono text-stone-400 uppercase tracking-widest relative">
               or continue with email
             </span>
           </div>
 
           {/* Input Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Pen Name (Signup only) */}
-            {mode === "signup" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-1.5"
-              >
-                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                  Author Pen Name / Full Name
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Brandon Sanderson"
-                    value={penName}
-                    onChange={(e) => setPenName(e.target.value)}
-                    className="w-full h-10.5 pl-10 pr-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
-                  />
-                </div>
-              </motion.div>
-            )}
+            
+            {/* Pen Name (Signup only) with smooth height animation */}
+            <AnimatePresence initial={false}>
+              {mode === "signup" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                    Author Pen Name / Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required={mode === "signup"}
+                      placeholder="e.g. Brandon Sanderson"
+                      value={penName}
+                      onChange={(e) => setPenName(e.target.value)}
+                      className="w-full h-11 pl-10 pr-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-2 focus:ring-[#8C503C]/15 rounded-xl text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Email */}
             <div className="space-y-1.5">
@@ -404,7 +479,7 @@ export default function Login() {
                   placeholder="author@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-10.5 pl-10 pr-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
+                  className="w-full h-11 pl-10 pr-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-2 focus:ring-[#8C503C]/15 rounded-xl text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
                 />
               </div>
             </div>
@@ -436,7 +511,7 @@ export default function Login() {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-10.5 pl-10 pr-10 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-lg text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
+                  className="w-full h-11 pl-10 pr-10 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-2 focus:ring-[#8C503C]/15 rounded-xl text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
                 />
                 <button
                   type="button"
@@ -448,42 +523,143 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Confirm Password (Signup only) */}
+            <AnimatePresence initial={false}>
+              {mode === "signup" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required={mode === "signup"}
+                      placeholder="Re-enter your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full h-11 pl-10 pr-10 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-2 focus:ring-[#8C503C]/15 rounded-xl text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-sans shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {password && confirmPassword && (
+                    <p
+                      className={cn(
+                        "text-[11px] font-sans pl-1 transition-colors",
+                        password === confirmPassword ? "text-emerald-600 font-medium" : "text-rose-500 font-medium"
+                      )}
+                    >
+                      {password === confirmPassword ? "✓ Passwords match" : "✕ Passwords do not match"}
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Math Captcha Verification (Signup only) */}
+            <AnimatePresence initial={false}>
+              {mode === "signup" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                      Security Verification (Math Captcha)
+                    </label>
+                    <span className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
+                      Human Check
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2 px-3.5 h-11 bg-[#F4EFE6] border border-[#DDD5C7] rounded-xl font-mono text-sm font-bold text-[#2A1B14] select-none shrink-0 shadow-2xs">
+                      <span>{captchaQuestion.num1}</span>
+                      <span className="text-[#8C503C]">+</span>
+                      <span>{captchaQuestion.num2}</span>
+                      <span className="text-stone-400">=</span>
+                      <span className="text-[#8C503C]">?</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={refreshCaptcha}
+                      title="Generate new calculation"
+                      className="w-11 h-11 rounded-xl border border-[#DCD5C9] bg-white hover:bg-stone-50 flex items-center justify-center text-stone-500 hover:text-stone-800 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        required={mode === "signup"}
+                        placeholder="Result"
+                        value={captchaInput}
+                        onChange={(e) => setCaptchaInput(e.target.value)}
+                        className="w-full h-11 px-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-2 focus:ring-[#8C503C]/15 rounded-xl text-xs sm:text-sm text-stone-800 outline-none transition-all placeholder:text-stone-400 font-mono shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Remember checkbox */}
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="rounded border-[#DCD5C9] text-[#8C503C] focus:ring-[#8C503C] w-4 h-4 accent-[#8C503C]"
                 />
-                <span className="text-xs font-serif text-stone-600">Remember session on this device</span>
+                <span className="text-xs font-serif text-stone-600">Keep author session active</span>
               </label>
             </div>
 
             {/* Submit CTA */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={isLoading || isGoogleLoading}
-              className="w-full h-11 bg-[#8C503C] hover:bg-[#723F2F] text-white rounded-lg font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-60 mt-2"
+              className="w-full h-11 bg-gradient-to-r from-[#8C503C] to-[#753D2C] hover:from-[#7C4432] hover:to-[#683324] text-white rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-60 mt-3"
             >
               {isLoading ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Processing...</span>
+                  <span>Entering Studio...</span>
                 </>
               ) : (
                 <>
-                  <span>{mode === "signin" ? "Enter Studio" : "Create Author Profile"}</span>
+                  <span>{mode === "signin" ? "Open Studio Archives" : "Create Author Profile"}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </button>
+            </motion.button>
           </form>
 
-          <div className="text-center pt-2 border-t border-[#EAE3D6]">
-            <p className="text-[11px] font-serif text-stone-400">
-              Encrypted Author Workspace • Cloud Synced & Protected
+          {/* Security & Cloud Badge */}
+          <div className="text-center pt-3 border-t border-[#EAE3D6] flex items-center justify-center gap-2 text-stone-400">
+            <BookOpen className="w-3.5 h-3.5 text-[#8C503C]" />
+            <p className="text-[11px] font-serif">
+              Private Author Vault • Real-Time Cloud Synchronization
             </p>
           </div>
 
@@ -495,28 +671,36 @@ export default function Login() {
         {isForgotModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm bg-[#FCFAF6] border border-[#E5E0D5] rounded-xl p-5 shadow-2xl space-y-3.5"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm bg-[#FAF8F5] border border-[#E5E0D5] rounded-2xl p-6 shadow-2xl space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-[#EBE3D5] pb-2.5">
+              <div className="flex items-center justify-between border-b border-[#EBE3D5] pb-3">
                 <div className="flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-[#8C503C]" />
-                  <h3 className="font-serif font-bold text-sm text-[#2A1B14]">
-                    Reset Password
-                  </h3>
+                  <div className="w-8 h-8 rounded-lg bg-[#8C503C]/10 flex items-center justify-center text-[#8C503C]">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-sm text-[#2A1B14]">
+                      Reset Password
+                    </h3>
+                    <p className="text-[10px] font-mono text-stone-500">
+                      Author Vault Recovery
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsForgotModalOpen(false)}
-                  className="text-stone-400 hover:text-stone-700 text-xs font-bold cursor-pointer"
+                  className="text-stone-400 hover:text-stone-700 text-xs font-bold cursor-pointer w-6 h-6 rounded-full hover:bg-stone-200 flex items-center justify-center transition-colors"
                 >
                   ✕
                 </button>
               </div>
 
-              <p className="text-xs font-serif text-stone-600">
-                Enter your email to receive a password reset link.
+              <p className="text-xs font-serif text-stone-600 leading-relaxed">
+                Enter your registered email address and we will dispatch a secure link to reset your author credentials.
               </p>
 
               <form onSubmit={handleSendPasswordReset} className="space-y-3">
@@ -526,27 +710,33 @@ export default function Login() {
                   placeholder="author@example.com"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-[#DCD5C9] focus:border-[#8C503C] rounded-lg text-xs text-stone-800 outline-none"
+                  className="w-full h-10 px-3.5 bg-white border border-[#DCD5C9] focus:border-[#8C503C] focus:ring-1 focus:ring-[#8C503C] rounded-xl text-xs text-stone-800 outline-none shadow-2xs"
                 />
 
                 {resetStatus && (
-                  <p className="text-[11px] font-serif text-[#8C503C]">{resetStatus}</p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[11px] font-serif text-[#8C503C] bg-[#8C503C]/10 p-2 rounded-lg"
+                  >
+                    {resetStatus}
+                  </motion.p>
                 )}
 
-                <div className="flex justify-end gap-2 pt-1">
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsForgotModalOpen(false)}
-                    className="px-3 py-1.5 border border-[#DCD5C9] text-stone-600 text-[11px] font-bold uppercase rounded-md hover:bg-stone-100 cursor-pointer"
+                    className="px-3.5 py-1.5 border border-[#DCD5C9] text-stone-600 text-[11px] font-bold uppercase tracking-wider rounded-lg hover:bg-stone-100 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isResetting}
-                    className="px-3 py-1.5 bg-[#8C503C] hover:bg-[#723F2F] text-white text-[11px] font-bold uppercase rounded-md cursor-pointer disabled:opacity-60"
+                    className="px-4 py-1.5 bg-[#8C503C] hover:bg-[#753D2C] text-white text-[11px] font-bold uppercase tracking-wider rounded-lg cursor-pointer disabled:opacity-60 shadow-xs"
                   >
-                    {isResetting ? "Sending..." : "Send Link"}
+                    {isResetting ? "Dispatching..." : "Send Reset Link"}
                   </button>
                 </div>
               </form>

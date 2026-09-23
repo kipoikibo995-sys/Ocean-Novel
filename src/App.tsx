@@ -16,7 +16,7 @@ import { AppLayout, ProjectLayout } from "./components/layout/layouts";
 import { storage } from "./lib/storage";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Feather, RefreshCw } from "lucide-react";
+import { Feather, RefreshCw, ShieldAlert } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
 import CreateProject from "./pages/CreateProject";
 import ProjectOverview from "./pages/ProjectOverview";
@@ -29,15 +29,26 @@ import Settings from "./pages/Settings";
 import GlobalSearchPage from "./pages/GlobalSearchPage";
 import ConsistencyCheckerPage from "./pages/ConsistencyCheckerPage";
 import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import { adminService } from "./lib/adminService";
 
 function ProtectedRoute() {
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isBanned, setIsBanned] = useState<boolean>(false);
   const location = useLocation();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser && !currentUser.isAnonymous) {
+        try {
+          const res = await adminService.trackUserActivity(currentUser);
+          setIsBanned(res.isBanned);
+        } catch {
+          // ignore tracking error
+        }
+      }
       setLoading(false);
     });
     return () => unsub();
@@ -63,6 +74,33 @@ function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // If user has been banned by admin, lock them out of the studio
+  if (isBanned) {
+    return (
+      <div className="min-h-screen w-full bg-[#FAF8F5] flex flex-col items-center justify-center p-4 text-center select-none">
+        <div className="max-w-md w-full p-8 bg-white border border-rose-200 rounded-2xl shadow-xl space-y-4">
+          <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-serif font-bold text-stone-900">
+            Account Suspended
+          </h2>
+          <p className="text-xs text-stone-600 leading-relaxed font-serif">
+            Your account access to Ocean Novel Studio has been suspended by an administrator. If you believe this is an error or need assistance, please contact customer support.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => auth.signOut()}
+              className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <Outlet />;
 }
 
@@ -79,6 +117,7 @@ function AnimatedRoutes() {
 
       {/* Protected Archive & Studio Routes */}
       <Route element={<ProtectedRoute />}>
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateProject />} />
