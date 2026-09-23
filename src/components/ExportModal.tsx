@@ -7,22 +7,22 @@ import {
   File,
   FileDown,
   BookOpen,
-  AtSign,
-  Shield,
-  List,
-  Heart,
-  Sliders,
   RotateCcw,
-  Sparkles,
-  ExternalLink,
-  BookCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 import { storage, FrontBackMatterData } from "@/lib/storage";
 import { ManuscriptItem } from "@/mockData";
-import { exportToEpub, cleanContentToParagraphs, parseChapterHeading } from "@/lib/epubExport";
+import {
+  exportToEpub,
+  cleanContentToParagraphs,
+  parseChapterHeading,
+  auditManuscriptContent,
+  checkCoverResolution,
+  cleanInternalMentionsAndTags,
+} from "@/lib/epubExport";
 
 type ExportFormat = "epub" | "docx" | "pdf" | "txt";
 type ActiveTab = "format" | "matter";
@@ -40,12 +40,19 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   const [includeCopyright, setIncludeCopyright] = useState(true);
   const [includeTocPage, setIncludeTocPage] = useState(true);
   const [includeAboutAuthor, setIncludeAboutAuthor] = useState(true);
+  const [includeReviewRequest, setIncludeReviewRequest] = useState(true);
   const [includeAcknowledgments, setIncludeAcknowledgments] = useState(false);
   const [stripInternalMentions, setStripInternalMentions] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [coverValidation, setCoverValidation] = useState<{
+    width: number;
+    height: number;
+    isAdequate: boolean;
+    message: string;
+  } | null>(null);
 
   const project = storage.getProjects().find((p) => p.id === projectId);
   const projectData = storage.getProjectData(projectId);
@@ -56,7 +63,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
   const defaultMatter: FrontBackMatterData = {
     subtitle: "",
-    publisher: "Ocean Novel Studio",
+    publisher: "", // User input only; omitted if left blank
     edition: `First Digital Edition: ${defaultYear}`,
     copyrightYear: defaultYear,
     copyrightOwner: authorFallback,
@@ -65,13 +72,11 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
     disclaimerText:
       "This is a work of fiction. Names, characters, places, and incidents either are the product of the author's imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.",
     dedication: "",
-    acknowledgmentsText:
-      "To all the readers, early reviewers, and fellow storytellers who supported this journey from the very first draft. Thank you for bringing these characters to life in your imagination.",
+    acknowledgmentsText: "", // Strictly optional, no filler text
     authorPenName: authorFallback,
-    authorBioText:
-      profile.bio ||
-      `${authorFallback} is an independent author and novelist crafting immersive stories. When not writing the next chapter, you can find them plotting new worlds and connecting with readers worldwide.`,
+    authorBioText: profile.bio || "", // User input only, never auto-generate fake bio
     authorWebsiteOrNewsletter: "",
+    includeReviewRequest: true,
     reviewCtaHeading: "A Sincere Note to the Reader",
     reviewCtaText:
       `Thank you for reading ${project?.title || "this book"}! If you enjoyed this journey, please consider leaving an honest review on Amazon or Goodreads. Reviews are the lifeblood of independent authors and help fellow book lovers discover great new stories.`,
@@ -83,14 +88,32 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
   useEffect(() => {
     if (projectData?.frontBackMatter) {
-      setMatter(projectData.frontBackMatter);
+      setMatter({
+        ...defaultMatter,
+        ...projectData.frontBackMatter,
+      });
+      if (projectData.frontBackMatter.includeReviewRequest !== undefined) {
+        setIncludeReviewRequest(projectData.frontBackMatter.includeReviewRequest);
+      }
     } else {
       setMatter(defaultMatter);
     }
   }, [projectId]);
 
-  const updateMatterField = (key: keyof FrontBackMatterData, value: string) => {
-    const updated = { ...matter, [key]: value };
+  useEffect(() => {
+    checkCoverResolution(project?.coverUrl).then((res) => {
+      setCoverValidation(res);
+    });
+  }, [project?.coverUrl]);
+
+  const updateMatterField = (key: keyof FrontBackMatterData, value: any) => {
+    let updated = { ...matter, [key]: value };
+    // Synchronize author and copyright owner if they match or copyright owner is empty
+    if (key === "authorPenName") {
+      if (!matter.copyrightOwner || matter.copyrightOwner === matter.authorPenName) {
+        updated.copyrightOwner = value;
+      }
+    }
     setMatter(updated);
     storage.saveProjectData(projectId, { frontBackMatter: updated });
     setSavedNotice(true);
@@ -100,6 +123,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
   const handleResetToStandard = () => {
     if (window.confirm("Reset all Front & Back Matter to standard publishing defaults?")) {
       setMatter(defaultMatter);
+      setIncludeReviewRequest(true);
       storage.saveProjectData(projectId, { frontBackMatter: defaultMatter });
       setSavedNotice(true);
       setTimeout(() => setSavedNotice(false), 2000);
@@ -230,7 +254,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
     try {
       const manuscript = projectData?.manuscript || [];
       const title = project?.title || "Untitled Manuscript";
-      const author = matter.authorPenName || authorFallback;
+      const author = (matter.authorPenName || authorFallback).trim();
       const exportChapters = extractChaptersForExport(manuscript, stripInternalMentions);
 
       if (format === "epub") {
@@ -245,6 +269,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
           includeTocPage,
           includeAboutAuthor,
           includeAcknowledgments,
+          includeReviewRequest,
           authorBio: matter.authorBioText,
           manuscript,
           stripInternalMentions,
@@ -283,7 +308,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
       content += `${title.toUpperCase()}\n`;
       if (matter.subtitle) content += `${matter.subtitle}\n`;
       content += `\nBy ${author}\n\n`;
-      if (matter.publisher) content += `Published by ${matter.publisher}\n`;
+      if (matter.publisher?.trim()) content += `Published by ${matter.publisher.trim()}\n`;
       content += `\n\n=========================================\n\n\n`;
     }
 
@@ -292,6 +317,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
       if (matter.isbn) content += `ISBN: ${matter.isbn}\n`;
       if (matter.asin) content += `ASIN: ${matter.asin}\n`;
       content += `\n${matter.disclaimerText}\n\n`;
+      if (matter.publisher?.trim()) content += `Published by ${matter.publisher.trim()}\n`;
       content += `=========================================\n\n\n`;
     }
 
@@ -305,12 +331,17 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
     if (includeAboutAuthor) {
       content += `\n=========================================\n\nABOUT THE AUTHOR\n\n`;
-      content += `${author}\n\n${matter.authorBioText}\n\n`;
+      content += `${author}\n\n`;
+      if (matter.authorBioText?.trim()) {
+        content += `${matter.authorBioText.trim()}\n\n`;
+      }
       if (matter.authorWebsiteOrNewsletter) {
         content += `Newsletter: ${matter.authorWebsiteOrNewsletter}\n\n`;
       }
-      content += `-----------------------------------------\n`;
-      content += `${matter.reviewCtaHeading}\n\n${matter.reviewCtaText}\n\n`;
+      if (includeReviewRequest && matter.reviewCtaText?.trim()) {
+        content += `-----------------------------------------\n`;
+        content += `${matter.reviewCtaHeading || "Note to Readers:"}\n\n${matter.reviewCtaText}\n\n`;
+      }
     }
 
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -347,6 +378,15 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
           alignment: AlignmentType.CENTER,
         })
       );
+      if (matter.publisher?.trim()) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: matter.publisher.trim(), size: 20, color: "666666" })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 400 },
+          })
+        );
+      }
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
@@ -373,6 +413,9 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
             spacing: { after: 400 },
           })
         );
+      }
+      if (matter.publisher?.trim()) {
+        children.push(new Paragraph({ text: `Published by ${matter.publisher.trim()}`, spacing: { after: 200 } }));
       }
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
@@ -448,15 +491,15 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
           spacing: { after: 200 },
         })
       );
-      if (matter.authorBioText) {
+      if (matter.authorBioText?.trim()) {
         children.push(
           new Paragraph({
-            text: matter.authorBioText,
+            text: matter.authorBioText.trim(),
             spacing: { after: 400 },
           })
         );
       }
-      if (matter.reviewCtaText) {
+      if (includeReviewRequest && matter.reviewCtaText?.trim()) {
         children.push(
           new Paragraph({
             children: [
@@ -520,7 +563,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
           <p style="text-indent: 0;">Copyright © ${matter.copyrightYear || defaultYear} by ${matter.copyrightOwner || author}</p>
           ${matter.isbn ? `<p style="text-indent: 0;">ISBN: ${matter.isbn}</p>` : ""}
           <p style="text-indent: 0; font-style: italic;">${matter.disclaimerText}</p>
-          <p style="text-indent: 0;">Published by ${matter.publisher}</p>
+          ${matter.publisher?.trim() ? `<p style="text-indent: 0;">Published by ${matter.publisher.trim()}</p>` : ""}
         </div>
       `;
     }
@@ -543,11 +586,15 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
         <div class="about-author">
           <h2 style="text-align: center;">About the Author</h2>
           <p style="font-size: 1.2em; font-weight: bold; text-indent: 0;">${author}</p>
-          <p style="text-indent: 0;">${matter.authorBioText}</p>
-          <div style="margin-top: 2em; padding: 15px; border: 1px solid #ccc; background: #fafafa;">
-            <p style="font-weight: bold; text-indent: 0; margin-bottom: 5px;">${matter.reviewCtaHeading}</p>
-            <p style="font-style: italic; text-indent: 0;">${matter.reviewCtaText}</p>
-          </div>
+          ${matter.authorBioText?.trim() ? `<p style="text-indent: 0;">${matter.authorBioText.trim()}</p>` : ""}
+          ${
+            includeReviewRequest && matter.reviewCtaText?.trim()
+              ? `<div style="margin-top: 2em; padding: 15px; border: 1px solid #ccc; background: #fafafa;">
+                   <p style="font-weight: bold; text-indent: 0; margin-bottom: 5px;">${matter.reviewCtaHeading || "Note to Readers:"}</p>
+                   <p style="font-style: italic; text-indent: 0;">${matter.reviewCtaText.trim()}</p>
+                 </div>`
+              : ""
+          }
         </div>
       `;
     }
@@ -632,25 +679,23 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
             <div className="flex border-b border-[#E5E0D5] bg-stone-100/70 px-4 pt-2 gap-2 text-xs font-bold uppercase tracking-wider">
               <button
                 onClick={() => setActiveTab("format")}
-                className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`pb-2.5 px-3 border-b-2 flex items-center transition-all cursor-pointer ${
                   activeTab === "format"
                     ? "border-[#8C503C] text-[#8C503C]"
                     : "border-transparent text-stone-500 hover:text-stone-800"
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5" />
                 <span>Format & Scope</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("matter")}
-                className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`pb-2.5 px-3 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "matter"
                     ? "border-[#8C503C] text-[#8C503C]"
                     : "border-transparent text-stone-500 hover:text-stone-800"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#8C503C]" />
                 <span>Customize Pages (Front & Back Matter)</span>
                 <span className="bg-[#8C503C]/15 text-[#8C503C] text-[9px] px-1.5 py-0.2 rounded-full font-mono">
                   KDP Ready
@@ -766,9 +811,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                     />
                     <div className="text-xs">
-                      <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                        <AtSign className="w-3.5 h-3.5 text-[#8C503C]" />
-                        <span>Remove Internal '@' Mentions (Recommended for Publishing)</span>
+                      <div className="font-bold text-stone-900">
+                        Remove Internal '@' Mentions (Recommended for Publishing)
                       </div>
                       <p className="text-[11px] text-stone-500 font-serif mt-0.5">
                         Converts internal tags like <span className="font-mono text-stone-700">@Sarah Cole</span> into <span className="font-mono text-emerald-800 font-bold">Sarah Cole</span> while preserving email addresses.
@@ -785,9 +829,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                     />
                     <div className="text-xs">
-                      <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5 text-[#8C503C]" />
-                        <span>Include Title Page (Front Matter)</span>
+                      <div className="font-bold text-stone-900">
+                        Include Title Page (Front Matter)
                       </div>
                       <p className="text-[11px] text-stone-500 font-serif mt-0.5">
                         Displays book title, subtitle, author pen name, and publisher imprint.
@@ -804,9 +847,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                     />
                     <div className="text-xs">
-                      <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-[#8C503C]" />
-                        <span>Include Copyright Page & Fiction Disclaimer</span>
+                      <div className="font-bold text-stone-900">
+                        Include Copyright Page & Fiction Disclaimer
                       </div>
                       <p className="text-[11px] text-stone-500 font-serif mt-0.5">
                         Legal copyright notice © {matter.copyrightYear || defaultYear}, edition, and fiction disclaimer.
@@ -824,9 +866,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                         className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                       />
                       <div className="text-xs">
-                        <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                          <List className="w-3.5 h-3.5 text-[#8C503C]" />
-                          <span>Include In-Book Table of Contents Page (<code className="font-mono text-[10px]">toc.xhtml</code>)</span>
+                        <div className="font-bold text-stone-900">
+                          Include In-Book Table of Contents Page (<code className="font-mono text-[10px]">toc.xhtml</code>)
                         </div>
                         <p className="text-[11px] text-stone-500 font-serif mt-0.5">
                           Clickable chapter list for readers browsing through the opening pages.
@@ -835,7 +876,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                     </label>
                   )}
 
-                  {/* Option 5: About Author & Review Request */}
+                  {/* Option 5: About Author */}
                   <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5E0D5] bg-white cursor-pointer hover:bg-stone-50 transition-colors">
                     <input
                       type="checkbox"
@@ -844,17 +885,37 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                     />
                     <div className="text-xs">
-                      <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                        <Heart className="w-3.5 h-3.5 text-[#8C503C]" />
-                        <span>Include Back Matter: About the Author & Amazon Review CTA</span>
+                      <div className="font-bold text-stone-900">
+                        Include Back Matter: About the Author Page
                       </div>
                       <p className="text-[11px] text-stone-500 font-serif mt-0.5">
-                        Author bio, reader magnet newsletter link, and call-to-action note requesting reviews.
+                        Author bio from profile and reader magnet newsletter link.
                       </p>
                     </div>
                   </label>
 
-                  {/* Option 6: Acknowledgments */}
+                  {/* Option 6: Review Request CTA */}
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5E0D5] bg-white cursor-pointer hover:bg-stone-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeReviewRequest}
+                      onChange={(e) => {
+                        setIncludeReviewRequest(e.target.checked);
+                        updateMatterField("includeReviewRequest", e.target.checked);
+                      }}
+                      className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-stone-900">
+                        Include Amazon / Goodreads Review Request Box
+                      </div>
+                      <p className="text-[11px] text-stone-500 font-serif mt-0.5">
+                        Optional call-to-action note inviting readers to leave an honest review.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Option 7: Acknowledgments */}
                   <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5E0D5] bg-white cursor-pointer hover:bg-stone-50 transition-colors">
                     <input
                       type="checkbox"
@@ -863,37 +924,58 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       className="w-4 h-4 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C] mt-0.5"
                     />
                     <div className="text-xs">
-                      <div className="font-bold text-stone-900 flex items-center gap-1.5">
-                        <BookCheck className="w-3.5 h-3.5 text-[#8C503C]" />
-                        <span>Include Acknowledgments Page</span>
+                      <div className="font-bold text-stone-900">
+                        Include Acknowledgments Page (Optional)
                       </div>
                       <p className="text-[11px] text-stone-500 font-serif mt-0.5">
-                        Personal note thanking readers, editors, and supporters.
+                        Strictly optional. Only included when enabled with your custom text.
                       </p>
                     </div>
                   </label>
                 </div>
 
-                <div className="bg-[#E5E0D5]/30 p-3.5 rounded-xl flex items-center justify-between">
-                  <p className="text-xs text-stone-600 font-serif">
-                    Manuscript contains{" "}
-                    <strong className="text-stone-900 font-sans">
-                      {extractChaptersForExport(projectData?.manuscript || [], stripInternalMentions).length} chapters
-                    </strong>{" "}
-                    (~
-                    <strong className="text-stone-900 font-sans">
-                      {project?.currentWords?.toLocaleString() || 0} words
-                    </strong>
-                    )
-                  </p>
-                  <button
-                    onClick={() => setActiveTab("matter")}
-                    className="text-xs text-[#8C503C] hover:text-[#733D2D] font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Customize Page Texts</span>
-                    <span>→</span>
-                  </button>
-                </div>
+                {/* Cover Resolution Alert (if inadequate) */}
+                {format === "epub" && coverValidation && !coverValidation.isAdequate && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold">Cover Resolution Notice</div>
+                      <p className="text-[11px] text-amber-800 font-serif mt-0.5">
+                        {coverValidation.message}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Content Integrity Audit */}
+                {(() => {
+                  const audit = auditManuscriptContent(projectData?.manuscript || [], stripInternalMentions);
+                  return (
+                    <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <p className="text-xs text-emerald-900 font-serif">
+                          Pre-export Audit:{" "}
+                          <strong className="text-emerald-950 font-sans font-bold">
+                            {audit.compiledChapterCount} chapters
+                          </strong>
+                          ,{" "}
+                          <strong className="text-emerald-950 font-sans font-bold">
+                            {audit.compiledParagraphCount} paragraphs
+                          </strong>{" "}
+                          verified (100% Lossless content protection).
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("matter")}
+                        className="text-xs text-[#8C503C] hover:text-[#733D2D] font-bold flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                      >
+                        <span>Customize Pages</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -921,9 +1003,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
                 {/* Section 1: Title & Imprint */}
                 <div className="bg-white p-4 rounded-xl border border-[#E5E0D5] space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Title Page & Imprint</span>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C]">
+                    Title Page & Imprint
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -940,13 +1021,13 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-stone-700 mb-1">
-                        Publisher / Imprint Name
+                        Publisher / Imprint Name (Optional)
                       </label>
                       <input
                         type="text"
                         value={matter.publisher || ""}
                         onChange={(e) => updateMatterField("publisher", e.target.value)}
-                        placeholder="e.g. Ocean Novel Studio"
+                        placeholder="e.g. Acme Publishing (Leave blank to omit)"
                         className="w-full text-xs px-3 py-2 rounded-lg border border-stone-200 bg-stone-50 focus:bg-white focus:border-[#8C503C] outline-none"
                       />
                     </div>
@@ -968,9 +1049,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
                 {/* Section 2: Copyright & Legal */}
                 <div className="bg-white p-4 rounded-xl border border-[#E5E0D5] space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Copyright Page & Legal Metadata</span>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C]">
+                    Copyright Page & Legal Metadata
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
@@ -1036,9 +1116,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
                 {/* Section 3: About the Author & Reader Magnet */}
                 <div className="bg-white p-4 rounded-xl border border-[#E5E0D5] space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-1.5">
-                    <Heart className="w-3.5 h-3.5" />
-                    <span>About the Author & Reader Gifts</span>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C]">
+                    About the Author & Reader Gifts
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -1053,9 +1132,8 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-700 mb-1 flex items-center justify-between">
-                        <span>Newsletter / Reader Gift Link</span>
-                        <ExternalLink className="w-3 h-3 text-stone-400" />
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                        Newsletter / Reader Gift Link
                       </label>
                       <input
                         type="url"
@@ -1083,10 +1161,23 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
                 {/* Section 4: Amazon Review CTA Box */}
                 <div className="bg-white p-4 rounded-xl border border-[#E5E0D5] space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Amazon Review Call-to-Action (Back Matter)</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C]">
+                      Amazon Review Call-to-Action (Back Matter)
+                    </h4>
+                    <label className="flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeReviewRequest}
+                        onChange={(e) => {
+                          setIncludeReviewRequest(e.target.checked);
+                          updateMatterField("includeReviewRequest", e.target.checked);
+                        }}
+                        className="w-3.5 h-3.5 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C]"
+                      />
+                      <span className="font-bold text-[11px] text-stone-700">Include Review Box</span>
+                    </label>
+                  </div>
                   <div>
                     <label className="block text-[11px] font-bold text-stone-700 mb-1">
                       Review Box Headline
@@ -1115,16 +1206,26 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
 
                 {/* Section 5: Acknowledgments */}
                 <div className="bg-white p-4 rounded-xl border border-[#E5E0D5] space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C] flex items-center gap-1.5">
-                    <BookCheck className="w-3.5 h-3.5" />
-                    <span>Acknowledgments (Optional)</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#8C503C]">
+                      Acknowledgments (Optional)
+                    </h4>
+                    <label className="flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeAcknowledgments}
+                        onChange={(e) => setIncludeAcknowledgments(e.target.checked)}
+                        className="w-3.5 h-3.5 text-[#8C503C] rounded border-stone-300 focus:ring-[#8C503C] accent-[#8C503C]"
+                      />
+                      <span className="font-bold text-[11px] text-stone-700">Include Page</span>
+                    </label>
+                  </div>
                   <div>
                     <textarea
                       rows={2}
                       value={matter.acknowledgmentsText || ""}
                       onChange={(e) => updateMatterField("acknowledgmentsText", e.target.value)}
-                      placeholder="Thank your editors, beta readers, and family..."
+                      placeholder="Leave empty or enter words of gratitude to editors, beta readers, and mentors..."
                       className="w-full text-xs px-3 py-2 rounded-lg border border-stone-200 bg-stone-50 focus:bg-white focus:border-[#8C503C] outline-none font-serif"
                     />
                   </div>

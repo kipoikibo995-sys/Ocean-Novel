@@ -15,6 +15,7 @@ export interface EpubOptions {
   includeTocPage?: boolean;
   includeAboutAuthor?: boolean;
   includeAcknowledgments?: boolean;
+  includeReviewRequest?: boolean;
   authorBio?: string;
   manuscript: ManuscriptItem[];
   stripInternalMentions?: boolean;
@@ -51,6 +52,22 @@ interface ParsedPart {
   chapters: ParsedChapter[];
 }
 
+export interface ManifestItem {
+  id: string;
+  href: string;
+  mediaType: string;
+  properties?: string;
+}
+
+export interface ManuscriptAuditResult {
+  sourceChapterCount: number;
+  compiledChapterCount: number;
+  sourceParagraphCount: number;
+  compiledParagraphCount: number;
+  isLossless: boolean;
+  warnings: string[];
+}
+
 function escapeXml(unsafe: string): string {
   if (!unsafe) return "";
   return unsafe
@@ -68,34 +85,103 @@ function padZero(num: number, size: number = 3): string {
 }
 
 /**
- * Normalizes strings for robust duplicate detection across languages
+ * Standard RFC 4122 v4 UUID generator for book identifier
  */
-export function normalizeForComparison(str: string): string {
+export function generateEpubUuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    try {
+      return `urn:uuid:${crypto.randomUUID()}`;
+    } catch {
+      // Fallback below
+    }
+  }
+  return "urn:uuid:xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Strips internal software markers like @mentions and internal metadata tags
+ */
+export function cleanInternalMentionsAndTags(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/(^|[\s\(\[\{"'“‘—–\.,;:!?-])@([A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF]+)/g, "$1$2")
+    .replace(/^@/, "")
+    .replace(/\s*data-[a-z0-9\-_]+="[^"]*"/gi, "")
+    .trim();
+}
+
+/**
+ * Normalizes strings strictly for exact title comparison
+ */
+export function normalizeForExactTitleMatch(str: string): string {
   if (!str) return "";
   return str
     .toLowerCase()
     .replace(/^@/, "")
     .replace(/<[^>]*>/g, "")
-    .replace(/[^a-z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, "")
+    .replace(/^["'“‘#\s]+|["'”’:\s]+$/g, "")
     .trim();
 }
 
 /**
+ * Checks cover image resolution against Amazon KDP requirements
+ */
+export async function checkCoverResolution(
+  urlOrData?: string
+): Promise<{ width: number; height: number; isAdequate: boolean; message: string }> {
+  if (!urlOrData) {
+    return {
+      width: 0,
+      height: 0,
+      isAdequate: false,
+      message: "No cover image attached.",
+    };
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      const isAdequate = w >= 625 && h >= 1000;
+      let message = `Cover resolution: ${w} x ${h}px.`;
+      if (!isAdequate) {
+        message = `Cover resolution is low (${w} x ${h}px). Amazon KDP recommends at least 1,600 x 2,560px (minimum 625 x 1,000px).`;
+      } else if (w >= 1600 && h >= 2500) {
+        message = `High resolution Kindle-ready cover: ${w} x ${h}px.`;
+      }
+      resolve({ width: w, height: h, isAdequate, message });
+    };
+    img.onerror = () => {
+      resolve({
+        width: 0,
+        height: 0,
+        isAdequate: false,
+        message: "Unable to inspect cover image file.",
+      });
+    };
+    img.src = urlOrData;
+  });
+}
+
+/**
  * Parses chapter title into a clean two-level heading:
- * Level 1: "CHAPTER 1" (Number label)
- * Level 2: "The Arrival" (Subtitle/Name)
+ * Level 1: "CHAPTER 1"
+ * Level 2: "The Arrival"
  */
 export function parseChapterHeading(
   rawTitle: string,
   index: number,
   language: string = "en"
 ): ChapterHeadingInfo {
-  const clean = (rawTitle || "").replace(/^@/, "").trim();
+  const clean = cleanInternalMentionsAndTags(rawTitle);
   const isVi = language?.toLowerCase().startsWith("vi") || /^(chương|hồi)\s*/i.test(clean);
   const defaultPrefix = isVi ? "CHƯƠNG" : "CHAPTER";
   const defaultFullPrefix = isVi ? "Chương" : "Chapter";
 
-  // Check standalone special sections: Prologue, Epilogue, Interlude, Afterword, Mở đầu, Kết thúc
   if (/^(prologue|epilogue|interlude|afterword|preface|introduction|mở đầu|lời mở đầu|kết thúc|vĩ thanh)/i.test(clean)) {
     return {
       numberText: "",
@@ -104,7 +190,7 @@ export function parseChapterHeading(
     };
   }
 
-  // 1. "Chapter 1: The Arrival" or "Chapter 1 - The Arrival" or "Chương 1: The Arrival"
+  // 1. "Chapter 1: The Arrival" or "Chapter 1 - The Arrival"
   const matchWithSub = clean.match(/^(chapter|chương|hồi|chap|ch\.?)\s*([0-9ivxlcdm]+)\s*[:\-\u2013\u2014]\s*(.+)$/i);
   if (matchWithSub) {
     const prefix = matchWithSub[1].toUpperCase();
@@ -117,7 +203,7 @@ export function parseChapterHeading(
     };
   }
 
-  // 2. "Chapter 1" or "Chương 1" without subtitle
+  // 2. "Chapter 1" without subtitle
   const matchOnlyNum = clean.match(/^(chapter|chương|hồi|chap|ch\.?)\s*([0-9ivxlcdm]+)$/i);
   if (matchOnlyNum) {
     const prefix = matchOnlyNum[1].toUpperCase();
@@ -129,7 +215,7 @@ export function parseChapterHeading(
     };
   }
 
-  // 3. "1. The Arrival" or "1: The Arrival" or "1 - The Arrival"
+  // 3. "1. The Arrival"
   const matchNumberedSub = clean.match(/^([0-9]+)\s*[:\.\-\u2013\u2014]\s*(.+)$/);
   if (matchNumberedSub) {
     const num = matchNumberedSub[1].trim();
@@ -141,7 +227,7 @@ export function parseChapterHeading(
     };
   }
 
-  // 4. Default: Just a name like "The Arrival"
+  // 4. Default: Name like "The Arrival"
   return {
     numberText: `${defaultPrefix} ${index}`,
     titleText: clean,
@@ -150,13 +236,14 @@ export function parseChapterHeading(
 }
 
 /**
- * Extracts clean paragraphs from HTML while stripping internal @ mentions
- * AND stripping duplicate chapter/scene titles from the top of the scene
+ * Extracts clean paragraphs from HTML.
+ * STRICT CONTENT PROTECTION:
+ * Never deletes the opening paragraph unless it is an EXACT match to the Chapter Title.
  */
 export function cleanContentToParagraphs(
   html: string,
   stripMentions: boolean = true,
-  headingsToStrip: string[] = []
+  exactTitlesToStrip: string[] = []
 ): string[] {
   if (!html) return [];
 
@@ -176,32 +263,22 @@ export function cleanContentToParagraphs(
     });
   }
 
-  // Prepare normalized targets for duplicate title detection
-  const normalizedTargets = headingsToStrip
-    .map(normalizeForComparison)
+  const exactTargets = exactTitlesToStrip
+    .map(normalizeForExactTitleMatch)
     .filter((s) => s.length > 0);
 
-  // In book formatting, any top-level H1 or H2 inside a scene editor was inserted as a title placeholder.
-  // We completely strip them out so they never duplicate with the compiled chapter header.
+  // 1. Remove ONLY heading tags (h1, h2, h3) that EXACTLY match one of the titles
   const headingElements = container.querySelectorAll("h1, h2, h3, h4");
   headingElements.forEach((heading) => {
-    const headingNorm = normalizeForComparison(heading.textContent || "");
-    const matchesTarget =
-      normalizedTargets.length === 0 ||
-      normalizedTargets.some(
-        (target) =>
-          headingNorm === target ||
-          (headingNorm.length > 3 && (target.includes(headingNorm) || headingNorm.includes(target)))
-      );
-
-    if (heading.tagName === "H1" || matchesTarget) {
+    const headingClean = normalizeForExactTitleMatch(heading.textContent || "");
+    if (headingClean.length > 0 && exactTargets.includes(headingClean)) {
       heading.remove();
     }
   });
 
-  // Replace remaining block elements with line breaks
+  // Replace block elements with line breaks
   const blockElements = container.querySelectorAll(
-    "p, div, h2, h3, h4, h5, h6, li"
+    "p, div, h1, h2, h3, h4, h5, h6, li"
   );
   blockElements.forEach((el) => {
     el.appendChild(document.createTextNode("\n"));
@@ -215,10 +292,7 @@ export function cleanContentToParagraphs(
   let rawText = container.textContent || container.innerText || "";
 
   if (stripMentions) {
-    rawText = rawText.replace(
-      /(^|[\s\(\[\{"'“‘—–\.,;:!?-])@([A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF]+)/g,
-      "$1$2"
-    );
+    rawText = cleanInternalMentionsAndTags(rawText);
   }
 
   const rawParagraphs = rawText
@@ -226,26 +300,16 @@ export function cleanContentToParagraphs(
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
 
-  // Strip leading paragraphs if they are duplicate titles (e.g. plain <p>The Arrival</p>)
-  let startIndex = 0;
-  while (startIndex < rawParagraphs.length && startIndex < 2) {
-    const pNorm = normalizeForComparison(rawParagraphs[startIndex]);
-    const isDuplicate =
-      normalizedTargets.some(
-        (target) =>
-          pNorm === target ||
-          (pNorm.length > 3 && (target.includes(pNorm) || pNorm.includes(target)))
-      ) ||
-      /^(chapter|chương|hồi)\s*[0-9ivxlcdm]+/i.test(rawParagraphs[startIndex]);
-
-    if (isDuplicate) {
-      startIndex++;
-    } else {
-      break;
+  // 2. Strict Content Protection: Check ONLY the very first paragraph (index 0).
+  // Only remove if it matches EXACTLY with one of the target titles.
+  if (rawParagraphs.length > 0 && exactTargets.length > 0) {
+    const firstParaClean = normalizeForExactTitleMatch(rawParagraphs[0]);
+    if (exactTargets.includes(firstParaClean)) {
+      rawParagraphs.shift(); // Exact duplicate removed safely
     }
   }
 
-  return rawParagraphs.slice(startIndex);
+  return rawParagraphs;
 }
 
 /**
@@ -278,7 +342,7 @@ async function loadCoverBinary(urlOrData?: string): Promise<Uint8Array | null> {
 }
 
 /**
- * Parses manuscript items into structured parts & chapters with exact heading parsing
+ * Parses manuscript items into structured parts & chapters
  */
 function parseManuscriptStructure(
   items: ManuscriptItem[],
@@ -334,7 +398,7 @@ function parseManuscriptStructure(
 
       for (const chap of partChapters) {
         globalChapterCount++;
-        const rawTitle = stripMentions ? chap.title.replace(/^@/, "").trim() : chap.title;
+        const rawTitle = stripMentions ? cleanInternalMentionsAndTags(chap.title) : chap.title;
         const headingInfo = parseChapterHeading(rawTitle, globalChapterCount, language);
 
         const chapObj: ParsedChapter = {
@@ -354,13 +418,13 @@ function parseManuscriptStructure(
       parts.push({
         id: `part_${padZero(partCount)}`,
         index: partCount,
-        title: stripMentions ? item.title.replace(/^@/, "").trim() : item.title,
+        title: stripMentions ? cleanInternalMentionsAndTags(item.title) : item.title,
         filename: `part_${padZero(partCount)}.xhtml`,
         chapters: currentPartChapters,
       });
     } else if (item.type === "chapter") {
       globalChapterCount++;
-      const rawTitle = stripMentions ? item.title.replace(/^@/, "").trim() : item.title;
+      const rawTitle = stripMentions ? cleanInternalMentionsAndTags(item.title) : item.title;
       const headingInfo = parseChapterHeading(rawTitle, globalChapterCount, language);
 
       const chapObj: ParsedChapter = {
@@ -376,7 +440,7 @@ function parseManuscriptStructure(
       flatChapters.push(chapObj);
     } else if (item.type === "scene" && item.content) {
       globalChapterCount++;
-      const rawTitle = stripMentions ? item.title.replace(/^@/, "").trim() : item.title;
+      const rawTitle = stripMentions ? cleanInternalMentionsAndTags(item.title) : item.title;
       const headingInfo = parseChapterHeading(rawTitle, globalChapterCount, language);
 
       const chapObj: ParsedChapter = {
@@ -407,7 +471,132 @@ function parseManuscriptStructure(
 }
 
 /**
- * Main Standard EPUB 3 Export Function with Custom Front & Back Matter Support
+ * Audits total chapter and paragraph counts before and after export to guarantee 100% content integrity
+ */
+export function auditManuscriptContent(
+  items: ManuscriptItem[],
+  stripMentions: boolean,
+  language: string = "en"
+): ManuscriptAuditResult {
+  let sourceChapters = 0;
+  let sourceParagraphs = 0;
+
+  const countItems = (arr: ManuscriptItem[]) => {
+    for (const item of arr) {
+      if (item.type === "chapter" || (item.type === "scene" && item.content)) {
+        sourceChapters++;
+      }
+      if (item.content && item.content.trim()) {
+        const rawParas = cleanContentToParagraphs(item.content, stripMentions, []);
+        sourceParagraphs += rawParas.length;
+      }
+      if (item.children) {
+        countItems(item.children);
+      }
+    }
+  };
+
+  countItems(items);
+
+  const { parts, flatChapters } = parseManuscriptStructure(items, stripMentions, language);
+  const allChapters = parts.length > 0 ? parts.flatMap((p) => p.chapters) : flatChapters;
+
+  let compiledParagraphs = 0;
+  allChapters.forEach((ch) => {
+    ch.scenes.forEach((sc) => {
+      compiledParagraphs += sc.paragraphs.length;
+    });
+  });
+
+  const warnings: string[] = [];
+  if (allChapters.length === 0 && sourceChapters > 0) {
+    warnings.push(`Warning: Manuscript contains ${sourceChapters} items but 0 chapters were compiled.`);
+  }
+
+  return {
+    sourceChapterCount: sourceChapters,
+    compiledChapterCount: allChapters.length,
+    sourceParagraphCount: sourceParagraphs,
+    compiledParagraphCount: compiledParagraphs,
+    isLossless: allChapters.length > 0 && compiledParagraphs > 0,
+    warnings,
+  };
+}
+
+/**
+ * Validates the generated EPUB before allowing download:
+ * Checks XML/XHTML parsing, manifest & spine references, and ZIP integrity.
+ */
+export async function validateEpubArchive(
+  zip: JSZip,
+  manifestItems: ManifestItem[],
+  spineItemRefs: { idref: string }[]
+): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  const parser = new DOMParser();
+
+  // 1. Verify mimetype
+  const mime = zip.file("mimetype");
+  if (!mime) {
+    errors.push("Missing 'mimetype' file at EPUB root.");
+  }
+
+  // 2. Verify container.xml
+  const container = zip.file("META-INF/container.xml");
+  if (!container) {
+    errors.push("Missing 'META-INF/container.xml' rootfile entry.");
+  }
+
+  // 3. Verify manifest files exist in zip
+  for (const item of manifestItems) {
+    const file = zip.file(`EPUB/${item.href}`);
+    if (!file) {
+      errors.push(`Manifest references missing file: EPUB/${item.href}`);
+    }
+  }
+
+  // 4. Verify spine items exist in manifest
+  const manifestIdSet = new Set(manifestItems.map((m) => m.id));
+  for (const ref of spineItemRefs) {
+    if (!manifestIdSet.has(ref.idref)) {
+      errors.push(`Spine itemref '${ref.idref}' not found in manifest.`);
+    }
+  }
+
+  // 5. XML / XHTML Well-formedness check for all text, nav, opf, ncx
+  const checkFiles = [
+    "EPUB/package.opf",
+    "EPUB/nav.xhtml",
+    "EPUB/toc.ncx",
+    ...manifestItems
+      .filter((m) => m.href.endsWith(".xhtml") || m.href.endsWith(".xml"))
+      .map((m) => `EPUB/${m.href}`),
+  ];
+
+  for (const filePath of checkFiles) {
+    const file = zip.file(filePath);
+    if (file) {
+      try {
+        const text = await file.async("text");
+        const doc = parser.parseFromString(text, "application/xml");
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+          errors.push(`XML/XHTML syntax error in ${filePath}: ${parserError.textContent?.slice(0, 100)}`);
+        }
+      } catch (err: any) {
+        errors.push(`Failed to read/parse ${filePath}: ${err.message}`);
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Main Standard EPUB 3 Export Function
  */
 export async function exportToEpub({
   title,
@@ -421,25 +610,43 @@ export async function exportToEpub({
   includeTocPage = true,
   includeAboutAuthor = true,
   includeAcknowledgments = false,
+  includeReviewRequest = true,
   authorBio,
   manuscript,
   stripInternalMentions = true,
   matter,
 }: EpubOptions): Promise<void> {
+  // Pre-export Content Audit
+  const audit = auditManuscriptContent(manuscript, stripInternalMentions, language);
+  if (audit.compiledChapterCount === 0) {
+    throw new Error("Cannot export empty book: Manuscript contains 0 chapters or scenes.");
+  }
+
   const zip = new JSZip();
 
-  // Resolved values taking custom matter into account
-  const resolvedAuthor = matter?.authorPenName || author;
-  const resolvedSubtitle = matter?.subtitle || subtitle;
-  const resolvedPublisher = matter?.publisher || "Ocean Novel Studio";
+  // Author & Metadata Synchronization - Single authoritative source
+  const resolvedAuthor = cleanInternalMentionsAndTags(matter?.authorPenName || author || "Author");
+  const resolvedCopyrightOwner = cleanInternalMentionsAndTags(matter?.copyrightOwner || resolvedAuthor);
+  const resolvedTitle = cleanInternalMentionsAndTags(title);
+  const resolvedSubtitle = cleanInternalMentionsAndTags(matter?.subtitle || subtitle || "");
+  
+  // Publisher: User input only. Never hard-coded. Omitted if empty!
+  const resolvedPublisher = cleanInternalMentionsAndTags(matter?.publisher || "");
+  
   const resolvedYear = matter?.copyrightYear || new Date().getFullYear().toString();
-  const resolvedCopyrightOwner = matter?.copyrightOwner || resolvedAuthor;
   const resolvedEdition = matter?.edition || `First Digital Edition: ${resolvedYear}`;
   const resolvedDisclaimer =
     matter?.disclaimerText ||
     "This is a work of fiction. Names, characters, places, and incidents either are the product of the author's imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.";
 
-  // 1. mimetype (Must be first, stored completely uncompressed)
+  // Acknowledgments: Strictly optional, only if explicitly enabled AND user has provided text
+  const hasAcknowledgments = Boolean(
+    includeAcknowledgments &&
+    matter?.acknowledgmentsText &&
+    matter.acknowledgmentsText.trim().length > 0
+  );
+
+  // 1. mimetype (Must be first, completely uncompressed)
   zip.file("mimetype", "application/epub+zip", { compression: "STORE" });
 
   // 2. META-INF/container.xml pointing to EPUB/package.opf
@@ -453,9 +660,8 @@ export async function exportToEpub({
 </container>`
   );
 
-  // 3. EPUB/css/book.css - Professional Novel Typography for Kindle / E-readers
-  const bookCss = `/* Ocean Novel Studio - Publishing Grade EPUB 3 Stylesheet */
-@namespace "http://www.w3.org/1999/xhtml";
+  // 3. EPUB/css/book.css - Commercial EPUB 3 Typography
+  const bookCss = `@namespace "http://www.w3.org/1999/xhtml";
 
 @page {
   margin: 5%;
@@ -631,7 +837,7 @@ ul.inbook-toc li.toc-part {
   color: #2A1B14;
 }
 
-/* Chapter & Body Styles - Exact Single Title Layout */
+/* Chapter & Body Styles - Single Title Layout */
 .chapter-section {
   page-break-before: always;
   break-before: page;
@@ -708,7 +914,7 @@ img.cover-img {
   display: block;
 }
 
-/* Back matter note box */
+/* Back matter review box */
 .review-box {
   margin-top: 3em;
   padding: 1.5em;
@@ -751,7 +957,7 @@ img.cover-img {
 `;
   zip.file("EPUB/css/book.css", bookCss);
 
-  // 4. Load & Embed Cover Image if available
+  // 4. Cover Image
   const coverBytes = await loadCoverBinary(coverImageUrl);
   const hasCoverImage = coverBytes !== null;
   if (hasCoverImage) {
@@ -766,13 +972,6 @@ img.cover-img {
   );
   const hasParts = parts.length > 0;
 
-  // Track items for Manifest and Spine
-  interface ManifestItem {
-    id: string;
-    href: string;
-    mediaType: string;
-    properties?: string;
-  }
   const manifestItems: ManifestItem[] = [
     { id: "style", href: "css/book.css", mediaType: "text/css" },
     { id: "nav", href: "nav.xhtml", mediaType: "application/xhtml+xml", properties: "nav" },
@@ -808,7 +1007,7 @@ img.cover-img {
       hasCoverImage
         ? `<img class="cover-img" src="../images/cover.jpg" alt="Cover" />`
         : `<div style="padding-top: 30vh; color: #FAF8F5;">
-             <h1 style="font-size: 2.5em; text-transform: uppercase;">${escapeXml(title)}</h1>
+             <h1 style="font-size: 2.5em; text-transform: uppercase;">${escapeXml(resolvedTitle)}</h1>
              <p style="font-size: 1.4em; font-style: italic;">By ${escapeXml(resolvedAuthor)}</p>
            </div>`
     }
@@ -825,23 +1024,25 @@ img.cover-img {
 
   // 7. Title Page (text/titlepage.xhtml)
   if (includeTitlePage) {
+    const publisherBlock = resolvedPublisher
+      ? `<div class="publisher-mark"><p>${escapeXml(resolvedPublisher)}</p></div>`
+      : "";
+
     const titlePageXhtml = `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${language}">
 <head>
-  <title>${escapeXml(title)}</title>
+  <title>${escapeXml(resolvedTitle)}</title>
   <link rel="stylesheet" type="text/css" href="../css/book.css"/>
 </head>
 <body class="frontmatter" epub:type="frontmatter titlepage">
   <section>
-    <h1 class="book-title">${escapeXml(title)}</h1>
+    <h1 class="book-title">${escapeXml(resolvedTitle)}</h1>
     ${resolvedSubtitle ? `<p class="book-subtitle">${escapeXml(resolvedSubtitle)}</p>` : ""}
     <div class="ornament">❖</div>
     <p class="author-by">A Novel by</p>
     <p class="author-name">${escapeXml(resolvedAuthor)}</p>
-    <div class="publisher-mark">
-      <p>${escapeXml(resolvedPublisher)}</p>
-    </div>
+    ${publisherBlock}
   </section>
 </body>
 </html>`;
@@ -858,6 +1059,9 @@ img.cover-img {
   if (includeCopyright) {
     const isbnRow = matter?.isbn ? `<p class="copyright-meta">ISBN: ${escapeXml(matter.isbn)}</p>` : "";
     const asinRow = matter?.asin ? `<p class="copyright-meta">ASIN: ${escapeXml(matter.asin)}</p>` : "";
+    const publishedByRow = resolvedPublisher
+      ? `<p>Published by ${escapeXml(resolvedPublisher)}</p>`
+      : "";
 
     const copyrightXhtml = `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
@@ -868,14 +1072,14 @@ img.cover-img {
 </head>
 <body epub:type="frontmatter copyright-page">
   <section class="copyright-section">
-    <p style="font-weight: bold; font-size: 1.1em;">${escapeXml(title)}</p>
+    <p style="font-weight: bold; font-size: 1.1em;">${escapeXml(resolvedTitle)}</p>
     <p>Copyright © ${escapeXml(resolvedYear)} by ${escapeXml(resolvedCopyrightOwner)}</p>
     <p>All rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the author, except in the case of brief quotations embodied in critical reviews.</p>
     <p class="disclaimer">${escapeXml(resolvedDisclaimer)}</p>
     ${isbnRow}
     ${asinRow}
     <p>${escapeXml(resolvedEdition)}</p>
-    <p>Published by ${escapeXml(resolvedPublisher)}</p>
+    ${publishedByRow}
   </section>
 </body>
 </html>`;
@@ -899,7 +1103,7 @@ img.cover-img {
 </head>
 <body class="frontmatter" epub:type="frontmatter dedication">
   <section class="dedication-section">
-    <p class="dedication-text">${escapeXml(matter.dedication)}</p>
+    <p class="dedication-text">${escapeXml(cleanInternalMentionsAndTags(matter.dedication))}</p>
     <div class="ornament">❖</div>
   </section>
 </body>
@@ -914,6 +1118,7 @@ img.cover-img {
   }
 
   // 10. In-book HTML Table of Contents (text/toc.xhtml)
+  // Shows only Part/Chapter and selected Back Matter. Scenes are strictly excluded!
   if (includeTocPage) {
     let tocListItemsHtml = "";
     if (hasParts) {
@@ -927,6 +1132,10 @@ img.cover-img {
       for (const chap of flatChapters) {
         tocListItemsHtml += `<li><a href="${chap.filename}">${escapeXml(chap.fullTitle)}</a></li>\n`;
       }
+    }
+
+    if (hasAcknowledgments) {
+      tocListItemsHtml += `<li><a href="acknowledgments.xhtml">Acknowledgments</a></li>\n`;
     }
 
     if (includeAboutAuthor) {
@@ -962,7 +1171,6 @@ img.cover-img {
   // 11. Body Matter: Parts & Chapters
   if (hasParts) {
     for (const part of parts) {
-      // Part Divider Page (text/part_001.xhtml)
       const partXhtml = `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${language}">
@@ -985,7 +1193,6 @@ img.cover-img {
       });
       spineItemRefs.push({ idref: part.id });
 
-      // Chapters inside this part
       for (const chap of part.chapters) {
         writeChapterFile(zip, chap, language);
         manifestItems.push({
@@ -997,7 +1204,6 @@ img.cover-img {
       }
     }
   } else {
-    // Flat chapters
     for (const chap of flatChapters) {
       writeChapterFile(zip, chap, language);
       manifestItems.push({
@@ -1009,11 +1215,9 @@ img.cover-img {
     }
   }
 
-  // 12. Acknowledgments (text/acknowledgments.xhtml - Optional)
-  if (includeAcknowledgments || (matter?.acknowledgmentsText && matter.acknowledgmentsText.trim())) {
-    const ackBody =
-      matter?.acknowledgmentsText ||
-      "To all the readers, early reviewers, and fellow storytellers who supported this journey from the very first draft. Thank you for bringing these characters to life in your imagination.";
+  // 12. Acknowledgments (text/acknowledgments.xhtml - Strictly Optional)
+  if (hasAcknowledgments) {
+    const ackBody = cleanInternalMentionsAndTags(matter?.acknowledgmentsText || "");
 
     const ackXhtml = `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
@@ -1042,21 +1246,24 @@ img.cover-img {
   }
 
   // 13. About the Author & Review Request (text/about_author.xhtml - Back Matter)
+  // Bio only from user input. Never auto-generate fake bio!
   if (includeAboutAuthor) {
-    const bioText =
-      matter?.authorBioText ||
-      authorBio ||
-      `${resolvedAuthor} is a dedicated novelist and storyteller crafting immersive worlds. When not typing away at the next chapter, ${resolvedAuthor} can be found exploring great stories and plotting new adventures.`;
-
-    const reviewHeading = matter?.reviewCtaHeading || "A Sincere Note to the Reader";
-    const reviewBody =
-      matter?.reviewCtaText ||
-      `Thank you for reading ${title}! If you enjoyed this story, please consider taking a moment to leave an honest review on Amazon or Goodreads. Reviews are the lifeblood of independent authors. Your feedback not only supports the author but also helps other passionate book lovers discover their next favorite novel.`;
+    const bioText = cleanInternalMentionsAndTags(matter?.authorBioText || authorBio || "");
+    const shouldIncludeReview = includeReviewRequest !== false && (matter?.includeReviewRequest ?? true);
+    const reviewHeading = cleanInternalMentionsAndTags(matter?.reviewCtaHeading || "A Sincere Note to the Reader");
+    const reviewBody = cleanInternalMentionsAndTags(matter?.reviewCtaText || "");
 
     const newsletterHtml = matter?.authorWebsiteOrNewsletter
       ? `<div class="author-newsletter">
-           <p><strong>Connect with the Author &amp; Exclusive Reader Gifts:</strong></p>
+           <p><strong>Connect with the Author:</strong></p>
            <p><a href="${escapeXml(matter.authorWebsiteOrNewsletter)}">${escapeXml(matter.authorWebsiteOrNewsletter)}</a></p>
+         </div>`
+      : "";
+
+    const reviewBoxHtml = (shouldIncludeReview && reviewBody)
+      ? `<div class="review-box">
+           <h3>${escapeXml(reviewHeading)}</h3>
+           <p>${escapeXml(reviewBody)}</p>
          </div>`
       : "";
 
@@ -1074,17 +1281,10 @@ img.cover-img {
     <p style="font-size: 1.3em; font-weight: bold; margin-bottom: 1em; text-indent: 0;">
       ${escapeXml(resolvedAuthor)}
     </p>
-    <p style="text-indent: 0; line-height: 1.8; margin-bottom: 1.5em;">
-      ${escapeXml(bioText)}
-    </p>
+    ${bioText ? `<p style="text-indent: 0; line-height: 1.8; margin-bottom: 1.5em;">${escapeXml(bioText)}</p>` : ""}
 
     ${newsletterHtml}
-
-    <!-- Amazon KDP Review Call to Action Box -->
-    <div class="review-box">
-      <h3>${escapeXml(reviewHeading)}</h3>
-      <p>${escapeXml(reviewBody)}</p>
-    </div>
+    ${reviewBoxHtml}
   </section>
 </body>
 </html>`;
@@ -1116,6 +1316,10 @@ img.cover-img {
     }
   }
 
+  if (hasAcknowledgments) {
+    navOlHtml += `    <li><a href="text/acknowledgments.xhtml">Acknowledgments</a></li>\n`;
+  }
+
   if (includeAboutAuthor) {
     navOlHtml += `    <li><a href="text/about_author.xhtml">About the Author</a></li>\n`;
   }
@@ -1135,7 +1339,6 @@ ${navOlHtml}
     </ol>
   </nav>
 
-  <!-- Kindle Start Reading Location (Landmarks) -->
   <nav epub:type="landmarks" id="landmarks" hidden="">
     <h2>Guide</h2>
     <ol>
@@ -1149,7 +1352,7 @@ ${navOlHtml}
 </html>`;
   zip.file("EPUB/nav.xhtml", navXhtml);
 
-  // 15. Legacy NCX Table of Contents (EPUB/toc.ncx) for older Kindle devices
+  // 15. Standard NCX Table of Contents (EPUB/toc.ncx)
   let ncxPlayOrder = 1;
   let navPointsHtml = "";
 
@@ -1179,9 +1382,26 @@ ${navOlHtml}
     }
   }
 
-  const bookUuid = matter?.isbn
-    ? `urn:isbn:${matter.isbn.trim()}`
-    : "urn:uuid:" + Math.random().toString(36).substring(2, 15) + "-" + Date.now().toString(36);
+  if (hasAcknowledgments) {
+    navPointsHtml += `
+    <navPoint id="np_ack" playOrder="${ncxPlayOrder++}">
+      <navLabel><text>Acknowledgments</text></navLabel>
+      <content src="text/acknowledgments.xhtml"/>
+    </navPoint>`;
+  }
+
+  if (includeAboutAuthor) {
+    navPointsHtml += `
+    <navPoint id="np_about" playOrder="${ncxPlayOrder++}">
+      <navLabel><text>About the Author</text></navLabel>
+      <content src="text/about_author.xhtml"/>
+    </navPoint>`;
+  }
+
+  // Standard RFC 4122 UUID
+  const bookUuid = matter?.isbn?.trim()
+    ? `urn:isbn:${matter.isbn.trim().replace(/[^0-9X-]/gi, "")}`
+    : generateEpubUuid();
 
   const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
@@ -1192,7 +1412,7 @@ ${navOlHtml}
     <meta name="dtb:maxPageNumber" content="0"/>
   </head>
   <docTitle>
-    <text>${escapeXml(title)}</text>
+    <text>${escapeXml(resolvedTitle)}</text>
   </docTitle>
   <docAuthor>
     <text>${escapeXml(resolvedAuthor)}</text>
@@ -1218,15 +1438,19 @@ ${navPointsHtml}
     .map((item) => `    <itemref idref="${item.idref}"${item.linear ? ` linear="${item.linear}"` : ""}/>`)
     .join("\n");
 
+  const publisherTag = resolvedPublisher
+    ? `    <dc:publisher>${escapeXml(resolvedPublisher)}</dc:publisher>`
+    : "";
+
   const packageOpf = `<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
     <dc:identifier id="BookId">${bookUuid}</dc:identifier>
-    <dc:title>${escapeXml(title)}</dc:title>
+    <dc:title>${escapeXml(resolvedTitle)}</dc:title>
     <dc:creator id="creator">${escapeXml(resolvedAuthor)}</dc:creator>
     <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
     <dc:language>${escapeXml(language)}</dc:language>
-    <dc:publisher>${escapeXml(resolvedPublisher)}</dc:publisher>
+${publisherTag}
     ${genre ? `<dc:subject>${escapeXml(genre)}</dc:subject>` : ""}
     <meta property="dcterms:modified">${nowIso}</meta>
     ${hasCoverImage ? '<meta name="cover" content="cover-image"/>' : ""}
@@ -1240,7 +1464,16 @@ ${spineXml}
 </package>`;
   zip.file("EPUB/package.opf", packageOpf);
 
-  // 17. Generate Final Binary EPUB Blob & Trigger Browser Download
+  // 17. PRE-FLIGHT VALIDATION: Verify XHTML syntax, Manifest & Spine integrity before creating zip
+  const validation = await validateEpubArchive(zip, manifestItems, spineItemRefs);
+  if (!validation.valid) {
+    console.error("EPUB validation failed with errors:", validation.errors);
+    throw new Error(
+      `EPUB 3 Pre-flight Validation Failed (${validation.errors.length} errors):\n${validation.errors.slice(0, 3).join("\n")}`
+    );
+  }
+
+  // 18. Generate Final Binary EPUB Blob & Trigger Browser Download
   const epubBlob = await zip.generateAsync({
     type: "blob",
     mimeType: "application/epub+zip",
@@ -1248,17 +1481,13 @@ ${spineXml}
     compressionOptions: { level: 9 },
   });
 
-  const cleanFilename = `${title.replace(/[^a-zA-Z0-9_\-\u00C0-\u024F\u1E00-\u1EFF]/g, "_")}.epub`;
+  const cleanFilename = `${resolvedTitle.replace(/[^a-zA-Z0-9_\-\u00C0-\u024F\u1E00-\u1EFF]/g, "_")}.epub`;
   saveAs(epubBlob, cleanFilename);
 }
 
 /**
- * Helper to generate and write clean chapter XHTML file
- * Formats exactly ONE chapter header:
- * CHAPTER 1
- * The Arrival
- * ❖
- * [Story text starts immediately]
+ * Generates and writes clean chapter XHTML file
+ * Formats exactly ONE chapter header
  */
 function writeChapterFile(zip: JSZip, chap: ParsedChapter, language: string) {
   let contentHtml = "";

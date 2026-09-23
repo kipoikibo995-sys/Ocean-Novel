@@ -87,6 +87,7 @@ export interface FrontBackMatterData {
   authorPenName?: string;
   authorBioText?: string;
   authorWebsiteOrNewsletter?: string;
+  includeReviewRequest?: boolean;
   reviewCtaHeading?: string;
   reviewCtaText?: string;
 }
