@@ -200,9 +200,16 @@ export default function Login() {
         await handlePostAuthSync(result.user);
       }
     } catch (err: any) {
-      console.error("Google Sign-In error:", err);
-      if (err?.code !== "auth/popup-closed-by-user") {
-        setErrorMsg(err?.message || "Google authentication was interrupted.");
+      const isUserCancellation =
+        err?.code === "auth/popup-closed-by-user" ||
+        err?.code === "auth/cancelled-popup-request" ||
+        err?.code === "auth/popup-blocked";
+
+      if (isUserCancellation) {
+        console.info("[Auth] Google Sign-In popup was closed or cancelled by the user.");
+      } else {
+        console.error("Google Sign-In error:", err);
+        setErrorMsg(err?.message || "Google authentication was interrupted. Please try again.");
       }
     } finally {
       setIsGoogleLoading(false);

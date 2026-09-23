@@ -4,7 +4,6 @@ import {
   FileText,
   Download,
   CheckCircle,
-  File,
   FileDown,
   BookOpen,
   RotateCcw,
@@ -24,7 +23,7 @@ import {
   cleanInternalMentionsAndTags,
 } from "@/lib/epubExport";
 
-type ExportFormat = "epub" | "docx" | "pdf" | "txt";
+type ExportFormat = "epub" | "docx" | "txt";
 type ActiveTab = "format" | "matter";
 
 interface ExportModalProps {
@@ -185,7 +184,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
     paragraphs: string[];
   }
 
-  // Build structured list of chapters with title deduplication for Word, PDF, TXT
+  // Build structured list of chapters with title deduplication for Word and TXT
   const extractChaptersForExport = (
     items: ManuscriptItem[],
     shouldStripMentions: boolean = stripInternalMentions
@@ -279,8 +278,6 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
         await exportTxt(exportChapters, title, author);
       } else if (format === "docx") {
         await exportDocx(exportChapters, title, author);
-      } else if (format === "pdf") {
-        await exportPdf(exportChapters, title, author);
       }
 
       setExportComplete(true);
@@ -520,113 +517,6 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
     saveAs(blob, `${title.replace(/\s+/g, "_")}.docx`);
   };
 
-  const exportPdf = async (
-    chapters: ExportChapter[],
-    title: string,
-    author: string
-  ) => {
-    let htmlContent = `
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body { font-family: 'Times New Roman', serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; color: black; }
-            h1 { text-align: center; font-size: 2.5em; margin-top: 20vh; margin-bottom: 0.2em; }
-            .subtitle { text-align: center; font-style: italic; font-size: 1.3em; margin-bottom: 1em; color: #444; }
-            .author { text-align: center; font-size: 1.5em; margin-bottom: 30vh; page-break-after: always; }
-            .copyright-page { padding-top: 30vh; font-size: 0.9em; page-break-after: always; }
-            h2 { page-break-before: always; font-size: 1.8em; margin-bottom: 1em; }
-            p { margin-bottom: 1em; text-indent: 1.5em; text-align: justify; }
-            p:first-of-type { text-indent: 0; }
-            .about-author { page-break-before: always; padding-top: 5vh; }
-            @media print {
-              body { padding: 0; }
-              @page { margin: 1in; }
-            }
-          </style>
-        </head>
-        <body>
-    `;
-
-    if (includeTitlePage) {
-      htmlContent += `
-        <h1>${title.toUpperCase()}</h1>
-        ${matter.subtitle ? `<div class="subtitle">${matter.subtitle}</div>` : ""}
-        <div class="author">By ${author}</div>
-      `;
-    }
-
-    if (includeCopyright) {
-      htmlContent += `
-        <div class="copyright-page">
-          <p style="font-weight: bold; text-indent: 0;">${title}</p>
-          <p style="text-indent: 0;">Copyright © ${matter.copyrightYear || defaultYear} by ${matter.copyrightOwner || author}</p>
-          ${matter.isbn ? `<p style="text-indent: 0;">ISBN: ${matter.isbn}</p>` : ""}
-          <p style="text-indent: 0; font-style: italic;">${matter.disclaimerText}</p>
-          ${matter.publisher?.trim() ? `<p style="text-indent: 0;">Published by ${matter.publisher.trim()}</p>` : ""}
-        </div>
-      `;
-    }
-
-    chapters.forEach((chap) => {
-      htmlContent += `
-        <div style="page-break-before: always; padding-top: 5vh;">
-          ${chap.numberText ? `<div style="text-align: center; color: #8C503C; font-weight: bold; letter-spacing: 2px; font-size: 0.9em; text-transform: uppercase;">${chap.numberText}</div>` : ""}
-          <h2 style="text-align: center; margin-top: 6px; margin-bottom: 35px; font-weight: normal; font-size: 1.85em;">${chap.titleText || chap.fullTitle}</h2>
-      `;
-      chap.paragraphs.forEach((p, pIdx) => {
-        const indent = pIdx === 0 ? "text-indent: 0;" : "text-indent: 1.5em;";
-        htmlContent += `<p style="${indent} margin-bottom: 0.8em; text-align: justify;">${p}</p>`;
-      });
-      htmlContent += `</div>`;
-    });
-
-    if (includeAboutAuthor) {
-      htmlContent += `
-        <div class="about-author">
-          <h2 style="text-align: center;">About the Author</h2>
-          <p style="font-size: 1.2em; font-weight: bold; text-indent: 0;">${author}</p>
-          ${matter.authorBioText?.trim() ? `<p style="text-indent: 0;">${matter.authorBioText.trim()}</p>` : ""}
-          ${
-            includeReviewRequest && matter.reviewCtaText?.trim()
-              ? `<div style="margin-top: 2em; padding: 15px; border: 1px solid #ccc; background: #fafafa;">
-                   <p style="font-weight: bold; text-indent: 0; margin-bottom: 5px;">${matter.reviewCtaHeading || "Note to Readers:"}</p>
-                   <p style="font-style: italic; text-indent: 0;">${matter.reviewCtaText.trim()}</p>
-                 </div>`
-              : ""
-          }
-        </div>
-      `;
-    }
-
-    htmlContent += `</body></html>`;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-
-    document.body.appendChild(iframe);
-
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(htmlContent);
-      iframeDoc.close();
-
-      iframe.contentWindow?.focus();
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 100);
-      }, 500);
-    }
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -655,7 +545,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                     Export Novel Studio
                   </h2>
                   <p className="text-[11px] text-stone-500 font-serif">
-                    Professional KDP EPUB 3, Print PDF, and Editorial DOCX
+                    Professional KDP EPUB 3, Editorial DOCX, and Plain Text TXT
                   </p>
                 </div>
               </div>
@@ -710,7 +600,7 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                   <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2.5">
                     Publishing Format
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* EPUB Option */}
                     <button
                       onClick={() => setFormat("epub")}
@@ -742,20 +632,6 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                       <span className="text-[9px] text-stone-500 font-sans">Word & Editors</span>
                     </button>
 
-                    {/* PDF Option */}
-                    <button
-                      onClick={() => setFormat("pdf")}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        format === "pdf"
-                          ? "border-[#8C503C] bg-[#8C503C]/10 text-[#8C503C] ring-1 ring-[#8C503C] shadow-xs"
-                          : "border-[#E5E0D5] bg-white text-stone-600 hover:bg-stone-50"
-                      }`}
-                    >
-                      <File className="w-5 h-5 mt-1" />
-                      <span className="text-xs font-bold font-mono uppercase">PDF</span>
-                      <span className="text-[9px] text-stone-500 font-sans">Print & Proof</span>
-                    </button>
-
                     {/* TXT Option */}
                     <button
                       onClick={() => setFormat("txt")}
@@ -782,11 +658,6 @@ export function ExportModal({ isOpen, onClose, projectId }: ExportModalProps) {
                   {format === "docx" && (
                     <p className="leading-relaxed">
                       <strong className="text-stone-800">Microsoft Word (.docx)</strong>: Ideal for developmental editors, line proofreaders, or importing into Kindle Create.
-                    </p>
-                  )}
-                  {format === "pdf" && (
-                    <p className="leading-relaxed">
-                      <strong className="text-stone-800">Printable Document (.pdf)</strong>: Generates an automatic print layout with page breaks for proofreading.
                     </p>
                   )}
                   {format === "txt" && (

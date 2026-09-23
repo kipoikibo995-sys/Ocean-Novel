@@ -1071,7 +1071,7 @@ app.post('/api/ipn/warriorplus', async (req, res) => {
                           <td className="py-3 px-3 font-mono font-bold text-amber-800">FrontEnd</td>
                           <td className="py-3 px-3 font-serif">Ocean Novel Studio - Standard</td>
                           <td className="py-3 px-3 font-mono font-bold text-stone-900">$27.00</td>
-                          <td className="py-3 px-3 text-stone-600">Standard Story Bible, Manuscript binder, Word/PDF export</td>
+                          <td className="py-3 px-3 text-stone-600">Standard Story Bible, Manuscript binder, Word/TXT export</td>
                         </tr>
                         <tr>
                           <td className="py-3 px-3 font-mono font-bold text-blue-700">OTO1</td>

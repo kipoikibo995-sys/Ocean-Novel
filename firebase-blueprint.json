@@ -7,6 +7,10 @@
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
+        "author": { "type": "string" },
+        "genre": { "type": "string" },
+        "audience": { "type": "string" },
+        "logline": { "type": "string" },
         "wordGoal": { "type": "number" },
         "currentWords": { "type": "number" },
         "lastModified": { "type": "number" },
@@ -14,11 +18,11 @@
         "coverUrl": { "type": "string" },
         "userId": { "type": "string" }
       },
-      "required": ["id", "title", "userId"]
+      "required": ["id", "title"]
     },
     "ProjectData": {
       "title": "ProjectData",
-      "description": "Data inside a project",
+      "description": "Deep content of a novel project including manuscript, cast, atlas, and canon",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -26,10 +30,67 @@
         "manuscript": { "type": "array" },
         "characters": { "type": "array" },
         "locations": { "type": "array" },
+        "characterGraphs": { "type": "array" },
+        "locationMap": { "type": "object" },
+        "notes": { "type": "object" },
+        "lastActiveSceneId": { "type": "string" },
+        "lastActiveSceneTitle": { "type": "string" },
         "storyBible": { "type": "object" },
-        "plot": { "type": "object" }
+        "plotEvents": { "type": "array" },
+        "plotArcs": { "type": "array" },
+        "frontBackMatter": { "type": "object" }
       },
-      "required": ["id", "userId"]
+      "required": ["manuscript", "characters", "locations"]
+    },
+    "StudioTask": {
+      "title": "StudioTask",
+      "description": "User writing or editing task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "urgency": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "title", "completed", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Author profile and writing studio preferences",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "penName": { "type": "string" },
+        "email": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "plan": { "type": "string" },
+        "defaultFont": { "type": "string" },
+        "fontSize": { "type": "string" },
+        "defaultPov": { "type": "string" },
+        "defaultTone": { "type": "string" },
+        "theme": { "type": "string" }
+      },
+      "required": ["name", "email"]
+    },
+    "AuthorTimelineSettings": {
+      "title": "AuthorTimelineSettings",
+      "description": "Streak and writing time tracking configuration",
+      "type": "object",
+      "properties": {
+        "streakMode": { "type": "string" },
+        "customStreakDays": { "type": "number" },
+        "timeMode": { "type": "string" },
+        "customHours": { "type": "number" },
+        "customMinutes": { "type": "number" },
+        "activeDates": { "type": "array" },
+        "totalWritingMinutesTracked": { "type": "number" }
+      },
+      "required": ["streakMode", "timeMode"]
     },
     "RegisteredUser": {
       "title": "RegisteredUser",
@@ -72,6 +133,18 @@
     "users/{userId}/projectData/{projectId}": {
       "schema": { "$ref": "#/entities/ProjectData" },
       "description": "Stores the heavy content of the projects"
+    },
+    "users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/StudioTask" },
+      "description": "Stores author studio tasks and checklist items"
+    },
+    "users/{userId}/profile/{profileId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores author profile, pen name, bio, and typography defaults"
+    },
+    "users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AuthorTimelineSettings" },
+      "description": "Stores writing studio timeline and streak settings"
     },
     "registeredUsers/{userId}": {
       "schema": { "$ref": "#/entities/RegisteredUser" },

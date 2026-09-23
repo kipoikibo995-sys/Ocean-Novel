@@ -316,12 +316,14 @@ function cleanForFirestore<T>(data: T): T {
 
 function canSyncWithFirestore(targetUserId?: string | null): boolean {
   const uid = targetUserId || currentUserId;
+  const user = auth.currentUser;
   return Boolean(
-    auth.currentUser &&
+    user &&
+    !user.isAnonymous &&
     uid &&
     uid !== 'null' &&
     uid !== 'undefined' &&
-    auth.currentUser.uid === uid
+    user.uid === uid
   );
 }
 
@@ -616,6 +618,7 @@ export const storage = {
       }
 
       // 4. Load Tasks from Cloud
+      if (!canSyncWithFirestore(userId)) return;
       try {
         const taskSnapshot = await getDocs(collection(db, `users/${userId}/tasks`));
         if (!taskSnapshot.empty) {
@@ -631,6 +634,7 @@ export const storage = {
       }
 
       // 5. Load Project Data from Cloud
+      if (!canSyncWithFirestore(userId)) return;
       try {
         const pdSnapshot = await getDocs(collection(db, `users/${userId}/projectData`));
         pdSnapshot.docs.forEach(d => {

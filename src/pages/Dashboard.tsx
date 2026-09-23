@@ -33,10 +33,8 @@ import { cn } from "@/lib/utils";
 import { storage, ProjectMeta, StudioTask } from "@/lib/storage";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { ensureFantasyBooksSeeded } from "@/fantasySampleData";
 import { TimelineSettingsModal } from "@/components/TimelineSettingsModal";
 
-import { runFantasySeed } from "@/lib/seed";
 import { isUserAdmin } from "@/lib/adminService";
 
 export default function Dashboard() {
