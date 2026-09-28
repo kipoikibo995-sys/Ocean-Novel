@@ -1,18 +1,19 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
-
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import tippy from 'tippy.js';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, 
-  Heading1, Heading2, Heading3, List, ListOrdered, Quote, 
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, MessageSquare, Scissors 
+  Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
+  Heading1, Heading2, List, ListOrdered, 
+  Scissors, Sparkles, CheckCircle2, UserCheck
 } from 'lucide-react';
+import { autoLinkEntitiesInHtml, autoLinkEntitiesInPlainText } from '@/lib/entityAutoLinker';
 
 // Suggestion list component
 const MentionList = forwardRef((props: any, ref) => {
@@ -59,8 +60,9 @@ const MentionList = forwardRef((props: any, ref) => {
 
   return (
     <div className="bg-[#F9F6ED] shadow-xl border border-[#E5E0D5] rounded-xl overflow-hidden py-2 min-w-[240px] z-50">
-      <div className="px-3 pb-2 mb-2 border-b border-[#E5E0D5] text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-        Link Character
+      <div className="px-3 pb-2 mb-2 border-b border-[#E5E0D5] text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center justify-between">
+        <span>Link Character</span>
+        <span className="text-[9px] text-[#8C503C] font-mono">Bold In Text</span>
       </div>
       {props.items.length ? (
         <div className="max-h-48 overflow-y-auto">
@@ -72,18 +74,18 @@ const MentionList = forwardRef((props: any, ref) => {
               key={`mention-item-${item.id || item.name || index}-${index}`}
               onClick={() => selectItem(index)}
             >
-              <div className="w-6 h-6 rounded-full bg-[#D3BFA9] flex items-center justify-center text-[10px] font-serif text-stone-800">
+              <div className="w-6 h-6 rounded-full bg-[#D3BFA9] flex items-center justify-center text-[10px] font-serif text-stone-800 font-bold">
                 {item.name.charAt(0)}
               </div>
               <div>
-                <div className="text-sm font-semibold text-stone-800">{item.name}</div>
-                <div className="text-[10px] text-stone-500 uppercase tracking-wider">{item.role}</div>
+                <div className="text-sm font-bold text-stone-800">{item.name}</div>
+                <div className="text-[10px] text-stone-500 uppercase tracking-wider">{item.role || item.type || 'Character'}</div>
               </div>
             </button>
           ))}
         </div>
       ) : (
-        <div className="px-4 py-2 text-sm text-stone-500">No result</div>
+        <div className="px-4 py-2 text-sm text-stone-500">No matching character</div>
       )}
     </div>
   );
@@ -91,13 +93,13 @@ const MentionList = forwardRef((props: any, ref) => {
 MentionList.displayName = 'MentionList';
 
 // Suggestion configuration
-
 let currentMentionItems: any[] = [];
 
 const suggestion = {
   items: ({ query }: { query: string }) => {
     return currentMentionItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
   },
+
   render: () => {
     let component: ReactRenderer;
     let popup: any;
@@ -193,6 +195,29 @@ export default function MentionEditor({
   }, [mentionItems]);
   currentMentionItems = mentionItems;
 
+  const editorRef = useRef<any>(null);
+  const [toastInfo, setToastInfo] = useState<{
+    visible: boolean;
+    count: number;
+    names: string[];
+    message?: string;
+  } | null>(null);
+
+  const toastTimerRef = useRef<any>(null);
+
+  const showToast = (count: number, names: string[], customMessage?: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastInfo({
+      visible: true,
+      count,
+      names,
+      message: customMessage,
+    });
+    toastTimerRef.current = setTimeout(() => {
+      setToastInfo(null);
+    }, 3800);
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -201,7 +226,11 @@ export default function MentionEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'], defaultAlignment: 'justify' }),
       Mention.configure({
         HTMLAttributes: {
-          class: 'text-[#8C503C] font-semibold cursor-pointer underline decoration-dotted underline-offset-4 decoration-[#8C503C]/40 hover:decoration-[#8C503C] transition-colors select-none mention',
+          class: 'mention-node font-bold text-[#8C503C] hover:text-[#5C2E1F] hover:bg-[#8C503C]/10 px-0.5 rounded cursor-pointer transition-colors duration-150 decoration-none inline-block border-b border-[#8C503C]/20 hover:border-[#8C503C]',
+        },
+        // IMPORTANT: Eliminates '@' in text, displays character name cleanly in bold
+        renderLabel({ node }) {
+          return `${node.attrs.label ?? node.attrs.id}`;
         },
         suggestion,
       }),
@@ -214,8 +243,9 @@ export default function MentionEditor({
       },
       handleClick(view, pos, event) {
         const target = event.target as HTMLElement;
-        if (target && target.classList.contains('mention')) {
-          const id = target.getAttribute('data-id');
+        const mentionEl = target.closest('[data-type="mention"], .mention, .mention-node');
+        if (mentionEl) {
+          const id = mentionEl.getAttribute('data-id');
           if (id) {
             onEntityClick(id, 'character');
             return true;
@@ -223,16 +253,48 @@ export default function MentionEditor({
         }
         return false;
       },
+      // AUTOMATIC RECOGNITION ON PASTE
+      handlePaste(view, event) {
+        if (!currentMentionItems || currentMentionItems.length === 0) return false;
+
+        const clipboard = event.clipboardData;
+        if (!clipboard) return false;
+
+        const html = clipboard.getData('text/html');
+        const text = clipboard.getData('text/plain');
+
+        if (!text && !html) return false;
+
+        let res: { html: string; linkedCount: number; linkedNames: string[] } | null = null;
+        if (html) {
+          res = autoLinkEntitiesInHtml(html, currentMentionItems);
+        } else if (text) {
+          res = autoLinkEntitiesInPlainText(text, currentMentionItems);
+        }
+
+        if (res && res.linkedCount > 0 && res.html) {
+          event.preventDefault();
+          if (editorRef.current && !editorRef.current.isDestroyed) {
+            editorRef.current.commands.insertContent(res.html);
+            showToast(res.linkedCount, res.linkedNames);
+            return true;
+          }
+        }
+
+        return false;
+      },
     },
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
     },
   });
+
+  editorRef.current = editor;
+
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setPortalTarget(document.getElementById('editor-toolbar-portal-target'));
   }, []);
-
 
   // Sync when active scene changes (initialValue changes)
   useEffect(() => {
@@ -279,19 +341,63 @@ export default function MentionEditor({
     return () => clearTimeout(timer);
   }, [editor, highlightText, initialValue]);
 
-  return (
-    <div className={`flex flex-col h-full w-full bg-transparent overflow-hidden custom-editor-container ${className}`}>
-      
-      
+  // 1-Click Scan & Auto-Link Entire Scene
+  const handleScanAndAutoLinkCurrentContent = () => {
+    if (!editor || editor.isDestroyed || !mentionItems || mentionItems.length === 0) return;
+    const currentHtml = editor.getHTML();
+    const res = autoLinkEntitiesInHtml(currentHtml, mentionItems);
+    if (res.linkedCount > 0) {
+      editor.commands.setContent(res.html);
+      showToast(res.linkedCount, res.linkedNames, `Đã quét và bôi đậm ${res.linkedCount} vị trí nhân vật!`);
+    } else {
+      showToast(0, [], `Tất cả nhân vật trong phân cảnh đã được liên kết đầy đủ.`);
+    }
+  };
 
+  return (
+    <div className={`flex flex-col h-full w-full bg-transparent overflow-hidden custom-editor-container relative ${className}`}>
       
+      {/* Toast notification when characters are auto-recognized */}
+      <AnimatePresence>
+        {toastInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-2 right-4 z-50 bg-[#332218] text-[#FAF8F5] text-xs px-3.5 py-2.5 rounded-lg shadow-xl border border-[#8C503C]/50 flex items-center gap-2.5 max-w-md pointer-events-auto"
+          >
+            <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {toastInfo.message ? (
+                <div className="font-medium text-stone-200">{toastInfo.message}</div>
+              ) : (
+                <div>
+                  <span className="font-semibold text-white">Tự động nhận diện & bôi đậm ({toastInfo.count}): </span>
+                  <span className="text-[#E5B59E] font-medium">
+                    {toastInfo.names.slice(0, 4).join(', ')}{toastInfo.names.length > 4 ? ` +${toastInfo.names.length - 4}` : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setToastInfo(null)}
+              className="text-stone-400 hover:text-white text-xs px-1"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative flex-grow overflow-y-auto">
         <EditorContent editor={editor} className="h-full" />
         
         {editor?.isEmpty && (
           <div className="absolute top-8 left-8 pointer-events-none text-stone-400 font-serif text-lg opacity-70">
-            Start writing chapter 1... Type @ to mention a character.
+            Dán nội dung từ AI hoặc bắt đầu viết... Nhân vật sẽ được tự động nhận diện và bôi đậm.
           </div>
         )}
 
@@ -302,17 +408,17 @@ export default function MentionEditor({
             <MenuButton action={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive('italic')}><Italic className="w-4 h-4" /></MenuButton>
             <MenuButton action={() => editor.chain().focus().toggleStrike().run()} isActive={editor.isActive('strike')}><Strikethrough className="w-4 h-4" /></MenuButton>
             
-            <div className="w-px h-4 bg-[#E5E0D5] mx-2" />
+            <div className="w-px h-4 bg-[#E5E0D5] mx-1.5" />
             
             <MenuButton action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })}><Heading1 className="w-4 h-4" /></MenuButton>
             <MenuButton action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })}><Heading2 className="w-4 h-4" /></MenuButton>
             
-            <div className="w-px h-4 bg-[#E5E0D5] mx-2" />
+            <div className="w-px h-4 bg-[#E5E0D5] mx-1.5" />
             
             <MenuButton action={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive('bulletList')}><List className="w-4 h-4" /></MenuButton>
             <MenuButton action={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive('orderedList')}><ListOrdered className="w-4 h-4" /></MenuButton>
             
-            <div className="w-px h-4 bg-[#E5E0D5] mx-2" />
+            <div className="w-px h-4 bg-[#E5E0D5] mx-1.5" />
 
             <button
               onClick={(e) => { e.preventDefault(); editor.chain().focus().setHorizontalRule().run(); }}
@@ -320,6 +426,22 @@ export default function MentionEditor({
               title="Scene Break"
             >
               <Scissors className="w-4 h-4" />
+            </button>
+
+            <div className="w-px h-4 bg-[#E5E0D5] mx-1.5" />
+
+            {/* Smart Auto-Link Entity Button & Indicator */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                handleScanAndAutoLinkCurrentContent();
+              }}
+              className="px-2.5 py-1 text-[11px] font-semibold text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/25 hover:border-[#8C503C] rounded-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+              title="Tự động quét & bôi đậm liên kết toàn bộ nhân vật trong phân cảnh này"
+              type="button"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Auto-Link Entities</span>
             </button>
           </div>,
           portalTarget
