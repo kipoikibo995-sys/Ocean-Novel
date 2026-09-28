@@ -23,53 +23,13 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       
-      match /projects/{projectId} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      }
-      
-      match /projectData/{projectId} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      }
-
-      match /tasks/{taskId} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      }
-      
-      match /profile/{profileId} {
-        allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-        allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-        allow update: if isSignedIn() && (
-          isAdmin() ||
-          (request.auth.uid == userId && (
-            !('plan' in request.resource.data) ||
-            request.resource.data.plan == resource.data.plan
-          ))
-        );
-        allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      }
-
-      match /settings/{settingId} {
+      match /{allUserPaths=**} {
         allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       }
     }
 
     match /registeredUsers/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && (
-        isAdmin() ||
-        (request.auth.uid == userId && (
-          !('tier' in request.resource.data) ||
-          request.resource.data.tier == 'FrontEnd' ||
-          request.resource.data.tier == 'Free'
-        ))
-      );
-      allow update: if isSignedIn() && (
-        isAdmin() ||
-        (request.auth.uid == userId &&
-          (!('tier' in request.resource.data) || request.resource.data.tier == resource.data.tier) &&
-          (!('isBanned' in request.resource.data) || request.resource.data.isBanned == resource.data.isBanned)
-        )
-      );
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
 
@@ -85,3 +45,4 @@ service cloud.firestore {
     }
   }
 }
+

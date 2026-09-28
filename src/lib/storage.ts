@@ -254,7 +254,7 @@ export function createDefaultProfile(email?: string | null, name?: string | null
     email: cleanEmail,
     bio: isAdmin ? "Master Administrator & Novel Architect at Ocean Novel." : "Author & Novel Architect at Ocean Novel.",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-    plan: isAdmin ? "master" : "free",
+    plan: "master",
     defaultFont: "Merriweather (Serif)",
     fontSize: "Medium (18px)",
     defaultPov: "Third Person Limited",
@@ -557,21 +557,19 @@ export const storage = {
         const userEmail = currentUser?.email || "";
         const isAdmin = isUserAdmin(userEmail);
 
-        let authoritativePlan: LicensePlan = isAdmin ? 'master' : 'free';
+        let authoritativePlan: LicensePlan = 'master';
 
         // Check CRM registeredUsers record
         try {
           const regDoc = await getDoc(doc(db, `registeredUsers/${userId}`));
           if (regDoc.exists()) {
             const regData = regDoc.data();
-            if (isAdmin) {
-              authoritativePlan = 'master';
-            } else if (regData?.tier === 'OTO2') {
-              authoritativePlan = 'master';
-            } else if (regData?.tier === 'OTO1') {
+            if (regData?.tier === 'OTO1') {
               authoritativePlan = 'pro';
-            } else {
+            } else if (regData?.tier === 'Free') {
               authoritativePlan = 'free';
+            } else {
+              authoritativePlan = 'master';
             }
           }
         } catch (crmErr) {
