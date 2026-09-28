@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   Heading1, Heading2, List, ListOrdered, 
-  Scissors, Sparkles, CheckCircle2, UserCheck
+  Scissors, CheckCircle2, UserCheck
 } from 'lucide-react';
 import { autoLinkEntitiesInHtml, autoLinkEntitiesInPlainText } from '@/lib/entityAutoLinker';
 
@@ -440,7 +440,7 @@ export default function MentionEditor({
               title="Tự động quét & bôi đậm liên kết toàn bộ nhân vật trong phân cảnh này"
               type="button"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <UserCheck className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Auto-Link Entities</span>
             </button>
           </div>,
