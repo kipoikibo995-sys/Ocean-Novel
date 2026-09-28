@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { storage, UserProfile } from "@/lib/storage";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 import { isUserAdmin } from "@/lib/adminService";
+import { tierToPlan } from "@/lib/license";
 import UpgradeModal from "@/components/UpgradeModal";
 import {
   User,
@@ -43,22 +45,69 @@ export default function Settings() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
 
   useEffect(() => {
-    // For Premium Edition, ensure user profile is on the highest tier ('master')
-    const cur = storage.getUserProfile();
-    if (cur.plan !== 'master') {
-      const updated = storage.saveUserProfile({ plan: 'master' });
-      setProfile(updated);
-    }
-  }, []);
+    let unsubSnapshotReg: (() => void) | null = null;
+    let unsubSnapshotProfile: (() => void) | null = null;
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    const handleStorageUpdate = () => {
+      setProfile(storage.getUserProfile());
+    };
+    window.addEventListener('novelist-storage-updated', handleStorageUpdate);
+
+    const unsubAuth = onAuthStateChanged(auth, async (u) => {
       setFirebaseUser(u);
       if (u) {
+        storage.switchUser(u.uid, u.email, u.displayName);
+        await storage.syncFromCloud(u.uid);
         setProfile(storage.getUserProfile());
+
+        const isAdminUser = isUserAdmin(u.email);
+
+        // Real-time listener on registeredUsers in Firestore
+        try {
+          const regDocRef = doc(db, "registeredUsers", u.uid);
+          unsubSnapshotReg = onSnapshot(regDocRef, (snap) => {
+            if (snap.exists()) {
+              const data = snap.data();
+              const livePlan = isAdminUser ? 'master' : tierToPlan(data?.tier);
+              const cur = storage.getUserProfile();
+              if (cur.plan !== livePlan) {
+                const updated = storage.saveUserProfile({ plan: livePlan }, true);
+                setProfile(updated);
+              }
+            }
+          }, (err) => console.warn("Live registeredUsers listener notice:", err));
+        } catch (e) {
+          console.warn("Could not attach registeredUsers snapshot:", e);
+        }
+
+        // Real-time listener on user profile doc in Firestore
+        try {
+          const profDocRef = doc(db, `users/${u.uid}/profile/default`);
+          unsubSnapshotProfile = onSnapshot(profDocRef, (snap) => {
+            if (snap.exists()) {
+              const pData = snap.data() as UserProfile;
+              const targetPlan = isAdminUser ? 'master' : (pData?.plan || 'free');
+              const cur = storage.getUserProfile();
+              if (cur.plan !== targetPlan) {
+                const updated = storage.saveUserProfile({ plan: targetPlan }, true);
+                setProfile(updated);
+              } else {
+                setProfile(prev => ({ ...prev, ...pData, plan: targetPlan }));
+              }
+            }
+          }, (err) => console.warn("Live profile snapshot notice:", err));
+        } catch (e) {
+          console.warn("Could not attach profile snapshot:", e);
+        }
       }
     });
-    return () => unsub();
+
+    return () => {
+      window.removeEventListener('novelist-storage-updated', handleStorageUpdate);
+      unsubAuth();
+      if (unsubSnapshotReg) unsubSnapshotReg();
+      if (unsubSnapshotProfile) unsubSnapshotProfile();
+    };
   }, []);
 
   const tabParam = searchParams.get("tab") || "profile";
@@ -624,7 +673,11 @@ export default function Settings() {
                     Subscription & License Rights
                   </CardTitle>
                   <CardDescription className="text-xs font-serif text-stone-500">
-                    Highest Tier License: All studio capabilities and premium features are fully unlocked for life.
+                    {profile.plan === 'master'
+                      ? "Highest Tier License: All studio capabilities and premium features are fully unlocked for life."
+                      : profile.plan === 'pro'
+                      ? "Pro Tier License: Unlimited manuscripts & 50+ fantasy art assets unlocked."
+                      : "Regular Tier License: Standard author quotas active with 3 manuscript slots."}
                   </CardDescription>
                 </div>
                 {isAdmin && (
@@ -644,123 +697,300 @@ export default function Settings() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-serif text-lg font-bold text-[#4A3225]">
-                      Ocean Novel: Premium Edition
+                      Ocean Novel: {profile.plan === 'master' ? 'Premium Edition' : profile.plan === 'pro' ? 'Pro Edition' : 'Regular Edition'}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono bg-[#723F2F] text-amber-200 border border-[#8C503C]">
-                      HIGHEST TIER (LIFETIME PREMIUM)
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider font-mono",
+                      profile.plan === 'master'
+                        ? "bg-[#723F2F] text-amber-200 border border-[#8C503C]"
+                        : profile.plan === 'pro'
+                        ? "bg-[#8C503C] text-white"
+                        : "bg-[#5D3F32] text-white"
+                    )}>
+                      {profile.plan === 'master' ? 'HIGHEST TIER (LIFETIME PREMIUM)' : profile.plan === 'pro' ? 'PRO ACTIVE' : 'REGULAR ACTIVE'}
                     </span>
                   </div>
                   <p className="text-xs text-stone-600 font-serif leading-relaxed">
-                    You have unrestricted access to all studio capabilities: AI Ghostwriter Hub, Continuity Conflict Engine, 50+ Curated Fantasy Art Assets, EPUB 3 Amazon KDP Publication Exporter, and unlimited novel manuscripts.
+                    {profile.plan === 'master'
+                      ? "You have unrestricted access to all studio capabilities: AI Ghostwriter Hub, Continuity Conflict Engine, 50+ Curated Fantasy Art Assets, EPUB 3 Amazon KDP Publication Exporter, and unlimited novel manuscripts."
+                      : profile.plan === 'pro'
+                      ? "You have unlocked unlimited novel manuscripts, complete Story Bible, 50+ fantasy character portraits & location art library, and EPUB 3 export."
+                      : "Default Regular Edition: Up to 3 novel projects, 25 characters/project, 15 locations/project, @Mentions enabled, custom upload/URL image support."}
                   </p>
                   <div className="text-[11px] text-stone-600 font-serif pt-1 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 inline-block animate-pulse" />
-                    <span>Verified License: <strong className="text-[#4A3225]">{firebaseUser?.email || profile.email || "Author"}</strong> (Lifetime Unrestricted Access)</span>
+                    <span>Verified Account: <strong className="text-[#4A3225]">{firebaseUser?.email || profile.email || "Author"}</strong> (Tier managed by Studio CRM)</span>
                   </div>
                 </div>
+
+                {profile.plan !== 'master' && (
+                  <Button
+                    onClick={() => {
+                      const target = profile.plan === 'free' ? 'pro' : 'premium';
+                      openSalesPage(target);
+                    }}
+                    className="bg-[#8C503C] hover:bg-[#723F2F] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 h-9 rounded-sm shadow-xs shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>{profile.plan === 'free' ? 'Upgrade to Pro' : 'Upgrade to Premium'}</span>
+                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                  </Button>
+                )}
               </div>
 
-              {/* HIGHEST TIER CARD (DISPLAY ONLY) */}
-              <div className="max-w-3xl mx-auto">
-                <div className="p-6 rounded-md border-2 border-[#723F2F] bg-[#FDF9F3] ring-1 ring-[#723F2F]/20 space-y-5 shadow-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-200/70">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-widest font-mono text-[#723F2F] font-bold flex items-center gap-1.5 mb-0.5">
-                        <Zap className="w-3.5 h-3.5 text-[#723F2F]" />
-                        HIGHEST TIER ACTIVE
+              {/* TIER DISPLAY */}
+              {profile.plan === 'master' ? (
+                /* FOR PREMIUM EDITION: ONLY DISPLAY HIGHEST TIER CARD */
+                <div className="max-w-3xl mx-auto">
+                  <div className="p-6 rounded-md border-2 border-[#723F2F] bg-[#FDF9F3] ring-1 ring-[#723F2F]/20 space-y-5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-200/70">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest font-mono text-[#723F2F] font-bold flex items-center gap-1.5 mb-0.5">
+                          <Zap className="w-3.5 h-3.5 text-[#723F2F]" />
+                          HIGHEST TIER ACTIVE
+                        </span>
+                        <h3 className="font-serif font-bold text-xl text-[#723F2F]">
+                          Premium Edition — Full Lifetime Unrestricted Access
+                        </h3>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider text-white bg-[#723F2F] shadow-xs self-start sm:self-auto">
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        Active & Lifetime
                       </span>
-                      <h3 className="font-serif font-bold text-xl text-[#723F2F]">
-                        Premium Edition — Full Lifetime Unrestricted Access
-                      </h3>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider text-white bg-[#723F2F] shadow-xs self-start sm:self-auto">
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      Active & Lifetime
-                    </span>
-                  </div>
 
-                  <div>
-                    <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-3 font-mono">
-                      Unlocked Studio Privileges & Capabilities
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">AI Ghostwriter Hub & Creative Muse</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Craft scene beats, multi-layered dialogue tension, and break writer's block with precision prompts.</span>
-                        </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-3 font-mono">
+                        Unlocked Studio Privileges & Capabilities
                       </div>
-
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Continuity Conflict Engine</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Scan timeline paradoxes, character trait contradictions, and track lore consistency across multi-book arcs.</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">AI Ghostwriter Hub & Creative Muse</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Craft scene beats, multi-layered dialogue tension, and break writer's block with precision prompts.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Unlimited Projects & Series Archives</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Write and organize multiple epic sagas, multi-volume series, and standalone manuscripts with zero limits.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Continuity Conflict Engine</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Scan timeline paradoxes, character trait contradictions, and track lore consistency across multi-book arcs.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Unlimited Characters & Lore Atlas</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Deep character dossiers, worldbuilding location atlas, interactive relationship matrices, and family trees.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Unlimited Projects & Series Archives</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Write and organize multiple epic sagas, multi-volume series, and standalone manuscripts with zero limits.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">50+ Curated Fantasy Art Library</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Handcrafted character portraits, creature illustrations, and atmospheric landscape backgrounds ready to use.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Unlimited Characters & Lore Atlas</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Deep character dossiers, worldbuilding location atlas, interactive relationship matrices, and family trees.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Amazon KDP EPUB 3 & Word Export</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Industry-standard publication exporter for Kindle, EPUB 3 e-readers, print-ready Word (.docx), and Plain Text.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">50+ Curated Fantasy Art Library</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Handcrafted character portraits, creature illustrations, and atmospheric landscape backgrounds ready to use.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Story Context Bridge</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">One-click export of complete Story Bible and scene context formatted directly for external AI assistants.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <ShieldCheck className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Amazon KDP EPUB 3 & Word Export</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Industry-standard publication exporter for Kindle, EPUB 3 e-readers, print-ready Word (.docx), and Plain Text.</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
-                        <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-serif font-bold text-xs text-stone-900 block">Word Echoes & Prose Cadence</span>
-                          <span className="font-serif text-[11px] text-stone-600 leading-tight">Real-time diagnostic scanner for word repetition, sentence cadence variety, and prose rhythm optimization.</span>
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Story Context Bridge</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">One-click export of complete Story Bible and scene context formatted directly for external AI assistants.</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 p-3 rounded bg-white/70 border border-stone-200/60">
+                          <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-serif font-bold text-xs text-stone-900 block">Word Echoes & Prose Cadence</span>
+                            <span className="font-serif text-[11px] text-stone-600 leading-tight">Real-time diagnostic scanner for word repetition, sentence cadence variety, and prose rhythm optimization.</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="pt-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#723F2F]/5 p-3.5 rounded-sm">
-                    <div className="flex items-center gap-2 text-xs font-serif text-[#4A3225]">
-                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Status: <strong>Lifetime highest edition active</strong> — Full unrestricted features with no recurring fees.</span>
+                    <div className="pt-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#723F2F]/5 p-3.5 rounded-sm">
+                      <div className="flex items-center gap-2 text-xs font-serif text-[#4A3225]">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Status: <strong>Lifetime highest edition active</strong> — Full unrestricted features with no recurring fees.</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#723F2F] bg-white px-2.5 py-1 rounded border border-[#723F2F]/20 shrink-0">
+                        Tier: Premium (Full Unrestricted)
+                      </span>
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#723F2F] bg-white px-2.5 py-1 rounded border border-[#723F2F]/20 shrink-0">
-                      Tier: Premium (Full Unrestricted)
-                    </span>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* FOR REGULAR & PRO USERS: SHOW CURRENT ACTIVE TIER + NEXT UPGRADE STEP */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+                  {/* Current Active Plan Card */}
+                  <div className="p-5 rounded-md border-2 border-[#5D3F32] bg-white space-y-4 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-100">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-stone-500 font-bold block">
+                            Current Tier
+                          </span>
+                          <h4 className="font-serif font-bold text-base text-[#4A3225]">
+                            {profile.plan === 'pro' ? 'Pro Edition' : 'Regular Edition'}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-white bg-[#5D3F32] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Active
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                        Active Features
+                      </div>
+                      <ul className="space-y-2.5 text-xs font-serif text-stone-700">
+                        {profile.plan === 'pro' ? (
+                          <>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>Unlimited Novel Archives</strong> simultaneously</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>Unlimited Characters & Locations</strong></span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>50+ Curated Fantasy Art Preset Library</strong></span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>EPUB 3 Amazon KDP Publication Exporter</strong></span>
+                            </li>
+                          </>
+                        ) : (
+                          <>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>Up to 3 Active Projects</strong> simultaneously</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>25 Characters & 15 Locations</strong> per novel</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span><strong>Smart @Mentions</strong> in chapters</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="w-4 h-4 text-[#5A9672] shrink-0 mt-0.5" />
+                              <span>Standard Word (.docx) & Plain Text export</span>
+                            </li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="pt-4 border-t border-stone-200">
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#5D3F32] py-2 bg-stone-100 rounded-sm">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Current Active Plan</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upgrade Step Card */}
+                  <div className="p-5 rounded-md border-2 border-[#8C503C] bg-[#FAF8F5] space-y-4 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-stone-200/60">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-[#8C503C] font-bold block">
+                            Next Upgrade Step
+                          </span>
+                          <h4 className="font-serif font-bold text-base text-[#8C503C]">
+                            {profile.plan === 'pro' ? 'Premium Edition' : 'Pro Edition'}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-[#8C503C] bg-[#8C503C]/10 border border-[#8C503C]/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Upgrade
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">
+                        Unlocked Privileges
+                      </div>
+                      <ul className="space-y-2.5 text-xs font-serif text-stone-700">
+                        {profile.plan === 'pro' ? (
+                          <>
+                            <li className="flex items-start gap-2">
+                              <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                              <span><strong>AI Ghostwriter Hub</strong> & Scene Beats generator</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                              <span><strong>Continuity Conflict Engine</strong> timeline paradox scanner</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                              <span><strong>Story Context Bridge</strong> export to ChatGPT & Claude</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Zap className="w-4 h-4 text-[#723F2F] shrink-0 mt-0.5" />
+                              <span><strong>Word Echoes & Prose Cadence</strong> rhythm scanner</span>
+                            </li>
+                          </>
+                        ) : (
+                          <>
+                            <li className="flex items-start gap-2">
+                              <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                              <span><strong>Unlimited Novel Archives</strong> with zero limits</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                              <span><strong>Unlimited Characters & Locations</strong></span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                              <span><strong>50+ Curated Fantasy Art Library</strong></span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ShieldCheck className="w-4 h-4 text-[#8C503C] shrink-0 mt-0.5" />
+                              <span><strong>Amazon KDP EPUB 3 Exporter</strong></span>
+                            </li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="pt-4 border-t border-stone-200">
+                      <Button
+                        onClick={() => openSalesPage(profile.plan === 'pro' ? 'premium' : 'pro')}
+                        className="w-full text-xs font-bold uppercase tracking-wider text-white bg-[#8C503C] hover:bg-[#723F2F] shadow-sm py-2.5 h-10 rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Upgrade to {profile.plan === 'pro' ? 'Premium Edition' : 'Pro Edition'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

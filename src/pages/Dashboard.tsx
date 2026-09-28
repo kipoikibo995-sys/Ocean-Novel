@@ -124,9 +124,11 @@ export default function Dashboard() {
     };
     window.addEventListener('storage', handleProfileSync);
     window.addEventListener('focus', handleProfileSync);
+    window.addEventListener('novelist-storage-updated', handleProfileSync);
     return () => {
       window.removeEventListener('storage', handleProfileSync);
       window.removeEventListener('focus', handleProfileSync);
+      window.removeEventListener('novelist-storage-updated', handleProfileSync);
     };
   }, []);
 

@@ -1,6 +1,6 @@
 import { ManuscriptItem, MOCK_MANUSCRIPT, MOCK_CHARACTERS, MOCK_LOCATIONS } from "@/mockData";
 import { db, auth } from './firebase';
-import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, query, where, limit } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { isUserAdmin } from './adminService';
 
@@ -60,7 +60,7 @@ const defaultTimelineSettings: AuthorTimelineSettings = {
   totalWritingMinutesTracked: 0,
 };
 
-import { LicensePlan } from './license';
+import { LicensePlan, tierToPlan } from './license';
 
 export interface UserProfile {
   name: string;
@@ -254,7 +254,7 @@ export function createDefaultProfile(email?: string | null, name?: string | null
     email: cleanEmail,
     bio: isAdmin ? "Master Administrator & Novel Architect at Ocean Novel." : "Author & Novel Architect at Ocean Novel.",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-    plan: "master",
+    plan: isAdmin ? "master" : "free",
     defaultFont: "Merriweather (Serif)",
     fontSize: "Medium (18px)",
     defaultPov: "Third Person Limited",
@@ -557,20 +557,26 @@ export const storage = {
         const userEmail = currentUser?.email || "";
         const isAdmin = isUserAdmin(userEmail);
 
-        let authoritativePlan: LicensePlan = 'master';
+        let authoritativePlan: LicensePlan = isAdmin ? 'master' : 'free';
+        let regData: any = null;
 
-        // Check CRM registeredUsers record
+        // Check CRM registeredUsers record by userId, or fallback query by email
         try {
           const regDoc = await getDoc(doc(db, `registeredUsers/${userId}`));
           if (regDoc.exists()) {
-            const regData = regDoc.data();
-            if (regData?.tier === 'OTO1') {
-              authoritativePlan = 'pro';
-            } else if (regData?.tier === 'Free') {
-              authoritativePlan = 'free';
-            } else {
-              authoritativePlan = 'master';
+            regData = regDoc.data();
+          } else if (userEmail) {
+            const q = query(collection(db, "registeredUsers"), where("email", "==", userEmail.toLowerCase().trim()), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              regData = snap.docs[0].data();
             }
+          }
+
+          if (isAdmin) {
+            authoritativePlan = 'master';
+          } else if (regData?.tier) {
+            authoritativePlan = tierToPlan(regData.tier);
           }
         } catch (crmErr) {
           console.warn("Could not read CRM registeredUsers for plan sync:", crmErr);
@@ -579,6 +585,9 @@ export const storage = {
         const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
         if (profileDoc.exists()) {
           const loadedProfile = profileDoc.data() as UserProfile;
+          if (!isAdmin && !regData?.tier && loadedProfile?.plan) {
+            authoritativePlan = loadedProfile.plan;
+          }
           cachedProfile = {
             ...loadedProfile,
             plan: authoritativePlan,
@@ -863,20 +872,16 @@ export const storage = {
     return fallback;
   },
 
-  saveUserProfile: (profile: Partial<UserProfile>): UserProfile => {
+  saveUserProfile: (profile: Partial<UserProfile>, forcePlan = false): UserProfile => {
     const current = cachedProfile || storage.getUserProfile();
     const currentUser = auth.currentUser;
     const isAdmin = isUserAdmin(currentUser?.email || current.email);
 
-    // SECURITY RESTRICTION:
-    // Only Admin can manually change or test license plans.
-    // Regular users cannot modify their plan tier via client actions.
     let targetPlan = current.plan;
     if (profile.plan !== undefined) {
-      if (isAdmin) {
+      if (isAdmin || forcePlan) {
         targetPlan = profile.plan;
       } else {
-        // Non-admin cannot change plan; maintain existing assigned plan
         targetPlan = current.plan;
       }
     }
@@ -891,6 +896,9 @@ export const storage = {
     };
     cachedProfile = updated;
     safeLocalStorageSet(getStorageKey('profile'), JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('novelist-storage-updated', { detail: { profile: updated } }));
+    }
     if (canSyncWithFirestore()) {
       setDoc(doc(db, `users/${currentUserId}/profile/default`), cleanForFirestore(updated))
         .catch(e => handleFirestoreError(e, OperationType.WRITE, `users/${currentUserId}/profile/default`));

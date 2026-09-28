@@ -43,8 +43,10 @@ function ProtectedRoute() {
       setUser(currentUser);
       if (currentUser && !currentUser.isAnonymous) {
         try {
+          storage.switchUser(currentUser.uid, currentUser.email, currentUser.displayName);
           const res = await adminService.trackUserActivity(currentUser);
           setIsBanned(res.isBanned);
+          await storage.syncFromCloud(currentUser.uid);
         } catch {
           // ignore tracking error
         }
