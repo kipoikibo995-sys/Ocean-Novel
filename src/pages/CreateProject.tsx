@@ -18,8 +18,7 @@ import {
   Shield,
   Crown,
   Moon,
-  Waves,
-  Wand2
+  Waves
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -101,7 +100,7 @@ const GENRE_THEMES: Record<string, GenreTheme> = {
   },
   "Arcane & Gaslamp Fantasy": {
     name: "Arcane & Gaslamp Fantasy",
-    icon: Wand2,
+    icon: Compass,
     tagline: "Alchemical colleges, secret mage guilds & clockwork mysteries",
     bgGradient: "radial-gradient(ellipse 90% 80% at 30% 45%, #F3F1EC 0%, #E9E6DE 50%, #DAD5C9 100%)",
     spotlightGlow: "radial-gradient(circle 380px at 32% 48%, rgba(140, 80, 60, 0.15), rgba(180, 83, 9, 0.1), transparent 75%)",
@@ -224,50 +223,9 @@ Primary Genre: ...
 Target Audience: ...
 Cover Theme: ...`;
 
-// Floating Dust & Star Particles Component
-function AmbientParticles({ color }: { color: string }) {
-  const particles = useMemo(() => {
-    return Array.from({ length: 24 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2.2 + 1,
-      duration: Math.random() * 8 + 6,
-      delay: Math.random() * 5,
-      driftX: (Math.random() - 0.5) * 40,
-    }));
-  }, []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            backgroundColor: color,
-            boxShadow: `0 0 ${p.size * 3}px ${color}`,
-          }}
-          animate={{
-            y: [0, -60, -120],
-            x: [0, p.driftX, 0],
-            opacity: [0, 0.85, 0],
-            scale: [0.8, 1.4, 0.6],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
+// Floating Dust & Particles Component (Disabled to remove sparkling star particles)
+function AmbientParticles({ color: _color }: { color: string }) {
+  return null;
 }
 
 // Fantasy Constellation Graphic
@@ -293,8 +251,6 @@ function ConstellationOverlay() {
         <line x1="170" y1="115" x2="120" y2="160" stroke="currentColor" strokeWidth="0.6" />
         <line x1="120" y1="160" x2="65" y2="130" stroke="currentColor" strokeWidth="0.6" strokeDasharray="3 3" />
         <line x1="65" y1="130" x2="30" y2="40" stroke="currentColor" strokeWidth="0.6" />
-        {/* Star glow */}
-        <circle cx="140" cy="55" r="7" fill="currentColor" opacity="0.15" />
       </svg>
 
       {/* Bottom Left Celestial Arc */}

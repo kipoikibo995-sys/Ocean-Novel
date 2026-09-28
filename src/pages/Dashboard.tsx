@@ -1026,7 +1026,7 @@ export default function Dashboard() {
                               Words
                             </span>
                             <span className="text-[10px] sm:text-[11px] font-serif font-bold text-[#2c1b13] truncate">
-                              {(proj.currentWords || 0).toLocaleString()} {isComplete && "★"}
+                              {(proj.currentWords || 0).toLocaleString()}
                             </span>
                           </div>
                           <div className="w-full bg-[#e7decfa0] h-[3px] rounded-full overflow-hidden">

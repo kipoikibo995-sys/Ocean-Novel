@@ -423,7 +423,7 @@ function createStarterProjectsForUser(userId: string): { meta: ProjectMeta; data
             motivation: "To redeem his fallen lineage and shatter the volcanic seal.",
             locationId: "1",
             traits: ["HONORABLE", "TORMENTED", "FEARLESS"],
-            imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/06_fur_clad_elder_warrior_cm6wxh.jpg",
+            imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564449/fantasy_08_under_100kb_mkojix.jpg",
             backstory: "Exiled from the High Citadel after refusing to execute civilian sympathizers."
           }
         ],

@@ -33,7 +33,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           motivation: "To uncover the supernatural conspiracy that claimed her sister.",
           locationId: "1",
           traits: ["ANALYTICAL", "RELENTLESS", "GUARDED"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721907/08_dark_fae_woman_mj0wba.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564450/fantasy_09_under_100kb_olpmb3.jpg",
           backstory: "Raised along the treacherous sea bluffs of Greyhaven, Sarah was the only family member who never believed the drowning was an accident."
         },
         {
@@ -45,7 +45,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           motivation: "To atone for closing the case prematurely fifteen years ago.",
           locationId: "2",
           traits: ["CYNICAL", "PROTECTIVE", "OBSERVANT"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/06_fur_clad_elder_warrior_cm6wxh.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564470/32_under_100kb_a0slub.jpg",
           backstory: "A decorated former guard captain, Daniel knows every subterranean tunnel beneath the cliffs."
         },
         {
@@ -57,7 +57,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           motivation: "To protect the family lineage from the ancient leviathan cult.",
           locationId: "3",
           traits: ["SECRETIVE", "COLD", "AUTHORITATIVE"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/09_grandmother_herbalist_in_her_cozy_apothecary_esx6py.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564509/36_under_100kb_tckrgf.jpg",
           backstory: "Matriarch of the old merchant fleet, Eleanor traded blood secrets for safe harbor during the Great Storms."
         }
       ],
@@ -138,7 +138,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "26",
           motivation: "To claim the Sunken Crown and unite the fractured realms against tyrannical ruin.",
           traits: ["HONORABLE", "FEARLESS", "IDEALISTIC"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564449/fantasy_08_under_100kb_mkojix.jpg",
           backstory: "Exiled after refusing to execute civilian clans during the Border Skirmishes, Valen carries the ancient blood of solar kings."
         },
         {
@@ -149,7 +149,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "118",
           motivation: "To restore the ancient treaty between elves and humans before war annihilates the sacred forests.",
           traits: ["CUNNING", "PERCEPTIVE", "MYSTERIOUS"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/01_elven_sorceress_in_a_celestial_library_pbyk5z.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564447/fantasy_01_under_100kb_klikgx.jpg",
           backstory: "Banished from the Silver Canopy for studying forbidden star sorcery, Lyra found an unexpected ally in Valen."
         },
         {
@@ -160,7 +160,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "142",
           motivation: "To honor his life-debt to Valen's fallen father and protect the secret dwarven tunnels.",
           traits: ["GRUNTING", "LOYAL", "MASTER SMITH"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/05_red_haired_forge_warrior_portrait_tpde6u.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564455/28_under_100kb_cvsnrc.jpg",
           backstory: "Renowned across five provinces as the only smith capable of folding dragon-scale metal into flexible plate."
         },
         {
@@ -171,7 +171,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "45",
           motivation: "To seize absolute dominion over Eldoria and eradicate all rival bloodlines.",
           traits: ["TYRANNICAL", "CRUEL", "STRATEGIC"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/10_skeletal_mage_e6802e.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564448/fantasy_10_under_100kb_hh25jh.jpg",
           backstory: "Once a trusted general of the late Emperor, Morath made a pact with the dormant fire dragons beneath Mount Ash."
         }
       ],
@@ -275,7 +275,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "74",
           motivation: "To decode the cosmic prophecy before the Astral Inquisitors eradicate free magical study.",
           traits: ["SCHOLARLY", "OBSESSIVE", "BRILLIANT"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/03_elderly_wizard_in_a_celestial_study_gxgza0.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564451/fantasy_04_under_100kb_wicdbn.jpg",
           backstory: "Former Dean of Celestial Theory, Alistair discovered that the empire's star calendar was hiding an impending cosmic extinction event."
         },
         {
@@ -286,7 +286,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "23",
           motivation: "To buy his family's freedom from the Inquisitorial debtor mines with the ultimate heist.",
           traits: ["ACROBATIC", "SARCASTIC", "FEARLESS"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/04_rogue_in_the_lantern_lit_alley_xdppun.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564448/fantasy_07_under_100kb_jzsg1g.jpg",
           backstory: "Orphaned in the lower docks, Kaelen discovered he could blend into magical shadows after surviving an experimental blast."
         },
         {
@@ -297,7 +297,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "62",
           motivation: "To preserve the sacred ley lines from celestial corruption.",
           traits: ["WISE", "UNYIELDING", "EARTH-BOUND"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/06_regal_orc_shaman_of_the_forest_shrine_da7pn9.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564464/18_under_100kb_epxdhg.jpg",
           backstory: "Spokesperson of the Old Faith, Sylvia commands the roots of the forest to seal unnatural portals."
         },
         {
@@ -308,7 +308,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "48",
           motivation: "To impose absolute imperial order by harnessing the cosmic void.",
           traits: ["ZEALOT", "RUTHLESS", "PURITANICAL"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/02_gothic_aristocrat_rsdt8q.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564461/16_under_100kb_p3ceg2.jpg",
           backstory: "Wields anti-magic cuffs and silver flames that incinerate spellcasters in their tracks."
         }
       ],
@@ -402,7 +402,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "44",
           motivation: "To ensure his people survive the long winter eclipse at any cost.",
           traits: ["STERN", "RESILIENT", "FEARLESS"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/06_fur_clad_elder_warrior_cm6wxh.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564516/49_under_100kb_lk6i5x.jpg",
           backstory: "Survivor of three blood feuds and twenty winters, Torvin holds the fortress gate against impossible odds."
         },
         {
@@ -413,7 +413,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "36",
           motivation: "To appease the primordial winter spirits before the earth is swallowed by eternal ice.",
           traits: ["MYSTICAL", "DEVOUT", "CALM"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/05_horned_dark_fantasy_woman_bd5vg4.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564457/27_under_100kb_am0d3p.jpg",
           backstory: "Blinded during her initiation under the frozen waterfall, Freyja sees through the eyes of northern owls."
         },
         {
@@ -424,7 +424,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "24",
           motivation: "To avenge her fallen clan members butchered by the Ice Wraith's shadows.",
           traits: ["FIERCE", "AGILE", "PRAGMATIC"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/01_woodland_child_with_rabbit_rzvvgu.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564466/15_under_100kb_atj3uk.jpg",
           backstory: "Raised by wolves in the high taiga, Astrid can track a scent across three days of blizzard."
         },
         {
@@ -435,7 +435,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "Unknown",
           motivation: "To plunge the mortal world into frozen stillness for eternity.",
           traits: ["MERCILESS", "ETHEREAL", "ANCIENT"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/10_skeletal_mage_e6802e.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564462/12_under_100kb_hlq8js.jpg",
           backstory: "A betrayed ruler of the First Age whose kingdom was drowned in glaciers."
         }
       ],
@@ -530,7 +530,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "28",
           motivation: "To find the oasis of living water and clear her family's name with the Sultan.",
           traits: ["PRAGMATIC", "VALIANT", "SWIFT"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/10_desert_citadel_warrior_at_dusk_djbqqn.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564508/38_under_100kb_mfs9gy.jpg",
           backstory: "Trained in the Scimitar Schools of the Sunken Oasis, Amira was framed for the theft of the sacred water jars."
         },
         {
@@ -541,7 +541,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "68",
           motivation: "To keep the ancient tomb sealed and prevent a sandstorm from consuming the oasis.",
           traits: ["PATIENT", "WISE", "MYSTICAL"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721895/04_desert_noble_gu06uc.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564511/33_under_100kb_uikhja.jpg",
           backstory: "Spent forty years in the desert hermitage deciphering the sand runes left by the First Dynasty."
         },
         {
@@ -552,7 +552,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "25",
           motivation: "To amass enough wealth to buy an entire fleet of desert skiffs.",
           traits: ["GREEDY", "CHARISMATIC", "LUCKY"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721896/07_steampunk_youth_enrgaj.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564458/24_under_100kb_peyoek.jpg",
           backstory: "Can slip through any barred window and escape any dungeon using nothing but a bent wire and a flash bomb."
         },
         {
@@ -563,7 +563,7 @@ export const FANTASY_SAMPLE_BOOKS: FantasyBookSample[] = [
           age: "Ancient",
           motivation: "To dry up all water in the world and rule over an eternal kingdom of golden sand.",
           traits: ["REGAL", "COLD", "DEVOURING"],
-          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721908/09_red_gold_court_lady_kusyp1.jpg",
+          imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564446/fantasy_03_under_100kb_xf2ihh.jpg",
           backstory: "Ancient monarch who traded her mortality for the heart of the scorched sun."
         }
       ],

@@ -40,6 +40,8 @@ import { PLAN_LIMITS } from "@/lib/license";
 import UpgradeModal from "@/components/UpgradeModal";
 import ImageDropzoneCard from "@/components/ImageDropzoneCard";
 import ImagePickerModal from "@/components/ImagePickerModal";
+import CharacterPresetPickerModal from "@/components/CharacterPresetPickerModal";
+import { CharacterPreset } from "@/data/characterPresets";
 import { FANTASY_PRESET_PORTRAITS } from "@/lib/imageUtils";
 
 // Define exact mock characters based on the provided image
@@ -405,7 +407,7 @@ export default function Characters() {
           if (!imageUrl || imageUrl.includes("unsplash.com") || imageUrl.includes(".webp")) {
             hasModified = true;
             const fallbackPreset = FANTASY_PRESET_PORTRAITS[index % FANTASY_PRESET_PORTRAITS.length];
-            imageUrl = fallbackPreset ? fallbackPreset.url : "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg";
+            imageUrl = fallbackPreset ? fallbackPreset.url : FANTASY_PRESET_PORTRAITS[0].url;
           }
 
           if (hasModified) hasChanges = true;
@@ -463,6 +465,10 @@ export default function Characters() {
   const hasImageLibrary = PLAN_LIMITS[profile?.plan || 'free'].hasImageLibrary;
   const isCharacterLimitReached = characters.length >= maxCharacters;
 
+  // 50 Character Presets Modal State
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [presetModalMode, setPresetModalMode] = useState<"editor" | "registry">("editor");
+
   // Group Management State (Standard + Custom)
   const [isCustomGroupMode, setIsCustomGroupMode] = useState(false);
   const [customGroupInput, setCustomGroupInput] = useState("");
@@ -475,7 +481,7 @@ export default function Characters() {
     aliases: [] as string[],
     backstory: "",
     traits: [] as string[],
-    imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
+    imageUrl: FANTASY_PRESET_PORTRAITS[0]?.url || "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564447/fantasy_01_under_100kb_klikgx.jpg",
     mbti: "",
     archetype: "",
     conflict: "",
@@ -540,7 +546,7 @@ export default function Characters() {
       aliases: [],
       backstory: "",
       traits: [],
-      imageUrl: "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
+      imageUrl: FANTASY_PRESET_PORTRAITS[0]?.url || "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564447/fantasy_01_under_100kb_klikgx.jpg",
       mbti: "",
       archetype: "",
       conflict: "",
@@ -550,6 +556,69 @@ export default function Characters() {
       customAttributes: [],
     });
     setViewMode("editor");
+  };
+
+  const handleSelectPreset = (preset: CharacterPreset, directSave = false) => {
+    if (isCharacterLimitReached) {
+      setUpgradeModalFeature("characters");
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    const newAliases = preset.title
+      ? [preset.title, ...(preset.aliases || [])]
+      : (preset.aliases || []);
+    const cleanGroup = preset.group || "none";
+
+    const customAttrs = [
+      { key: "Species", value: preset.race },
+      { key: "Signature Ability", value: preset.signatureAbility },
+      { key: "Iconic Gear", value: preset.gear },
+    ];
+
+    const presetData = {
+      name: preset.name,
+      role: preset.role,
+      age: preset.age,
+      status: preset.status,
+      aliases: newAliases,
+      backstory: preset.backstory,
+      traits: [...preset.traits],
+      imageUrl: preset.imageUrl,
+      mbti: preset.mbti,
+      archetype: preset.archetype,
+      conflict: preset.conflict,
+      goal: preset.goal,
+      trauma: preset.trauma,
+      group: cleanGroup,
+      customAttributes: customAttrs,
+    };
+
+    setFormData(presetData);
+    setTraitInput("");
+    setAliasInput("");
+
+    if (directSave) {
+      const newChar = {
+        id: Date.now().toString(),
+        ...presetData,
+        description: preset.backstory,
+      };
+      const updatedChars = [...characters, newChar];
+      setCharacters(updatedChars);
+      setNodes((prev: any) => [...prev, { id: newChar.id, x: 200, y: 200 }]);
+      if (id) {
+        storage.saveProjectData(id, { characters: updatedChars });
+      }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } else {
+      setPreviousViewMode(viewMode === "editor" ? previousViewMode : viewMode);
+      setEditingCharId(null);
+      setViewMode("editor");
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    }
   };
 
   const handleOpenEditorEdit = (char: any) => {
@@ -628,7 +697,7 @@ export default function Characters() {
       backstory: backstoryContent,
       description: backstoryContent, // Synchronize for all AI prompts, search, and overview widgets
       traits: currentTraits,
-      imageUrl: formData.imageUrl || "https://res.cloudinary.com/mekoxs1q/image/upload/v1789721866/02_regal_paladin_in_the_cathedral_kmo5lz.jpg",
+      imageUrl: formData.imageUrl || FANTASY_PRESET_PORTRAITS[0]?.url || "https://res.cloudinary.com/mekoxs1q/image/upload/v1790564447/fantasy_01_under_100kb_klikgx.jpg",
       mbti: formData.mbti || "",
       archetype: formData.archetype || "",
       conflict: formData.conflict || "",
@@ -1003,7 +1072,23 @@ ${backstoryText}`;
         
         {/* Top Nav */}
         <div className="sticky top-0 z-40 flex items-center justify-between px-8 py-4 bg-[#fcfaf5]/90 backdrop-blur-sm border-b border-[#e5e0d5]/50">
-          <div className="flex items-center gap-4 text-[#8a5b46]"></div>
+          <div className="flex items-center gap-3 text-[#8a5b46]">
+            <button
+              type="button"
+              onClick={() => {
+                setPresetModalMode("editor");
+                setShowPresetModal(true);
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#b8785e]/15 hover:bg-[#b8785e]/25 text-[#b8785e] border border-[#b8785e]/40 text-[10px] font-bold tracking-widest uppercase transition-all shadow-2xs"
+              title="Load from 50 Premade Character Archetypes"
+            >
+              <Users className="w-3.5 h-3.5 text-[#b8785e]" />
+              <span>50 Premade Archetypes</span>
+            </button>
+            <span className="text-[10px] font-mono text-stone-400 hidden sm:inline">
+              • {editingCharId ? "Editing Dossier" : "New Dossier"}
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={handleCopyEditor}
@@ -1037,7 +1122,7 @@ ${backstoryText}`;
         <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1400px] mx-auto px-8 lg:px-16 pt-12 pb-32 gap-16 lg:gap-24">
           
           {/* Left Column (Forms) */}
-          <div className="flex-1 max-w-[800px] space-y-16">
+          <div className="flex-1 max-w-[800px] space-y-12">
             
             {/* Identity Section */}
             <section className="space-y-8">
@@ -1388,19 +1473,22 @@ ${backstoryText}`;
           </div>
         </div>
 
+        {/* 50 Premade Character Archetypes Modal */}
+        <CharacterPresetPickerModal
+          isOpen={showPresetModal}
+          onClose={() => setShowPresetModal(false)}
+          onSelectPreset={(preset, directSave) => handleSelectPreset(preset, directSave)}
+          title="50 Premade Character Archetypes"
+          subtitle="Select any archetype to populate this character dossier with lore, motivations, personality traits, and portraits."
+          actionLabel="Load into Dossier"
+        />
+
       </div>
     );
   }
 
   return (
     <div className="flex-1 flex flex-col w-full h-full overflow-hidden relative bg-[#3d261d]">
-      {/* Immersive Vintage Wallpaper Background */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-40" 
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}
-      />
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
         <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
@@ -1569,6 +1657,20 @@ ${backstoryText}`;
 
               <button
                 type="button"
+                onClick={() => {
+                  setPresetModalMode("registry");
+                  setShowPresetModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#b8785e] hover:bg-[#a66850] text-white text-[10px] font-bold tracking-widest uppercase transition-all shadow-sm border border-[#d49a89]/30 hover:scale-105"
+                title="Browse 50 Premade Character Archetypes"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">50 Premade Archetypes</span>
+                <span className="sm:hidden">50 Archetypes</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowCharacterGuideModal(true)}
                 className="w-7 h-7 rounded-full bg-[#5d3f32]/50 hover:bg-[#5d3f32]/80 border border-[#8c503c]/50 hover:border-[#8c503c]/90 text-[#d49a89] hover:text-[#fcfaf5] flex items-center justify-center transition-all shadow-sm group hover:scale-105"
                 title="Character Guide & AI Prompt"
@@ -1585,17 +1687,17 @@ ${backstoryText}`;
             {/* New Character Card */}
             <div 
               onClick={handleOpenEditorNew}
-              className={`relative group cursor-pointer h-[420px] rounded-sm backdrop-blur-sm border-2 border-dashed transition-all flex flex-col items-center justify-center mt-4 ${
+              className={`relative group h-[420px] rounded-sm backdrop-blur-sm border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 text-center cursor-pointer mt-4 ${
                 isCharacterLimitReached
                   ? "bg-[#5d3f32]/10 border-amber-600/40 hover:border-amber-500"
-                  : "bg-[#5d3f32]/20 border-[#8c503c]/40 hover:bg-[#5d3f32]/40 hover:border-[#8c503c]/70 hover:-translate-y-1"
+                  : "bg-[#5d3f32]/20 border-[#8c503c]/40 hover:bg-[#5d3f32]/35 hover:border-[#8c503c]/70 hover:-translate-y-1"
               }`}
             >
-              <div className="w-16 h-16 rounded-full border-2 border-dashed border-[#d49a89]/40 flex items-center justify-center mb-4 text-[#d49a89]/60 group-hover:text-[#d49a89] group-hover:border-[#d49a89]/60 transition-all duration-300">
+              <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#d49a89]/40 flex items-center justify-center mb-4 text-[#d49a89]/60 group-hover:text-[#d49a89] group-hover:border-[#d49a89]/60 transition-all duration-300">
                 {isCharacterLimitReached ? <Lock className="w-6 h-6 stroke-[1.5] text-amber-300" /> : <Plus className="w-6 h-6 stroke-[1.5]" />}
               </div>
-              <span className="text-[10px] tracking-widest uppercase font-bold text-[#d49a89]/60 group-hover:text-[#d49a89] transition-colors">
-                {isCharacterLimitReached ? "Unlock Unlimited (Quota Reached)" : "New Character"}
+              <span className="text-[11px] tracking-widest uppercase font-bold text-[#d49a89]/80 group-hover:text-[#fcfaf5] transition-colors">
+                {isCharacterLimitReached ? "Unlock Unlimited (Quota Reached)" : "+ New Character"}
               </span>
               <span className="text-[9px] font-mono font-semibold text-stone-400 mt-1">
                 {characters.length} / {maxCharacters === Infinity ? "∞" : maxCharacters} Dossiers
@@ -1869,13 +1971,6 @@ ${backstoryText}`;
                   else handleZoomOut();
                 }}
               >
-                {/* Immersive Vintage Wallpaper Background */}
-                <div 
-                  className="absolute inset-0 pointer-events-none opacity-40" 
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236e4b3b' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                  }}
-                />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[#8c503c] rounded-full mix-blend-color-dodge blur-[150px] opacity-20" />
                   <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[#d49a89] rounded-full mix-blend-overlay blur-[120px] opacity-10" />
@@ -2393,7 +2488,7 @@ ${backstoryText}`;
         isOpen={showPortraitGalleryModal}
         onClose={() => setShowPortraitGalleryModal(false)}
         type="character"
-        title="Preset Character Portrait Library (25 Portraits)"
+        title={`Preset Character Portrait Library (${FANTASY_PRESET_PORTRAITS.length} Portraits)`}
         defaultTab="presets"
         currentImage=""
         onSelectImage={(selectedUrl) => {
@@ -2583,6 +2678,16 @@ ${backstoryText}`;
         feature={upgradeModalFeature}
         currentCount={characters.length}
         maxLimit={maxCharacters}
+      />
+
+      {/* 50 Premade Character Archetypes Modal */}
+      <CharacterPresetPickerModal
+        isOpen={showPresetModal}
+        onClose={() => setShowPresetModal(false)}
+        onSelectPreset={(preset, directSave) => handleSelectPreset(preset, directSave)}
+        title="50 Premade Character Archetypes"
+        subtitle="Browse all 50 full character sheets. Select any archetype to customize in the editor or inspect complete backstories and traits."
+        actionLabel={presetModalMode === "registry" ? "Use Character" : "Load into Dossier"}
       />
     </div>
   );
