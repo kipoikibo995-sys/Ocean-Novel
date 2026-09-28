@@ -348,9 +348,9 @@ export default function MentionEditor({
     const res = autoLinkEntitiesInHtml(currentHtml, mentionItems);
     if (res.linkedCount > 0) {
       editor.commands.setContent(res.html);
-      showToast(res.linkedCount, res.linkedNames, `Đã quét và bôi đậm ${res.linkedCount} vị trí nhân vật!`);
+      showToast(res.linkedCount, res.linkedNames, `Scanned and bolded ${res.linkedCount} character reference${res.linkedCount > 1 ? 's' : ''}!`);
     } else {
-      showToast(0, [], `Tất cả nhân vật trong phân cảnh đã được liên kết đầy đủ.`);
+      showToast(0, [], `All characters in this scene are already linked.`);
     }
   };
 
@@ -375,7 +375,7 @@ export default function MentionEditor({
                 <div className="font-medium text-stone-200">{toastInfo.message}</div>
               ) : (
                 <div>
-                  <span className="font-semibold text-white">Tự động nhận diện & bôi đậm ({toastInfo.count}): </span>
+                  <span className="font-semibold text-white">Auto-detected & bolded ({toastInfo.count}): </span>
                   <span className="text-[#E5B59E] font-medium">
                     {toastInfo.names.slice(0, 4).join(', ')}{toastInfo.names.length > 4 ? ` +${toastInfo.names.length - 4}` : ''}
                   </span>
@@ -397,7 +397,7 @@ export default function MentionEditor({
         
         {editor?.isEmpty && (
           <div className="absolute top-8 left-8 pointer-events-none text-stone-400 font-serif text-lg opacity-70">
-            Dán nội dung từ AI hoặc bắt đầu viết... Nhân vật sẽ được tự động nhận diện và bôi đậm.
+            Paste draft from AI or start writing... Character names will be automatically recognized and bolded.
           </div>
         )}
 
@@ -437,11 +437,11 @@ export default function MentionEditor({
                 handleScanAndAutoLinkCurrentContent();
               }}
               className="px-2.5 py-1 text-[11px] font-semibold text-[#8C503C] hover:text-white bg-[#8C503C]/10 hover:bg-[#8C503C] border border-[#8C503C]/25 hover:border-[#8C503C] rounded-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-              title="Tự động quét & bôi đậm liên kết toàn bộ nhân vật trong phân cảnh này"
+              title="Auto-detect & bold all character mentions in this scene"
               type="button"
             >
               <UserCheck className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Auto-Link Entities</span>
+              <span className="hidden sm:inline">Auto-Link Characters</span>
             </button>
           </div>,
           portalTarget

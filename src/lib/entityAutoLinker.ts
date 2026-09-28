@@ -36,8 +36,7 @@ function escapeHtml(text: string): string {
 const STOP_WORDS = new Set([
   'the', 'and', 'with', 'from', 'into', 'over', 'that', 'this',
   'lord', 'lady', 'sir', 'mrs', 'miss', 'doctor', 'prof', 'king', 'queen',
-  'captain', 'agent', 'detective', 'officer', 'father', 'mother', 'brother', 'sister',
-  'anh', 'chị', 'em', 'ông', 'bà', 'cô', 'chú', 'bác', 'nhưng', 'khi', 'sau', 'trước'
+  'captain', 'agent', 'detective', 'officer', 'father', 'mother', 'brother', 'sister'
 ]);
 
 /**

@@ -373,13 +373,78 @@ export default function WritingStudio() {
     });
   };
 
-  const getEntityMentionCount = (name: string) => {
-    if (!activeContent || !name) return 0;
+  const getEntityMentionCount = (
+    entityOrName: { id?: string | number; name?: string; aliases?: string[] | string } | string
+  ) => {
+    if (!activeContent) return 0;
     try {
-      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`@${escaped}|data-label="${escaped}"|\\b${escaped}\\b`, 'gi');
-      const matches = activeContent.match(regex);
-      return matches ? matches.length : 0;
+      const entity = typeof entityOrName === 'string'
+        ? { id: '', name: entityOrName, aliases: [] }
+        : entityOrName;
+
+      if (!entity || !entity.name) return 0;
+
+      const entityId = entity.id ? String(entity.id).trim() : '';
+
+      // 1. Direct Tiptap Mention span matches by data-id (e.g. data-id="char-1" or data-id="1")
+      if (entityId) {
+        const cleanId = entityId.replace(/^char-|^loc-/, '');
+        const escapedId = cleanId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const idRegex = new RegExp(`data-id=["'](?:char-|loc-)?${escapedId}["']`, 'gi');
+        const idMatches = activeContent.match(idRegex);
+        if (idMatches && idMatches.length > 0) {
+          return idMatches.length;
+        }
+      }
+
+      // 2. Gather all recognizable name variations (Full name, aliases, first/call name)
+      const name = entity.name.trim();
+      const representations = new Set<string>();
+      representations.add(name);
+
+      // Aliases
+      if (entity.aliases) {
+        const aliasList = Array.isArray(entity.aliases)
+          ? entity.aliases
+          : String(entity.aliases).split(',');
+        for (const a of aliasList) {
+          const t = a.trim();
+          if (t.length >= 2) representations.add(t);
+        }
+      }
+
+      // First name / significant individual words (e.g. "Aurelia", "Jaxen", "Blackthorn")
+      const parts = name.split(/\s+/).filter(p => p.length >= 3);
+      for (const p of parts) {
+        const lower = p.toLowerCase();
+        if (!['princess', 'prince', 'king', 'queen', 'lord', 'lady', 'sir', 'the', 'captain', 'mr', 'mrs'].includes(lower)) {
+          representations.add(p);
+        }
+      }
+
+      // 3. Match against data-label inside mention tags
+      let labelCount = 0;
+      for (const rep of representations) {
+        const escaped = rep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const dlRegex = new RegExp(`data-label=["']${escaped}["']`, 'gi');
+        const m = activeContent.match(dlRegex);
+        if (m) labelCount += m.length;
+      }
+      if (labelCount > 0) return labelCount;
+
+      // 4. Fallback: Plain-text search in scene prose (stripping HTML tags first to avoid attribute false matches)
+      const plainText = activeContent.replace(/<[^>]+>/g, ' ');
+      const sortedReps = Array.from(representations).sort((a, b) => b.length - a.length);
+      for (const rep of sortedReps) {
+        const escaped = rep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'giu');
+        const m = plainText.match(regex);
+        if (m && m.length > 0) {
+          return m.length;
+        }
+      }
+
+      return 0;
     } catch {
       return 0;
     }
@@ -1251,7 +1316,7 @@ export default function WritingStudio() {
                   })
                   .map((char, cIdx) => {
                     const isExpanded = expandedEntityId === `char-${char.id}` || selectedEntity?.id === String(char.id);
-                    const mentionCount = getEntityMentionCount(char.name);
+                    const mentionCount = getEntityMentionCount(char);
 
                     return (
                       <div
@@ -1414,7 +1479,7 @@ export default function WritingStudio() {
                   })
                   .map((loc, lIdx) => {
                     const isExpanded = expandedEntityId === `loc-${loc.id}` || selectedEntity?.id === String(loc.id);
-                    const mentionCount = getEntityMentionCount(loc.name);
+                    const mentionCount = getEntityMentionCount(loc);
 
                     return (
                       <div
