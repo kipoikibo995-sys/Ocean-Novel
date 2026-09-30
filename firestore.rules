@@ -4,46 +4,94 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
-    
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
+    // Email ownership proven (Google sign-in, or email/password after clicking the verification link)
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function authEmail() {
+      return request.auth.token.email.lower();
+    }
+
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == "kojiacademy2026@gmail.com" ||
+        (request.auth.token.email == "kojiacademy2026@gmail.com" && request.auth.token.email_verified == true) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
+    function pendingPath(id) {
+      return /databases/$(database)/documents/ipnPendingPurchases/$(id);
+    }
+
+    // First sign-in: user may only create their own record, on the entry tier, unbanned, with no purchases
+    function isValidNewRegistration(userId) {
+      let data = request.resource.data;
+      return isSignedIn() && request.auth.uid == userId
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'tier', 'isBanned', 'lastActive', 'createdAt', 'purchaseHistory'])
+        && data.uid == userId
+        && data.email == authEmail()
+        && data.tier in ['Free', 'FrontEnd']
+        && data.isBanned == false
+        && data.get('purchaseHistory', []).size() == 0;
+    }
+
+    // Routine activity tracking: tier, ban status and purchase history are untouchable
+    function isOwnerActivityUpdate(userId) {
+      return isSignedIn() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActive', 'email', 'displayName'])
+        && request.resource.data.email == authEmail();
+    }
+
+    // Claiming a WarriorPlus purchase: the pending record must belong to the caller's verified email
+    // and must be deleted in the same batch, so each purchase can only be claimed once.
+    function isOwnerPurchaseClaim(userId) {
+      let claimId = request.resource.data.lastClaimedPendingId;
+      return isVerified() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tier', 'purchaseHistory', 'lastClaimedPendingId'])
+        && isValidId(claimId)
+        && exists(pendingPath(claimId))
+        && !existsAfter(pendingPath(claimId))
+        && get(pendingPath(claimId)).data.buyerEmail == authEmail()
+        && (request.resource.data.tier == resource.data.tier
+            || request.resource.data.tier == get(pendingPath(claimId)).data.tier)
+        && request.resource.data.purchaseHistory.size() == resource.data.get('purchaseHistory', []).size() + 1;
+    }
+
     match /users/{userId} {
       allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      
+
       match /{allUserPaths=**} {
         allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       }
     }
 
     match /registeredUsers/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == authEmail());
+      allow create: if isAdmin() || isValidNewRegistration(userId);
+      allow update: if isAdmin() || isOwnerActivityUpdate(userId) || isOwnerPurchaseClaim(userId);
       allow delete: if isAdmin();
     }
 
+    // Written only by the WarriorPlus IPN server (Admin SDK bypasses rules) or an admin
     match /ipnPendingPurchases/{purchaseId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, delete: if isAdmin() || (isVerified() && resource.data.buyerEmail == authEmail());
+      allow create, update: if isAdmin();
     }
 
     match /admins/{adminId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
       allow write: if isAdmin();
     }
   }
 }
-

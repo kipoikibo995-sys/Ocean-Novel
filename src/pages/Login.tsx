@@ -21,6 +21,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -151,6 +152,12 @@ export default function Login() {
             await updateProfile(userCred.user, { displayName: nameToUse });
           } catch (err) {
             console.warn("Profile update note:", err);
+          }
+          // Verified email is required to claim WarriorPlus purchases (see firestore.rules)
+          try {
+            await sendEmailVerification(userCred.user);
+          } catch (err) {
+            console.warn("Verification email note:", err);
           }
           setSuccessMsg("Author profile created. Entering your Studio...");
           await handlePostAuthSync(userCred.user, nameToUse);

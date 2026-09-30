@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 
 export const ADMIN_EMAIL = "kojiacademy2026@gmail.com";
@@ -36,6 +37,7 @@ export interface RegisteredUser {
   lastActive: number;
   createdAt: number;
   purchaseHistory?: PurchaseRecord[];
+  lastClaimedPendingId?: string;
 }
 
 export interface IpnPendingPurchase {
@@ -120,35 +122,44 @@ export const adminService = {
           const q = query(pendingCol, where("buyerEmail", "==", cleanEmail));
           const snap = await getDocs(q);
 
-          if (!snap.empty) {
-            for (const docItem of snap.docs) {
-              const pendingData = docItem.data() as IpnPendingPurchase;
-              matchedPurchases++;
+          // Each claim is one atomic batch (upgrade + delete pending record) — Firestore rules
+          // only accept a tier change when it is backed by a pending purchase deleted in the same batch.
+          for (const docItem of snap.docs) {
+            const pendingData = docItem.data() as IpnPendingPurchase;
 
-              if (pendingData.tier === "OTO2") {
-                currentTier = "OTO2";
-              } else if (pendingData.tier === "OTO1" && currentTier !== "OTO2") {
-                currentTier = "OTO1";
-              } else if (pendingData.tier === "FrontEnd" && currentTier === "Free") {
-                currentTier = "FrontEnd";
-              }
+            let nextTier = currentTier;
+            if (pendingData.tier === "OTO2") {
+              nextTier = "OTO2";
+            } else if (pendingData.tier === "OTO1" && currentTier !== "OTO2") {
+              nextTier = "OTO1";
+            } else if (pendingData.tier === "FrontEnd" && currentTier === "Free") {
+              nextTier = "FrontEnd";
+            }
 
-              history.push({
+            const nextHistory: PurchaseRecord[] = [
+              ...history,
+              {
                 id: "auto_" + docItem.id,
                 productItem: pendingData.productItem,
                 tier: pendingData.tier,
                 amount: pendingData.amount || (pendingData.tier === "OTO2" ? "$67.00" : pendingData.tier === "OTO1" ? "$47.00" : "$27.00"),
                 date: Date.now(),
                 txnId: pendingData.txnId || "WP-AUTO-" + Date.now().toString(36).toUpperCase(),
-              });
+              },
+            ];
 
-              await deleteDoc(docItem.ref);
-            }
-
-            await updateDoc(userDocRef, {
-              tier: currentTier,
-              purchaseHistory: history,
+            const batch = writeBatch(db);
+            batch.update(userDocRef, {
+              tier: nextTier,
+              purchaseHistory: nextHistory,
+              lastClaimedPendingId: docItem.id,
             });
+            batch.delete(docItem.ref);
+            await batch.commit();
+
+            currentTier = nextTier;
+            history = nextHistory;
+            matchedPurchases++;
           }
         } catch (reconcileErr) {
           console.warn("Real IPN auto-reconcile check notice:", reconcileErr);

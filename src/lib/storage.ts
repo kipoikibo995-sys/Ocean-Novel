@@ -585,9 +585,7 @@ export const storage = {
         const profileDoc = await getDoc(doc(db, `users/${userId}/profile/default`));
         if (profileDoc.exists()) {
           const loadedProfile = profileDoc.data() as UserProfile;
-          if (!isAdmin && !regData?.tier && loadedProfile?.plan) {
-            authoritativePlan = loadedProfile.plan;
-          }
+          // The profile doc is user-writable, so its `plan` is never trusted — only registeredUsers.tier is.
           cachedProfile = {
             ...loadedProfile,
             plan: authoritativePlan,
